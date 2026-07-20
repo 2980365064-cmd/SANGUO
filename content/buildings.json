@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "scenario_id": "sanguo_liubei_208",
+    "note": "三国郡级设施；主要投资由 national_focus 系统结算。"
+  },
+  "buildings": [
+    {
+      "id": "xiakou_granary",
+      "region_id": "jiangxia",
+      "name": "夏口军仓",
+      "category": "军事",
+      "level": 1,
+      "condition": 65,
+      "maintenance": 0,
+      "risk": 25,
+      "output_metric": "",
+      "output_amount": 0,
+      "status": "借驻军仓，储备有限"
+    },
+    {
+      "id": "chaisang_dock",
+      "region_id": "chaisang",
+      "name": "柴桑水寨",
+      "category": "军事",
+      "level": 2,
+      "condition": 82,
+      "maintenance": 0,
+      "risk": 15,
+      "output_metric": "",
+      "output_amount": 0,
+      "status": "江东水军枢纽"
+    },
+    {
+      "id": "chengdu_granary",
+      "region_id": "chengdu",
+      "name": "成都府仓",
+      "category": "民生",
+      "level": 2,
+      "condition": 78,
+      "maintenance": 0,
+      "risk": 18,
+      "output_metric": "",
+      "output_amount": 0,
+      "status": "益州核心粮仓"
+    }
+  ]
+}

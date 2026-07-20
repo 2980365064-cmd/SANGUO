@@ -1,0 +1,94 @@
+[
+  {
+    "id": "army_order",
+    "label": "军令",
+    "category": "军务",
+    "settlement_hint": "每军每月一道主军令，只能沿战略边行动。",
+    "compiled_text": "军令：命{army}执行{action}，目标{target}。{note}",
+    "fields": [
+      {
+        "key": "army",
+        "label": "军队",
+        "type": "select",
+        "option_source": "armies",
+        "required": true
+      },
+      {
+        "key": "action",
+        "label": "行动",
+        "type": "select",
+        "required": true,
+        "options": [
+          "移动",
+          "驻守",
+          "围城",
+          "突袭",
+          "补给",
+          "撤退"
+        ]
+      },
+      {
+        "key": "target",
+        "label": "目标节点",
+        "type": "select",
+        "option_source": "regions",
+        "required": false
+      },
+      {
+        "key": "note",
+        "label": "备注",
+        "type": "textarea",
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "personnel_change",
+    "label": "人物任免",
+    "category": "人事",
+    "settlement_hint": "任命权归刘备，职位空缺只影响效率。",
+    "compiled_text": "任命：{person}出任{office}，理由：{reason}。",
+    "fields": [
+      {
+        "key": "person",
+        "label": "人物",
+        "type": "select",
+        "option_source": "people",
+        "required": true
+      },
+      {
+        "key": "office",
+        "label": "官职",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "reason",
+        "label": "理由",
+        "type": "text",
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "diplomatic_proposal",
+    "label": "外交提案",
+    "category": "外交",
+    "settlement_hint": "盟约必须保存独立条款并由规则校验。",
+    "compiled_text": "外交：向{target}提出{terms}。",
+    "fields": [
+      {
+        "key": "target",
+        "label": "对象势力",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "terms",
+        "label": "条款",
+        "type": "textarea",
+        "required": true
+      }
+    ]
+  }
+]

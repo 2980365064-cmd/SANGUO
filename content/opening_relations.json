@@ -1,0 +1,16 @@
+{
+  "relations": [
+    {"power_a":"liu_bei","power_b":"sun_quan","public_relation":68,"trust":56,"obligations":[{"type":"共同抗曹","target":"cao_cao"}],"territorial_claims":{"liu_bei":["jiangxia","jiangling","jingnan"],"sun_quan":["jiangxia","jiangling","jingnan"]},"marriage_hostages":{"status":"none"},"military_coordination":58,"status":"allied"},
+    {"power_a":"liu_bei","power_b":"liu_qi","public_relation":84,"trust":78,"obligations":[{"type":"夏口驻军与补给"}],"territorial_claims":{"liu_bei":[],"liu_qi":["jiangxia"]},"marriage_hostages":{"status":"none"},"military_coordination":72,"status":"friendly"},
+    {"power_a":"cao_cao","power_b":"liu_bei","public_relation":-90,"trust":0,"obligations":[],"territorial_claims":{"cao_cao":["xiangyang","jiangling","jiangxia","jingnan"],"liu_bei":["jiangxia","jiangling","jingnan"]},"marriage_hostages":{"status":"none"},"military_coordination":0,"status":"war"},
+    {"power_a":"cao_cao","power_b":"sun_quan","public_relation":-76,"trust":8,"obligations":[],"territorial_claims":{"cao_cao":["jianye","chaisang","hefei"],"sun_quan":["hefei","jiangxia","jiangling"]},"marriage_hostages":{"status":"none"},"military_coordination":0,"status":"war"},
+    {"power_a":"liu_bei","power_b":"liu_zhang","public_relation":38,"trust":42,"obligations":[],"territorial_claims":{"liu_bei":[],"liu_zhang":["chengdu","jiangzhou","yongan"]},"marriage_hostages":{"status":"none"},"military_coordination":5,"status":"neutral"},
+    {"power_a":"liu_bei","power_b":"zhang_lu","public_relation":5,"trust":25,"obligations":[],"territorial_claims":{"liu_bei":[],"zhang_lu":["hanzhong"]},"marriage_hostages":{"status":"none"},"military_coordination":0,"status":"neutral"},
+    {"power_a":"liu_bei","power_b":"ma_han","public_relation":28,"trust":35,"obligations":[],"territorial_claims":{"liu_bei":[],"ma_han":["wuwei","tianshui","longxi"]},"marriage_hostages":{"status":"none"},"military_coordination":12,"status":"neutral"},
+    {"power_a":"liu_bei","power_b":"shi_xie","public_relation":22,"trust":30,"obligations":[],"territorial_claims":{"liu_bei":[],"shi_xie":["jiaozhi","nanhai"]},"marriage_hostages":{"status":"none"},"military_coordination":0,"status":"neutral"},
+    {"power_a":"gongsun_kang","power_b":"liu_bei","public_relation":0,"trust":20,"obligations":[],"territorial_claims":{"gongsun_kang":["ji","liaodong"],"liu_bei":[]},"marriage_hostages":{"status":"none"},"military_coordination":0,"status":"neutral"}
+  ],
+  "treaties": [
+    {"treaty_key":"sun_liu_anti_cao_208","proposer":"liu_bei","target":"sun_quan","treaty_type":"军事联盟","terms":{"obligations":[{"type":"共同抗曹","target":"cao_cao"},{"type":"互通军情"}],"territorial_claims":{"disputed":["jiangxia","jiangling","jingnan"]},"marriage_hostages":{"status":"none"},"military_coordination":58},"start_turn":1,"status":"active"}
+  ]
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "local_famine", "title": "边郡饥歉", "kind": "民政", "event_type": "situation",
+    "summary": "郡仓不足与流民增多正在加重地方压力。", "urgency": 62, "severity": 65, "credibility": 70,
+    "interests": ["百姓", "郡守", "军队"], "audiences": ["刘备", "诸葛亮"], "is_historical": false,
+    "trigger_gate": {"粮秣": "<=25"}, "auto_trigger": false, "require": {},
+    "resolve_condition": "粮秣回升且受灾郡仓恢复供应。", "fail_condition": "连续断粮导致军民大规模流散。"
+  },
+  {
+    "id": "gentry_resistance", "title": "地方豪强抵制", "kind": "政治", "event_type": "situation",
+    "summary": "征发、任命与土地政策引发地方士族联合抵制。", "urgency": 58, "severity": 60, "credibility": 68,
+    "interests": ["益州士族", "荆州故部", "郡县"], "audiences": ["刘备", "法正", "糜竺"], "is_historical": false,
+    "trigger_gate": {"士族支持": "<=25"}, "auto_trigger": false, "require": {},
+    "resolve_condition": "士族支持恢复且关键官署有人主持。", "fail_condition": "地方官署停摆或豪强转而接应外敌。"
+  },
+  {
+    "id": "supply_disruption", "title": "军粮转运受阻", "kind": "军务", "event_type": "situation",
+    "summary": "远征军与后方郡仓之间的运粮通道受到威胁。", "urgency": 70, "severity": 72, "credibility": 72,
+    "interests": ["远征军", "郡仓", "粮道"], "audiences": ["刘备", "赵云", "张飞"], "is_historical": false,
+    "trigger_gate": {"军心": "<=30", "粮秣": "<=35"}, "auto_trigger": false, "require": {},
+    "resolve_condition": "恢复友方郡仓连通或完成携粮补充。", "fail_condition": "主力连续三回合断粮且无法撤回。"
+  }
+]

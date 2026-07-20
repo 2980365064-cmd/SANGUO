@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "note": "三国通用军府机构。"
+  },
+  "departments": [
+    {
+      "key": "military_council",
+      "name": "军府参谋署",
+      "category": "政治",
+      "题材": "政治",
+      "authority_scope": "汇总军令、外交、粮道与战区情报",
+      "power": 55,
+      "responsibility": 70,
+      "corruption_risk": 10,
+      "预计月数": 3,
+      "起步进度": 25,
+      "stage_text": "参谋署草创，人手与军报格式尚未齐备。",
+      "resolve_condition": "军报、粮道与战区文书形成固定流程。",
+      "fail_condition": "人手离散或军令互相冲突，进度归零。",
+      "effect_on_resolve": {
+        "departments": [
+          {
+            "action": "create",
+            "key": "military_council"
+          }
+        ]
+      },
+      "effect_on_fail": {},
+      "modifiers": {},
+      "effect_summary": "军令汇总更清晰。",
+      "requires": []
+    }
+  ]
+}

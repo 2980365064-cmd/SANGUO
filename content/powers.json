@@ -1,0 +1,166 @@
+{
+  "powers": [
+    {
+      "id": "cao_cao",
+      "name": "曹操",
+      "kind": "北方霸主",
+      "leader": "曹操",
+      "stance": "敌对",
+      "leverage": 95,
+      "satisfaction": 82,
+      "military_strength": 95,
+      "cohesion": 84,
+      "supply": 82,
+      "agenda": "南下夺取荆州、压服孙刘并统一天下",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "曹操"
+      ]
+    },
+    {
+      "id": "sun_quan",
+      "name": "孙权",
+      "kind": "江东政权",
+      "leader": "孙权",
+      "stance": "潜在盟友",
+      "leverage": 82,
+      "satisfaction": 72,
+      "military_strength": 78,
+      "cohesion": 80,
+      "supply": 86,
+      "agenda": "保全江东、控制长江并争夺荆州",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "孙权"
+      ]
+    },
+    {
+      "id": "liu_bei",
+      "name": "刘备",
+      "kind": "玩家政权",
+      "leader": "刘备",
+      "stance": "自身",
+      "leverage": 48,
+      "satisfaction": 78,
+      "military_strength": 32,
+      "cohesion": 86,
+      "supply": 40,
+      "agenda": "联吴抗曹、取得立足之地并兴复汉室",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "刘备"
+      ]
+    },
+    {
+      "id": "liu_qi",
+      "name": "刘琦",
+      "kind": "荆州余部",
+      "leader": "刘琦",
+      "stance": "友好",
+      "leverage": 38,
+      "satisfaction": 65,
+      "military_strength": 24,
+      "cohesion": 48,
+      "supply": 45,
+      "agenda": "守住江夏并延续刘表旧部",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "刘琦"
+      ]
+    },
+    {
+      "id": "liu_zhang",
+      "name": "刘璋",
+      "kind": "益州政权",
+      "leader": "刘璋",
+      "stance": "中立",
+      "leverage": 62,
+      "satisfaction": 58,
+      "military_strength": 55,
+      "cohesion": 62,
+      "supply": 78,
+      "agenda": "保全益州、抵御汉中与北方威胁",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "刘璋"
+      ]
+    },
+    {
+      "id": "zhang_lu",
+      "name": "张鲁",
+      "kind": "汉中政权",
+      "leader": "张鲁",
+      "stance": "中立",
+      "leverage": 46,
+      "satisfaction": 62,
+      "military_strength": 40,
+      "cohesion": 70,
+      "supply": 68,
+      "agenda": "守住汉中与阳平关、维系道众",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "张鲁"
+      ]
+    },
+    {
+      "id": "ma_han",
+      "name": "马腾／韩遂",
+      "kind": "西凉联盟",
+      "leader": "马腾",
+      "stance": "中立",
+      "leverage": 54,
+      "satisfaction": 55,
+      "military_strength": 50,
+      "cohesion": 58,
+      "supply": 55,
+      "agenda": "维持凉州部众并牵制曹操关中势力",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "马腾/韩遂"
+      ]
+    },
+    {
+      "id": "shi_xie",
+      "name": "士燮",
+      "kind": "交州政权",
+      "leader": "士燮",
+      "stance": "观望",
+      "leverage": 30,
+      "satisfaction": 68,
+      "military_strength": 28,
+      "cohesion": 72,
+      "supply": 66,
+      "agenda": "安抚交州、避免卷入中原大战",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "士燮"
+      ]
+    },
+    {
+      "id": "gongsun_kang",
+      "name": "公孙康",
+      "kind": "辽东政权",
+      "leader": "公孙康",
+      "stance": "观望",
+      "leverage": 34,
+      "satisfaction": 60,
+      "military_strength": 35,
+      "cohesion": 65,
+      "supply": 60,
+      "agenda": "固守辽东并在曹氏与北方边地间周旋",
+      "status": "建安十三年赤壁前夕在局势力。",
+      "last_action": "整军观势",
+      "aliases": [
+        "公孙康"
+      ]
+    }
+  ]
+}

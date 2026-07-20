@@ -1,0 +1,82 @@
+{
+  "version": 3,
+  "note": "三国军队装备类别；实际战力仍以 armies.equipment 与特性结算。",
+  "default_tier": "常规兵械",
+  "tiers": {
+    "常规兵械": {
+      "cost": 1,
+      "equip_per_unit": 0.4,
+      "keywords": [
+        "刀",
+        "矛",
+        "弓",
+        "弩",
+        "盾"
+      ]
+    },
+    "重装兵械": {
+      "cost": 2,
+      "equip_per_unit": 0.8,
+      "keywords": [
+        "甲",
+        "具装"
+      ]
+    },
+    "舟船": {
+      "cost": 3,
+      "equip_per_unit": 1.0,
+      "keywords": [
+        "船",
+        "舟",
+        "舰"
+      ]
+    }
+  },
+  "weapons": [
+    {
+      "id": "spear",
+      "name": "长矛",
+      "tier": "常规兵械",
+      "cost": 1,
+      "equip_per_unit": 0.4,
+      "requires_tech": "",
+      "opening_stock": 0
+    },
+    {
+      "id": "bow_crossbow",
+      "name": "弓弩",
+      "tier": "常规兵械",
+      "cost": 1,
+      "equip_per_unit": 0.4,
+      "requires_tech": "",
+      "opening_stock": 0
+    },
+    {
+      "id": "shield_blade",
+      "name": "刀盾",
+      "tier": "常规兵械",
+      "cost": 1,
+      "equip_per_unit": 0.4,
+      "requires_tech": "",
+      "opening_stock": 0
+    },
+    {
+      "id": "armor",
+      "name": "甲胄",
+      "tier": "重装兵械",
+      "cost": 2,
+      "equip_per_unit": 0.8,
+      "requires_tech": "",
+      "opening_stock": 0
+    },
+    {
+      "id": "warship",
+      "name": "战船",
+      "tier": "舟船",
+      "cost": 3,
+      "equip_per_unit": 1.0,
+      "requires_tech": "",
+      "opening_stock": 0
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "note": "刘备 208 开局结构性困境。"
+  },
+  "legacies": [
+    {
+      "key": "no_fixed_domain",
+      "name": "寄军夏口·无一郡之土",
+      "modifiers": {
+        "民望": -2,
+        "名分": -1
+      },
+      "narrative_hint": "刘备暂借夏口驻军，兵少粮薄，无正式控制郡县。",
+      "clear_gate": {
+        "region.jiangxia.controlled_by": "==liu_bei"
+      },
+      "clear_narrative": "刘备取得稳定立足之地，流亡军局告终。"
+    }
+  ]
+}

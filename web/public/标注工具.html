@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>东汉十三州双层标注工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Source Han Serif", "Noto Serif SC", serif; background: #1a1610; color: #e8d9b5; }
+  .container { display: grid; grid-template-columns: 1fr 340px; height: 100vh; }
+  .map-area { position: relative; overflow: auto; background: #0a0806; }
+  .map-area img { display: block; cursor: crosshair; }
+  .sidebar { padding: 16px; background: #2a2418; border-left: 1px solid #6d5539; overflow-y: auto; }
+  .sidebar h2 { font-size: 17px; margin-bottom: 10px; color: #f2deb5; border-bottom: 1px solid #6d5539; padding-bottom: 7px; }
+  .sidebar h3 { font-size: 13px; margin: 12px 0 6px; color: #c9a878; }
+
+  /* 模式切换 */
+  .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+  .mode-switch button { padding: 9px; border: 1px solid #6d5539; background: #3a3225; color: #e8d9b5; cursor: pointer; font-size: 12px; border-radius: 3px; transition: all 0.15s; }
+  .mode-switch button.active { background: #7a382e; border-color: #bd9352; color: #f5e6c8; box-shadow: 0 0 0 1px #bd9352; }
+
+  /* 选择器 */
+  .item-selector { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; max-height: 180px; overflow-y: auto; margin-bottom: 10px; padding: 6px; background: #1a1610; border-radius: 3px; }
+  .item-selector button { padding: 6px 4px; border: 1px solid #5a4a35; background: #3a3225; color: #d8c8a0; cursor: pointer; font-size: 11px; border-radius: 2px; }
+  .item-selector button.active { background: #6d3528; border-color: #bd9352; color: #f5e6c8; }
+  .item-selector button.done { background: #3a5a3a; border-color: #5a8a5a; color: #a0d8a0; }
+
+  /* 点列表 */
+  .point-list { max-height: 220px; overflow-y: auto; font-size: 10px; background: #1a1610; padding: 6px; border-radius: 3px; font-family: monospace; }
+  .point-list div { padding: 2px 5px; border-bottom: 1px solid #3a3225; color: #b8a878; }
+
+  /* 按钮 */
+  .controls { display: flex; gap: 6px; margin-top: 10px; }
+  .controls button { flex: 1; padding: 7px; border: 1px solid #6d5539; background: #3a3225; color: #e8d9b5; cursor: pointer; border-radius: 3px; font-size: 11px; }
+  .controls button:hover { background: #7a382e; }
+  .controls button.primary { background: #6d3528; border-color: #bd9352; }
+
+  /* 导出 */
+  textarea { width: 100%; height: 180px; margin-top: 10px; padding: 7px; background: #1a1610; border: 1px solid #6d5539; color: #e8d9b5; font-family: monospace; font-size: 9px; resize: vertical; border-radius: 3px; }
+
+  /* 说明 */
+  .instructions { font-size: 10px; color: #a89878; line-height: 1.5; margin-bottom: 12px; padding: 8px; background: #1a1610; border-radius: 3px; border-left: 3px solid #8d4030; }
+  .instructions strong { color: #d8b878; }
+
+  /* 状态栏 */
+  .status-bar { padding: 7px 10px; background: #1a1610; border-radius: 3px; margin-bottom: 10px; font-size: 11px; border: 1px solid #5a4a35; }
+  .status-bar .mode { color: #c9a878; }
+  .status-bar .current { color: #f2deb5; font-weight: 700; }
+  .status-bar .count { color: #8da878; }
+
+  /* 进度 */
+  .progress { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 10px; }
+  .progress div { padding: 5px; background: #1a1610; border-radius: 3px; border: 1px solid #5a4a35; }
+  .progress strong { color: #f2deb5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="map-area">
+    <img id="map" src="./底图_preview.jpg?v=20260718-retouch" alt="东汉十三州底图" style="width: 1920px; height: 1080px;">
+  </div>
+  <div class="sidebar">
+    <h2>🏯 双层标注工具</h2>
+
+    <div class="instructions">
+      <strong>使用说明：</strong><br>
+      1. 选择标注模式（州界 / 城池）<br>
+      2. 选择要标注的州或城池<br>
+      3. 在地图上沿边界点击添加点<br>
+      4. <strong style="color: #ff6b6b;">右键点击已标注的点可删除</strong><br>
+      5. 切换项目时自动保存<br>
+      6. 完成后点击"导出"生成代码
+    </div>
+
+    <h3>标注模式</h3>
+    <div class="mode-switch">
+      <button id="modeProvince" class="active" onclick="setMode('province')">🗺️ 州界标注</button>
+      <button id="modeCity" onclick="setMode('city')">🏯 城池标注</button>
+    </div>
+
+    <div class="status-bar">
+      模式：<span class="mode" id="statusMode">州界标注</span><br>
+      当前：<span class="current" id="statusCurrent">未选择</span><br>
+      点数：<span class="count" id="statusCount">0</span>
+    </div>
+
+    <div class="instructions" style="margin-top: 8px; border-left-color: #4CAF50;">
+      <strong style="color: #4CAF50;">🧲 边界吸附（12px）</strong><br>
+      点击位置 12px 内的其他项目点会自动吸附共用<br>
+      <strong style="color: #ff6b6b;">🗑️ 右键点击标注点可直接删除</strong>
+    </div>
+
+    <h3 id="selectorTitle">选择州</h3>
+    <div class="item-selector" id="itemSelector"></div>
+
+    <h3>边界点列表</h3>
+    <div class="point-list" id="pointList">
+      <div style="color: #8a7a60;">请先选择项目，然后在地图上点击边界点</div>
+    </div>
+
+    <div class="controls">
+      <button onclick="undoLastPoint()"> 撤销</button>
+      <button onclick="clearCurrent()">✕ 清除</button>
+      <button onclick="syncToFile()">💾 同步</button>
+      <button class="primary" onclick="exportData()">⬇ 导出</button>
+    </div>
+
+    <div class="progress">
+      <div>州界：<strong id="provinceProgress">0/13</strong></div>
+      <div>城池：<strong id="cityProgress">0/0</strong></div>
+    </div>
+
+    <textarea id="exportOutput" placeholder="导出的代码将显示在这里，复制后发给开发..."></textarea>
+  </div>
+</div>
+
+<script src="./annotation_path_utils.js?v=20260718-single-city-fallback"></script>
+<script>
+// 配置
+const PROVINCES = ['凉州', '并州', '幽州', '冀州', '青州', '司隶', '兖州', '徐州', '豫州', '荆州', '扬州', '益州', '交州'];
+
+const CITIES_BY_PROVINCE = {
+  '凉州': ['姑藏'],
+  '并州': ['晋阳', '九原'],
+  '幽州': ['襄平', '蓟县'],
+  '冀州': ['南皮', '邺城'],
+  '青州': ['临淄'],
+  '司隶': ['长安', '洛阳', '许昌'],
+  '兖州': ['陈留', '谯县'],
+  '徐州': ['下邳'],
+  '豫州': ['宛城', '襄阳'],
+  '荆州': ['江陵', '柴桑'],
+  '扬州': ['合肥', '秣陵'],
+  '益州': ['成都', '梓潼', '江州', '南郑', '上庸'],
+  '交州': ['番禺'],
+};
+
+const ALL_CITIES = Object.values(CITIES_BY_PROVINCE).flat();
+
+function getVisibleCities() {
+  return [...new Set([...ALL_CITIES, ...Object.keys(cityPoints)])];
+}
+
+// 边界吸附距离（像素）
+const SNAP_DISTANCE = 12;
+
+// 状态
+let mode = 'province'; // 'province' | 'city'
+let currentProvince = null;
+let currentCity = null;
+const provincePoints = {};
+const cityPoints = {};
+let tempPoints = [];
+
+// 保存绘制的点 DOM 元素引用（所有项目的点都保留）
+const allDots = [];
+
+// 本地存储键名
+const STORAGE_KEY = 'sanguo_map_annotation_v1';
+
+// DOM
+const mapContainer = document.querySelector('.map-area');
+const map = document.getElementById('map');
+const itemSelector = document.getElementById('itemSelector');
+const pointList = document.getElementById('pointList');
+const exportOutput = document.getElementById('exportOutput');
+
+// 从本地存储加载数据
+function loadFromStorage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.provincePoints) Object.assign(provincePoints, data.provincePoints);
+      if (data.cityPoints) Object.assign(cityPoints, data.cityPoints);
+      console.log('已从本地存储加载数据');
+    }
+  } catch (e) {
+    console.error('加载本地存储失败:', e);
+  }
+}
+
+// 保存到本地存储
+function saveToStorage() {
+  try {
+    const data = { provincePoints, cityPoints };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('保存到本地存储失败:', e);
+  }
+}
+
+// 初始化
+function init() {
+  loadFromStorage();
+  renderSelector();
+  updateProgress();
+  redrawAllDots();
+}
+
+// 设置模式
+function setMode(newMode) {
+  // 保存当前项目的点
+  if (mode === 'province' && currentProvince) {
+    provincePoints[currentProvince] = tempPoints;
+  } else if (mode === 'city' && currentCity) {
+    cityPoints[currentCity] = tempPoints;
+  }
+
+  mode = newMode;
+  document.getElementById('modeProvince').classList.toggle('active', mode === 'province');
+  document.getElementById('modeCity').classList.toggle('active', mode === 'city');
+  document.getElementById('statusMode').textContent = mode === 'province' ? '州界标注' : '城池标注';
+  document.getElementById('selectorTitle').textContent = mode === 'province' ? '选择州' : '选择城池';
+
+  currentProvince = null;
+  currentCity = null;
+  tempPoints = [];
+
+  // 不清除地图上的点，保留所有已标注的边界
+  // 高亮当前模式的点（州或城池）
+  updateDotHighlight();
+
+  renderSelector();
+  updateStatus();
+  updatePointList();
+}
+
+// 渲染选择器
+function renderSelector() {
+  if (mode === 'province') {
+    itemSelector.innerHTML = PROVINCES.map(p => {
+      const done = provincePoints[p] && provincePoints[p].length >= 3;
+      return `<button class="${done ? 'done' : ''}" data-item="${p}" onclick="selectItem('${p}')">${p}${done ? ' ✓' : ''}</button>`;
+    }).join('');
+  } else {
+    itemSelector.innerHTML = ALL_CITIES.map(c => {
+      const done = getCityPoints(c).length >= 3;
+      return `<button class="${done ? 'done' : ''}" data-item="${c}" onclick="selectItem('${c}')">${c}${done ? ' ✓' : ''}</button>`;
+    }).join('');
+  }
+}
+
+// 选择项目
+function selectItem(item) {
+  // 先保存当前项目的点
+  if (mode === 'province' && currentProvince) {
+    provincePoints[currentProvince] = tempPoints;
+    saveToStorage();
+  } else if (mode === 'city' && currentCity) {
+    cityPoints[currentCity] = tempPoints;
+    saveToStorage();
+  }
+
+  if (mode === 'province') {
+    currentProvince = item;
+    currentCity = null;
+    tempPoints = provincePoints[item] || [];
+  } else {
+    currentCity = item;
+    currentProvince = null;
+    tempPoints = getCityPoints(item).map(p => ({ ...p }));
+  }
+
+  document.querySelectorAll('.item-selector button').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.item-selector button[data-item="${item}"]`)?.classList.add('active');
+
+  updateDotHighlight();
+  updateStatus();
+  updatePointList();
+}
+
+// 更新状态栏
+function updateStatus() {
+  const current = mode === 'province' ? (currentProvince || '未选择') : (currentCity || '未选择');
+  document.getElementById('statusCurrent').textContent = current;
+  document.getElementById('statusCount').textContent = tempPoints.length;
+}
+
+// 更新点列表
+function updatePointList() {
+  if (tempPoints.length === 0) {
+    pointList.innerHTML = '<div style="color: #8a7a60;">暂无边界点，请在地图上点击添加</div>';
+    return;
+  }
+  pointList.innerHTML = tempPoints.map((p, i) => `<div>${String(i + 1).padStart(2, ' ')}. (${p.x}, ${p.y})</div>`).join('');
+}
+
+// 点击地图（使用 mapContainer 而不是 map，这样点击标注点也能触发）
+mapContainer.addEventListener('click', (e) => {
+  const target = mode === 'province' ? currentProvince : currentCity;
+  if (!target) {
+    alert('请先选择要标注的' + (mode === 'province' ? '州' : '城池'));
+    return;
+  }
+
+  const rect = map.getBoundingClientRect();
+  const x = Math.round(e.clientX - rect.left);
+  const y = Math.round(e.clientY - rect.top);
+
+  // 辅助：检查 tempPoints 中是否已存在相同坐标
+  const hasPoint = (px, py) => tempPoints.some(p => p.x === px && p.y === py);
+
+  // 检查是否点击到了已有的标注点
+  const clickedDot = (e.target.style.borderRadius === '50%' && e.target.style.width === '8px') ? e.target : null;
+
+  // 检查附近是否有其他项目的点可以吸附共用
+  let snapped = false;
+  for (const dot of allDots) {
+    const dotX = Math.round(parseFloat(dot.style.left) + 4);
+    const dotY = Math.round(parseFloat(dot.style.top) + 4);
+    const distance = Math.sqrt((x - dotX) ** 2 + (y - dotY) ** 2);
+
+    if (distance <= SNAP_DISTANCE) {
+      // 如果这个坐标已经在当前项目中，跳过（避免重复）
+      if (hasPoint(dotX, dotY)) {
+        // 已存在，不做任何事
+        return;
+      }
+
+      // 吸附：将其他项目的点加入当前项目
+      tempPoints.push({ x: dotX, y: dotY });
+      snapped = true;
+
+      // 更新这个 DOM 点的归属标记（支持多项目共享，用逗号分隔）
+      if (mode === 'province') {
+        if (!dot._province) {
+          dot._province = currentProvince;
+        } else if (!dot._province.includes(currentProvince)) {
+          dot._province += ',' + currentProvince;
+        }
+      } else {
+        if (!dot._city) {
+          dot._city = currentCity;
+        } else if (!dot._city.includes(currentCity)) {
+          dot._city += ',' + currentCity;
+        }
+      }
+
+      break; // 每次只吸附一个点
+    }
+  }
+
+  // 如果没有吸附到现有点，则添加新点
+  if (!snapped) {
+    // 如果直接点击了自己的点，不重复添加
+    if (clickedDot) {
+      const isOwn = (mode === 'province' && clickedDot._province === currentProvince) ||
+                    (mode === 'city' && clickedDot._city === currentCity);
+      if (isOwn) return;
+    }
+    // 检查是否已经存在相同坐标
+    if (hasPoint(x, y)) return;
+
+    tempPoints.push({ x, y });
+    drawPoint(x, y, false);
+  } else {
+    // 吸附的点：不创建新的 DOM 点（原始点仍然存在），只在视觉上短暂提示
+    const snappedDot = allDots.find(d => {
+      const dx = Math.round(parseFloat(d.style.left) + 4);
+      const dy = Math.round(parseFloat(d.style.top) + 4);
+      return dx === tempPoints[tempPoints.length - 1].x && dy === tempPoints[tempPoints.length - 1].y;
+    });
+    if (snappedDot) {
+      // 闪烁效果提示已吸附
+      const origBg = snappedDot.style.background;
+      snappedDot.style.background = '#4CAF50';
+      snappedDot.style.transform = 'scale(1.6)';
+      setTimeout(() => {
+        snappedDot.style.background = origBg;
+        snappedDot.style.transform = 'scale(1)';
+      }, 400);
+    }
+  }
+
+  if (mode === 'province') {
+    provincePoints[currentProvince] = tempPoints;
+  } else {
+    cityPoints[currentCity] = tempPoints;
+  }
+
+  updateStatus();
+  updatePointList();
+  updateDotHighlight(); // 更新高亮显示
+  saveToStorage(); // 自动保存
+});
+
+// 双击完成
+mapContainer.addEventListener('dblclick', (e) => {
+  // 忽略标注点上的双击
+  if (e.target.style.borderRadius === '50%' && e.target.style.width === '8px') return;
+
+  const target = mode === 'province' ? currentProvince : currentCity;
+  if (!target) return;
+  e.preventDefault();
+
+  const count = tempPoints.length;
+  if (count < 3) {
+    alert(`点数不足（${count}个），至少需要 3 个点`);
+    return;
+  }
+
+  alert(`已完成 ${target} 的标注，共 ${count} 个点`);
+  renderSelector();
+  updateProgress();
+});
+// 绘制点
+function drawPoint(x, y, isSnapped = false) {
+  const dot = document.createElement('div');
+  dot.style.cssText = `position: absolute; left: ${x - 4}px; top: ${y - 4}px; width: 8px; height: 8px; background: ${isSnapped ? '#4CAF50' : '#c42c2c'}; border-radius: 50%; border: 2px solid #fff; cursor: pointer; z-index: 10; box-shadow: 0 0 6px #0008; transition: all 0.3s ease;`;
+  dot._x = x;
+  dot._y = y;
+  dot._province = mode === 'province' ? currentProvince : null;
+  dot._city = mode === 'city' ? currentCity : null;
+
+  // 右键删除
+  dot.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deletePoint(dot);
+  });
+
+  // 悬停效果
+  dot.addEventListener('mouseenter', () => {
+    dot.style.transform = 'scale(1.4)';
+    dot.style.boxShadow = '0 0 10px #ff0';
+  });
+  dot.addEventListener('mouseleave', () => {
+    dot.style.transform = 'scale(1)';
+    dot.style.boxShadow = '0 0 6px #0008';
+  });
+
+  map.parentElement.appendChild(dot);
+  allDots.push(dot);
+
+  // 如果是吸附的点，显示一个提示动画
+  if (isSnapped) {
+    dot.style.transform = 'scale(1.5)';
+    setTimeout(() => { dot.style.transform = 'scale(1)'; }, 300);
+  }
+}
+
+// 更新点的高亮显示
+function updateDotHighlight() {
+  allDots.forEach(dot => {
+    // 检查是否属于当前项目（支持多项目共享，逗号分隔）
+    const isCurrentItem = (mode === 'province' && dot._province && dot._province.includes(currentProvince)) ||
+                          (mode === 'city' && dot._city && dot._city.includes(currentCity));
+    // 只显示当前模式的点（州或城池）
+    const isCurrentMode = (mode === 'province' && dot._province) || (mode === 'city' && dot._city);
+    dot.style.display = isCurrentMode ? 'block' : 'none';
+    dot.style.opacity = isCurrentItem ? '1' : '0.4';
+  });
+}
+
+// 重绘所有已保存的点（合并相同坐标，支持多项目共享）
+function redrawAllDots() {
+  // 先清除所有点
+  allDots.forEach(dot => dot.remove());
+  allDots.length = 0;
+
+  // 收集所有唯一的坐标点，并记录它们属于哪些项目
+  const pointMap = new Map(); // key: "x,y", value: { x, y, provinces: [], cities: [] }
+
+  // 收集州界点
+  for (const [province, points] of Object.entries(provincePoints)) {
+    if (points && points.length > 0) {
+      points.forEach(p => {
+        const key = `${p.x},${p.y}`;
+        if (!pointMap.has(key)) {
+          pointMap.set(key, { x: p.x, y: p.y, provinces: [], cities: [] });
+        }
+        pointMap.get(key).provinces.push(province);
+      });
+    }
+  }
+
+  // 收集城池点
+  for (const city of getVisibleCities()) {
+    const points = getCityPoints(city);
+    if (points && points.length > 0) {
+      points.forEach(p => {
+        const key = `${p.x},${p.y}`;
+        if (!pointMap.has(key)) {
+          pointMap.set(key, { x: p.x, y: p.y, provinces: [], cities: [] });
+        }
+        pointMap.get(key).cities.push(city);
+      });
+    }
+  }
+
+  // 为每个唯一坐标创建一个DOM点
+  for (const point of pointMap.values()) {
+    const dot = document.createElement('div');
+    dot.style.cssText = `position: absolute; left: ${point.x - 4}px; top: ${point.y - 4}px; width: 8px; height: 8px; background: #c42c2c; border-radius: 50%; border: 2px solid #fff; cursor: pointer; z-index: 10; box-shadow: 0 0 6px #0008; transition: all 0.3s ease;`;
+    dot._x = point.x;
+    dot._y = point.y;
+    // 支持多项目共享（逗号分隔）
+    dot._province = point.provinces.length > 0 ? point.provinces.join(',') : null;
+    dot._city = point.cities.length > 0 ? point.cities.join(',') : null;
+
+    // 右键删除
+    dot.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      deletePoint(dot);
+    });
+
+    // 悬停效果
+    dot.addEventListener('mouseenter', () => {
+      dot.style.transform = 'scale(1.4)';
+      dot.style.boxShadow = '0 0 10px #ff0';
+    });
+    dot.addEventListener('mouseleave', () => {
+      dot.style.transform = 'scale(1)';
+      dot.style.boxShadow = '0 0 6px #0008';
+    });
+
+    map.parentElement.appendChild(dot);
+    allDots.push(dot);
+  }
+
+  updateDotHighlight();
+}
+
+// 删除标注点（右键）
+function deletePoint(dot) {
+  const pointData = { x: dot._x, y: dot._y };
+
+  // 获取当前要删除的项目（根据模式决定）
+  let targetProject = null;
+  let isProvince = false;
+
+  if (mode === 'province') {
+    targetProject = currentProvince;
+    isProvince = true;
+  } else {
+    targetProject = currentCity;
+    isProvince = false;
+  }
+
+  if (!targetProject) return;
+
+  // 从数据中移除
+  if (isProvince && provincePoints[targetProject]) {
+    const idx = provincePoints[targetProject].findIndex(p => p.x === pointData.x && p.y === pointData.y);
+    if (idx >= 0) provincePoints[targetProject].splice(idx, 1);
+
+    // 如果删除的是当前选中项目的点，更新 tempPoints
+    if (currentProvince === targetProject) {
+      tempPoints = provincePoints[targetProject];
+    }
+
+    // 更新DOM点的归属标记
+    if (dot._province) {
+      const provinces = dot._province.split(',').filter(p => p !== targetProject);
+      dot._province = provinces.length > 0 ? provinces.join(',') : null;
+    }
+  } else if (!isProvince && cityPoints[targetProject]) {
+    const idx = cityPoints[targetProject].findIndex(p => p.x === pointData.x && p.y === pointData.y);
+    if (idx >= 0) cityPoints[targetProject].splice(idx, 1);
+
+    // 如果删除的是当前选中项目的点，更新 tempPoints
+    if (currentCity === targetProject) {
+      tempPoints = cityPoints[targetProject];
+    }
+
+    // 更新DOM点的归属标记
+    if (dot._city) {
+      const cities = dot._city.split(',').filter(c => c !== targetProject);
+      dot._city = cities.length > 0 ? cities.join(',') : null;
+    }
+  }
+
+  // 只有当这个点不属于任何项目时才从DOM移除
+  if (!dot._province && !dot._city) {
+    dot.remove();
+    const allIdx = allDots.indexOf(dot);
+    if (allIdx >= 0) allDots.splice(allIdx, 1);
+  } else {
+    // 否则只是更新高亮
+    updateDotHighlight();
+  }
+
+  // 更新界面
+  updateStatus();
+  updatePointList();
+  renderSelector();
+  updateProgress();
+  saveToStorage();
+}
+
+// 撤销
+function undoLastPoint() {
+  if (tempPoints.length === 0) return;
+  tempPoints.pop();
+
+  // 移除最后一个点的 DOM 元素（只移除当前项目的点）
+  for (let i = allDots.length - 1; i >= 0; i--) {
+    const dot = allDots[i];
+    const isCurrentItem = (mode === 'province' && dot._province === currentProvince) ||
+                          (mode === 'city' && dot._city === currentCity);
+    if (isCurrentItem) {
+      dot.remove();
+      allDots.splice(i, 1);
+      break;
+    }
+  }
+
+  if (mode === 'province') {
+    provincePoints[currentProvince] = tempPoints;
+  } else {
+    cityPoints[currentCity] = tempPoints;
+  }
+
+  updateStatus();
+  updatePointList();
+  saveToStorage(); // 自动保存
+}
+
+// 清除
+function clearCurrent() {
+  const target = mode === 'province' ? currentProvince : currentCity;
+  if (!target) return;
+  if (!confirm(`确定清除 ${target} 的所有标注点？`)) return;
+
+  tempPoints = [];
+
+  // 移除当前项目的所有点
+  for (let i = allDots.length - 1; i >= 0; i--) {
+    const dot = allDots[i];
+    const isCurrentItem = (mode === 'province' && dot._province === currentProvince) ||
+                          (mode === 'city' && dot._city === currentCity);
+    if (isCurrentItem) {
+      dot.remove();
+      allDots.splice(i, 1);
+    }
+  }
+
+  if (mode === 'province') {
+    provincePoints[currentProvince] = tempPoints;
+  } else {
+    cityPoints[currentCity] = tempPoints;
+  }
+
+  updateStatus();
+  updatePointList();
+  renderSelector();
+  updateProgress();
+  saveToStorage(); // 自动保存
+}
+
+// 更新进度
+function updateProgress() {
+  const provDone = PROVINCES.filter(p => provincePoints[p] && provincePoints[p].length >= 3).length;
+  const cityDone = ALL_CITIES.filter(c => getCityPoints(c).length >= 3).length;
+
+  document.getElementById('provinceProgress').textContent = `${provDone}/${PROVINCES.length}`;
+  document.getElementById('cityProgress').textContent = `${cityDone}/${ALL_CITIES.length}`;
+}
+
+function rawPointsToPath(points) {
+  if (!points || points.length < 3) return null;
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+}
+
+// 州界在人工顺序和自动重排之间选择更短、更少交叉的候选路径。
+function provincePointsToPath(points) {
+  if (!points || points.length < 3) return null;
+  return window.annotationPathUtils.provincePointsToSvgPath(points);
+}
+
+// 城池共享边界点可能被跨段点击，导出前整理成无自交轮廓。
+function pointsToPath(points) {
+  if (!points || points.length < 3) return null;
+  return window.annotationPathUtils.pointsToSvgPath(points);
+}
+
+function getCityPoints(city) {
+  return window.annotationPathUtils.getCityBoundaryPoints(city, cityPoints, provincePoints);
+}
+
+// 同步数据到文件（供开发查看）
+function syncToFile() {
+  // 先保存当前项目
+  if (mode === 'province' && currentProvince) {
+    provincePoints[currentProvince] = tempPoints;
+  } else if (mode === 'city' && currentCity) {
+    cityPoints[currentCity] = tempPoints;
+  }
+  saveToStorage();
+
+  const data = { provincePoints, cityPoints };
+  fetch('/api/save-annotation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.ok) {
+      alert('✅ 数据已同步到文件！开发者可以查看了');
+    } else {
+      alert('❌ 同步失败：' + (res.error || '未知错误'));
+    }
+  })
+  .catch(err => {
+    alert('❌ 同步失败：' + err.message);
+  });
+}
+
+// 导出
+function exportData() {
+  // 先保存当前项目
+  if (mode === 'province' && currentProvince) {
+    provincePoints[currentProvince] = tempPoints;
+  } else if (mode === 'city' && currentCity) {
+    cityPoints[currentCity] = tempPoints;
+  }
+  saveToStorage();
+
+  let code = `// 双层标注数据 - 生成于 ${new Date().toLocaleString('zh-CN')}\n\n`;
+
+  // 州地块
+  code += '// ========== 州地块 SVG 路径 ==========\n';
+  code += 'export const PROVINCE_BLOCKS = {\n';
+  for (const p of PROVINCES) {
+    const pts = provincePoints[p];
+    if (!pts || pts.length < 3) {
+      code += `  // "${p}": 未标注\n`;
+      continue;
+    }
+    const cx = Math.round(pts.reduce((s, p) => s + p.x, 0) / pts.length);
+    const cy = Math.round(pts.reduce((s, p) => s + p.y, 0) / pts.length);
+    const d = provincePointsToPath(pts);
+    code += `  "${p}": { d: "${d}", cx: ${cx}, cy: ${cy}, labelX: ${cx}, labelY: ${cy} },\n`;
+  }
+  code += '};\n\n';
+
+  // 城池
+  code += '// ========== 城池势力范围 SVG 路径 ==========\n';
+  code += 'export const CITY_BLOCKS = {\n';
+  for (const c of getVisibleCities()) {
+    const pts = getCityPoints(c);
+    if (!pts || pts.length < 3) {
+      code += `  // "${c}": 未标注\n`;
+      continue;
+    }
+    const cx = Math.round(pts.reduce((s, p) => s + p.x, 0) / pts.length);
+    const cy = Math.round(pts.reduce((s, p) => s + p.y, 0) / pts.length);
+    const province = Object.entries(CITIES_BY_PROVINCE).find(([, cities]) => cities.includes(c))?.[0] || '';
+    const d = pointsToPath(pts);
+    code += `  "${c}": { d: "${d}", cx: ${cx}, cy: ${cy}, province: "${province}" },\n`;
+  }
+  code += '};\n\n';
+
+  // 城池列表
+  code += '// ========== 城池基础信息 ==========\n';
+  code += 'export const CITY_LIST = [\n';
+  for (const c of getVisibleCities()) {
+    const pts = getCityPoints(c);
+    if (!pts || pts.length < 3) continue;
+    const cx = Math.round(pts.reduce((s, p) => s + p.x, 0) / pts.length);
+    const cy = Math.round(pts.reduce((s, p) => s + p.y, 0) / pts.length);
+    const province = Object.entries(CITIES_BY_PROVINCE).find(([, cities]) => cities.includes(c))?.[0] || '';
+    const isCapital = ['长安', '洛阳', '成都', '襄阳', '合肥', '县', '许昌', '下邳', '江陵', '秣陵', '番禺'].includes(c);
+    code += `  { id: "${c.toLowerCase().replace(/[^a-z]/g, '')}", name: "${c}", province: "${province}", x: ${cx}, y: ${cy}, is_capital: ${isCapital} },\n`;
+  }
+  code += '];\n';
+
+  exportOutput.value = code;
+  exportOutput.select();
+}
+
+// 启动
+init();
+</script>
+</body>
+</html>

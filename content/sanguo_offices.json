@@ -1,0 +1,14 @@
+{
+  "offices": [
+    {"key":"chief_strategist","name":"首席军师","ability_field":"intelligence","vacancy_penalty":20,"titles":{"流亡军":"军师","荆州立足":"军师中郎将","益州牧":"军师将军","汉中王":"军师","称帝后":"丞相／首席军师"},"effect":"提高谋划、事件预判与计策执行效率"},
+    {"key":"military_chief","name":"军政长","ability_field":"leadership","vacancy_penalty":20,"titles":{"流亡军":"军政主簿","荆州立足":"军司马","益州牧":"治中从事","汉中王":"尚书仆射（军政）","称帝后":"尚书令（军政）"},"effect":"提高军队整编与多军协调效率"},
+    {"key":"civil_chief","name":"政务长","ability_field":"politics","vacancy_penalty":20,"titles":{"流亡军":"政务主簿","荆州立足":"治中","益州牧":"别驾从事","汉中王":"尚书仆射（政务）","称帝后":"尚书令（政务）"},"effect":"提高法令、治理与官署执行效率"},
+    {"key":"finance_chief","name":"财政长","ability_field":"politics","vacancy_penalty":20,"titles":{"流亡军":"粮秣主簿","荆州立足":"仓曹掾","益州牧":"劝学从事／仓曹","汉中王":"度支尚书","称帝后":"度支尚书"},"effect":"提高军资、粮秣和郡仓调度效率"},
+    {"key":"diplomacy_chief","name":"外交长","ability_field":"diplomacy","vacancy_penalty":20,"titles":{"流亡军":"行人","荆州立足":"从事中郎","益州牧":"使者署长","汉中王":"大鸿胪属官","称帝后":"大鸿胪"},"effect":"提高结盟、谈判与违约预警效率"},
+    {"key":"intelligence_chief","name":"情报长","ability_field":"intelligence","vacancy_penalty":20,"titles":{"流亡军":"军中耳目","荆州立足":"督邮密曹","益州牧":"州牧密曹","汉中王":"司闻曹","称帝后":"司闻校尉"},"effect":"提高军情等级、细作与反间效率"},
+    {"key":"main_commander","name":"主力统帅","ability_field":"leadership","vacancy_penalty":20,"titles":{"流亡军":"前军主将","荆州立足":"荡寇将军","益州牧":"大将军属将","汉中王":"前将军／大将","称帝后":"大将军"},"effect":"提高主力军团统率与军心"},
+    {"key":"guard_commander","name":"禁卫统帅","ability_field":"leadership","vacancy_penalty":15,"titles":{"流亡军":"亲卫统领","荆州立足":"牙门将军","益州牧":"中护军","汉中王":"中护军","称帝后":"中护军／禁卫统帅"},"effect":"提高刘备安全与核心人物护卫"},
+    {"key":"governor","name":"郡守","ability_field":"politics","vacancy_penalty":20,"titles":{"流亡军":"驻地长史","荆州立足":"郡太守","益州牧":"郡太守","汉中王":"郡太守","称帝后":"郡太守"},"effect":"提高指定郡的治理、征收与稳定"},
+    {"key":"theater_governor","name":"战区都督","ability_field":"leadership","vacancy_penalty":20,"titles":{"流亡军":"分军主将","荆州立足":"督军","益州牧":"都督","汉中王":"都督","称帝后":"都督"},"effect":"提高指定战区的跨军协同与守备"}
+  ]
+}

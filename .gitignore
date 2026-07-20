@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.python-version
+.venv/
+venv/
+env/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+*.local
+secrets/
+build
+dist
+!web/build/
+!web/build/icon.png
+!web/build/icon.ico
+!web/build/icon.icns
+# Logs and runtime files
+*.log
+logs/
+tmp/
+temp/
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Local AI assistant workspace
+.claude/
+.codex/
+CLAUDE.md
+web/public/portraits/_original_before_cutout
+
+# Test / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+output
+# Frontend
+web/node_modules/
+web/dist/
+web/release/
+web/tsconfig.tsbuildinfo
+.vscode/
+
+# Portrait local backups (rembg 抠图前的 RGB 原图，git 历史里有，无需入库)
+web/public/portraits/_backup_rgb/
+output/imagegen/bg_ending.png
+output/imagegen/ending_timeline_scroll.png
+web/public/bg_ending.webp
+web/public/ending_timeline_scroll.webp

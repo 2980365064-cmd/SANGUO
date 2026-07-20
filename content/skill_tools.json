@@ -1,0 +1,18 @@
+{
+  "check_treasury_prefix": "查军资粮秣：",
+  "check_military": "{event_title}军情复核：军队警讯为{army_warning}。",
+  "front_line_plan": "前线部署须核对路线、粮秣、关隘与各军本月军令：{army_detail}。",
+  "strategic_review": "复核{event_title}：先看兵力、粮道、盟约与历史事件窗口。",
+  "inner_court_inquiry": "家族与近侍查访只能提供低影响线索，不得直接落高影响事实。",
+  "secret_investigation": "密查{subject}与{event_title}，只取可验证线索并记录风险。",
+  "factory_network_probe": "地方耳目回报{event_title}，须再由情报与规则盘面核实。",
+  "intimidate_obstruction": "威慑{target}可能加快执行，但会结算名分、民望与互信代价。",
+  "convene_court_debate": "召集群议{event_title}，比较军资、粮秣、名分与外交代价。",
+  "estimate_project_workshop": "估算{event_title}所需军资、粮秣、人物与回合数。",
+  "estimate_project_default": "{event_title}须先核资源与承办人，不得空立。",
+  "draft_edict": "命{executor}承办{event_title}，依“{policy}”执行，限期具实回报。",
+  "directive_generic": "命{actor}承办{event_title}：{action}。",
+  "directive_funds": "命{actor}为{purpose}调度资源{amount}，逐项记录。",
+  "directive_troops": "命{actor}依路线与单军单令规则调度{target}：{action}。",
+  "directive_investigation": "命{actor}以{method}查核{target}，只取实据。"
+}

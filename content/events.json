@@ -1,0 +1,207 @@
+[
+  {
+    "id": "xinye_aftermath", "title": "新野余波", "kind": "生存", "event_type": "node",
+    "summary": "曹军南下，刘备集团必须在江夏寄驻期间保全军民与政治号召。",
+    "urgency": 90, "severity": 90, "credibility": 100, "interests": ["刘备集团", "荆州百姓"], "audiences": ["刘备", "诸葛亮"],
+    "trigger_year": 208, "trigger_month": 8, "trigger_end_year": 208, "trigger_end_month": 10, "is_historical": true,
+    "precondition": "刘备军尚存，但无稳定郡县根基。", "require": {}, "trigger_gate": {},
+    "roles": {"主将": {"primary": "刘备", "alternates": [], "required": true}, "谋主": {"primary": "诸葛亮", "alternates": ["孙乾", "糜竺"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei"]},
+    "variants": [
+      {"id": "refugees_preserved", "title": "保全军民", "effects": {"metric_delta": {"民望": 5, "粮秣": -3}}},
+      {"id": "military_withdrawal", "title": "军事优先撤离", "effects": {"metric_delta": {"军心": 4, "民望": -4}}}
+    ]
+  },
+  {
+    "id": "sun_liu_alliance", "title": "孙刘联盟", "kind": "外交", "event_type": "node",
+    "summary": "曹操压境，孙权与刘备集团需决定是否建立可执行的军事联盟。",
+    "urgency": 95, "severity": 92, "credibility": 100, "interests": ["刘备", "孙权", "荆州"], "audiences": ["诸葛亮", "孙权", "周瑜"],
+    "trigger_year": 208, "trigger_month": 9, "trigger_end_year": 208, "trigger_end_month": 11, "is_historical": true,
+    "precondition": "刘备与孙权势力均存续，且共同面临曹操南征。", "require": {}, "trigger_gate": {},
+    "roles": {"刘备使者": {"primary": "诸葛亮", "alternates": ["孙乾", "糜竺"], "required": true}, "江东主君": {"primary": "孙权", "alternates": [], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "sun_quan"]},
+    "variants": [
+      {"id": "alliance_formed", "title": "结成抗曹联盟", "effects": {"metric_delta": {"名分": 4, "军心": 3}, "relation_delta": {"power": "sun_quan", "trust": 12, "military_coordination": 18}}},
+      {"id": "limited_cooperation", "title": "有限协同", "effects": {"metric_delta": {"军心": 1}, "relation_delta": {"power": "sun_quan", "trust": 3, "military_coordination": 6}}},
+      {"id": "talks_broken", "title": "谈判破裂", "effects": {"metric_delta": {"军心": -5, "名分": -2}, "relation_delta": {"power": "sun_quan", "trust": -12, "military_coordination": -10}}}
+    ]
+  },
+  {
+    "id": "red_cliffs", "title": "赤壁战局", "kind": "战役", "event_type": "node",
+    "summary": "长江战区决战窗口开启，实际胜负由军队、补给、外交与战役结算决定。",
+    "urgency": 100, "severity": 100, "credibility": 100, "interests": ["曹操", "孙权", "刘备"], "audiences": ["周瑜", "诸葛亮", "曹操"],
+    "trigger_year": 208, "trigger_month": 11, "trigger_end_year": 209, "trigger_end_month": 1, "is_historical": true,
+    "precondition": "曹、孙两方政权尚存，长江战区仍有可投入军队。", "require": {}, "trigger_gate": {},
+    "roles": {"联军都督": {"primary": "周瑜", "alternates": ["鲁肃"], "required": true}, "刘备军谋主": {"primary": "诸葛亮", "alternates": ["刘备", "孙乾"], "required": true}, "曹军主将": {"primary": "曹操", "alternates": ["曹仁"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["cao_cao", "sun_quan"]},
+    "variants": [
+      {"id": "cao_withdraws", "title": "曹军退出长江战区", "effects": {"metric_delta": {"军心": 8, "民望": 5}}},
+      {"id": "stalemate", "title": "战局僵持", "effects": {"metric_delta": {"粮秣": -6, "军心": -2}}},
+      {"id": "alliance_defeated", "title": "联军受挫", "effects": {"metric_delta": {"军心": -12, "民望": -6}}}
+    ]
+  },
+  {
+    "id": "jingnan_campaign", "title": "荆南立足", "kind": "扩张", "event_type": "node",
+    "summary": "赤壁后的荆州权力真空引出荆南经略机会。",
+    "urgency": 78, "severity": 72, "credibility": 95, "interests": ["荆州", "刘备", "孙权"], "audiences": ["刘备", "诸葛亮", "关羽"],
+    "trigger_year": 209, "trigger_month": 1, "trigger_end_year": 211, "trigger_end_month": 12, "is_historical": true,
+    "precondition": "刘备集团尚有建制军队可执行荆州政略。", "require": {}, "trigger_gate": {},
+    "roles": {"决策者": {"primary": "刘备", "alternates": [], "required": true}, "前线统帅": {"primary": "关羽", "alternates": ["张飞", "赵云"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei"]},
+    "variants": [
+      {"id": "jingnan_foothold", "title": "建立荆南根基", "effects": {"metric_delta": {"民望": 5, "粮秣": 5, "士族支持": 3}}},
+      {"id": "partial_foothold", "title": "有限立足", "effects": {"metric_delta": {"民望": 2, "粮秣": -2}}},
+      {"id": "jingnan_blocked", "title": "立足受阻", "effects": {"metric_delta": {"军心": -5, "粮秣": -5}}}
+    ]
+  },
+  {
+    "id": "sun_lady_marriage", "title": "孙夫人联姻", "kind": "婚盟", "event_type": "node",
+    "summary": "孙刘关系进入以婚姻维系或相互牵制的窗口。",
+    "urgency": 60, "severity": 55, "credibility": 90, "interests": ["刘备家族", "孙氏", "联盟"], "audiences": ["刘备", "孙尚香", "孙权"],
+    "trigger_year": 209, "trigger_month": 12, "trigger_end_year": 211, "trigger_end_month": 12, "is_historical": true,
+    "precondition": "刘备与孙权均存，双方仍有外交接触。", "require": {}, "trigger_gate": {},
+    "roles": {"联姻男方": {"primary": "刘备", "alternates": [], "required": true}, "联姻女方": {"primary": "孙尚香", "alternates": [], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "sun_quan"]},
+    "variants": [
+      {"id": "marriage_concluded", "title": "联姻成立", "effects": {"metric_delta": {"名分": 2}, "relation_delta": {"power": "sun_quan", "trust": 8}}},
+      {"id": "marriage_refused", "title": "联姻未成", "effects": {"metric_delta": {"士族支持": 1}, "relation_delta": {"power": "sun_quan", "trust": -5}}}
+    ]
+  },
+  {
+    "id": "enter_yizhou", "title": "入蜀抉择", "kind": "政略", "event_type": "node",
+    "summary": "益州内外压力使刘备获得入川机会，但同宗名义与长线补给均将受考验。",
+    "urgency": 80, "severity": 78, "credibility": 92, "interests": ["刘备", "刘璋", "益州士族"], "audiences": ["庞统", "法正", "刘璋"],
+    "trigger_year": 211, "trigger_month": 1, "trigger_end_year": 213, "trigger_end_month": 12, "is_historical": true,
+    "precondition": "刘备与刘璋势力均存续。", "require": {}, "trigger_gate": {},
+    "roles": {"入川主君": {"primary": "刘备", "alternates": [], "required": true}, "益州向导": {"primary": "庞统", "alternates": ["法正", "诸葛亮"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "liu_zhang"]},
+    "variants": [
+      {"id": "accepted_invitation", "title": "率军入川", "effects": {"metric_delta": {"粮秣": -5, "军心": 3}}},
+      {"id": "declined_invitation", "title": "留守荆州", "effects": {"metric_delta": {"士族支持": 2, "名分": -1}}},
+      {"id": "different_entry", "title": "以其他条件入川", "effects": {"metric_delta": {"军资": -4, "名分": 1}}}
+    ]
+  },
+  {
+    "id": "chengdu_surrender", "title": "成都归降", "kind": "攻城", "event_type": "node",
+    "summary": "成都的归属将决定刘备集团能否从客军转为益州政权。",
+    "urgency": 88, "severity": 90, "credibility": 95, "interests": ["成都", "刘璋", "刘备"], "audiences": ["刘备", "刘璋", "法正"],
+    "trigger_year": 214, "trigger_month": 1, "trigger_end_year": 214, "trigger_end_month": 12, "is_historical": true,
+    "precondition": "刘备与刘璋均尚在场，成都战局进入可决断阶段。", "require": {}, "trigger_gate": {},
+    "roles": {"进取方": {"primary": "刘备", "alternates": [], "required": true}, "成都之主": {"primary": "刘璋", "alternates": [], "required": true}, "劝降者": {"primary": "法正", "alternates": ["庞统", "诸葛亮"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "liu_zhang"]},
+    "variants": [
+      {"id": "peaceful_surrender", "title": "成都开城", "effects": {"metric_delta": {"民望": 8, "士族支持": 6, "名分": 3}, "region_control": {"chengdu": "liu_bei"}}},
+      {"id": "chengdu_taken", "title": "攻取成都", "effects": {"metric_delta": {"军心": 5, "民望": -5, "粮秣": -8}, "region_control": {"chengdu": "liu_bei"}}},
+      {"id": "campaign_failed", "title": "取蜀受挫", "effects": {"metric_delta": {"军心": -9, "粮秣": -8}}}
+    ]
+  },
+  {
+    "id": "xiangshui_division", "title": "湘水划界", "kind": "外交", "event_type": "node",
+    "summary": "孙刘两家围绕荆州归属进入公开谈判或军事对峙。",
+    "urgency": 82, "severity": 80, "credibility": 95, "interests": ["荆州", "孙权", "刘备"], "audiences": ["鲁肃", "关羽", "孙权"],
+    "trigger_year": 215, "trigger_month": 1, "trigger_end_year": 215, "trigger_end_month": 12, "is_historical": true,
+    "precondition": "孙刘两方势力尚存，且对荆州仍有利益冲突。", "require": {}, "trigger_gate": {},
+    "roles": {"刘备方主谈": {"primary": "关羽", "alternates": ["诸葛亮", "法正"], "required": true}, "孙权方主谈": {"primary": "鲁肃", "alternates": ["吕蒙", "孙权"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "sun_quan"]},
+    "variants": [
+      {"id": "border_settlement", "title": "达成划界", "effects": {"metric_delta": {"名分": 2, "军心": -1}, "relation_delta": {"power": "sun_quan", "trust": 3}}},
+      {"id": "armed_standoff", "title": "军事对峙", "effects": {"metric_delta": {"粮秣": -5, "军心": 2}, "relation_delta": {"power": "sun_quan", "trust": -10}}},
+      {"id": "new_partition", "title": "改定荆州边界", "effects": {"metric_delta": {"名分": 1}, "relation_delta": {"power": "sun_quan", "trust": 1}}}
+    ]
+  },
+  {
+    "id": "hanzhong_campaign", "title": "汉中争夺", "kind": "战役", "event_type": "node",
+    "summary": "汉中门户的归属决定益州北部安全与北伐可能。",
+    "urgency": 92, "severity": 92, "credibility": 98, "interests": ["汉中", "刘备", "曹操"], "audiences": ["刘备", "黄忠", "曹操"],
+    "trigger_year": 217, "trigger_month": 1, "trigger_end_year": 219, "trigger_end_month": 7, "is_historical": true,
+    "precondition": "刘备与曹操集团均尚有西部作战能力。", "require": {}, "trigger_gate": {},
+    "roles": {"刘备方统帅": {"primary": "刘备", "alternates": ["诸葛亮"], "required": true}, "前锋大将": {"primary": "黄忠", "alternates": ["张飞", "赵云"], "required": true}, "曹军统帅": {"primary": "曹操", "alternates": ["夏侯渊", "曹仁"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "cao_cao"]},
+    "variants": [
+      {"id": "hanzhong_secured", "title": "控制汉中", "effects": {"metric_delta": {"军心": 8, "名分": 5}, "region_control": {"hanzhong": "liu_bei"}}},
+      {"id": "hanzhong_contested", "title": "汉中僵持", "effects": {"metric_delta": {"粮秣": -10, "军心": -2}}},
+      {"id": "northern_gate_lost", "title": "北门受挫", "effects": {"metric_delta": {"军心": -10, "名分": -4}}}
+    ]
+  },
+  {
+    "id": "king_of_hanzhong", "title": "进位汉中王", "kind": "名分", "event_type": "node",
+    "summary": "刘备集团面临是否以汉中王名号建立准国家架构的政治抉择。",
+    "urgency": 72, "severity": 68, "credibility": 96, "interests": ["汉室名分", "益州士族", "军府"], "audiences": ["刘备", "诸葛亮", "法正"],
+    "trigger_year": 219, "trigger_month": 7, "trigger_end_year": 219, "trigger_end_month": 10, "is_historical": true,
+    "precondition": "刘备尚在且集团已具备可支撑王号的领地与威望。", "require": {}, "trigger_gate": {},
+    "roles": {"受推戴者": {"primary": "刘备", "alternates": [], "required": true}, "劝进文臣": {"primary": "诸葛亮", "alternates": ["法正", "糜竺"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei"]},
+    "variants": [
+      {"id": "title_accepted", "title": "进位汉中王", "effects": {"metric_delta": {"名分": 10, "士族支持": 5}}},
+      {"id": "title_deferred", "title": "暂缓进位", "effects": {"metric_delta": {"民望": 2, "名分": -2}}}
+    ]
+  },
+  {
+    "id": "jingzhou_collapse", "title": "荆州崩解", "kind": "危机", "event_type": "node",
+    "summary": "荆州前线、孙刘互信与襄樊战局同时进入高风险窗口。",
+    "urgency": 98, "severity": 100, "credibility": 98, "interests": ["荆州", "关羽", "孙权"], "audiences": ["关羽", "吕蒙", "陆逊"],
+    "trigger_year": 219, "trigger_month": 10, "trigger_end_year": 220, "trigger_end_month": 2, "is_historical": true,
+    "precondition": "关羽与东吴尚有可影响荆州的军事主体。", "require": {}, "trigger_gate": {},
+    "roles": {"荆州守将": {"primary": "关羽", "alternates": [], "required": true}, "东吴主将": {"primary": "吕蒙", "alternates": ["陆逊", "孙权"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "sun_quan"]},
+    "variants": [
+      {"id": "historical_collapse", "title": "荆州防线崩解", "effects": {"metric_delta": {"军心": -15, "名分": -5}, "relation_delta": {"power": "sun_quan", "trust": -25}}},
+      {"id": "jingzhou_held", "title": "保全荆州防线", "effects": {"metric_delta": {"军心": 10, "名分": 5}, "relation_delta": {"power": "sun_quan", "trust": -10}}},
+      {"id": "orderly_withdrawal", "title": "有序撤出前线", "effects": {"metric_delta": {"军心": -3, "粮秣": -4}}}
+    ]
+  },
+  {
+    "id": "cao_pi_usurpation", "title": "曹丕代汉", "kind": "天下", "event_type": "node",
+    "summary": "汉廷名义的终结将重构各方政权的合法性竞争。",
+    "urgency": 92, "severity": 95, "credibility": 100, "interests": ["汉室", "曹魏", "刘备"], "audiences": ["曹丕", "刘备", "诸葛亮"],
+    "trigger_year": 220, "trigger_month": 10, "trigger_end_year": 220, "trigger_end_month": 12, "is_historical": true,
+    "precondition": "曹丕尚在且曹氏政权存续。", "require": {}, "trigger_gate": {},
+    "roles": {"代汉者": {"primary": "曹丕", "alternates": [], "required": true}, "汉室宗亲": {"primary": "刘备", "alternates": [], "required": true}},
+    "hard_conditions": {"required_powers_active": ["cao_cao", "liu_bei"]},
+    "variants": [
+      {"id": "wei_founded", "title": "魏政权建立", "effects": {"metric_delta": {"名分": 8, "士族支持": 2}}},
+      {"id": "abdication_blocked", "title": "代汉进程受阻", "effects": {"metric_delta": {"名分": 2}}}
+    ]
+  },
+  {
+    "id": "chengdu_enthronement", "title": "成都称帝", "kind": "名分", "event_type": "node",
+    "summary": "汉祚断绝后，刘备集团需决定是否在成都继统建国。",
+    "urgency": 88, "severity": 85, "credibility": 98, "interests": ["刘备", "益州士族", "汉室名分"], "audiences": ["刘备", "诸葛亮", "刘禅"],
+    "trigger_year": 221, "trigger_month": 4, "trigger_end_year": 221, "trigger_end_month": 7, "is_historical": true,
+    "precondition": "刘备尚在，并有可支撑称帝的核心领地。", "require": {}, "trigger_gate": {},
+    "roles": {"继统者": {"primary": "刘备", "alternates": [], "required": true}, "劝进大臣": {"primary": "诸葛亮", "alternates": ["李严", "糜竺"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei"]},
+    "variants": [
+      {"id": "shuhan_founded", "title": "成都建国", "effects": {"metric_delta": {"名分": 12, "士族支持": 6, "民望": 4}}},
+      {"id": "enthronement_deferred", "title": "暂不称帝", "effects": {"metric_delta": {"民望": 2, "名分": -4}}}
+    ]
+  },
+  {
+    "id": "eastern_campaign_yiling", "title": "伐吴与夷陵", "kind": "战役", "event_type": "node",
+    "summary": "荆州、复仇、联盟与国家战略的冲突集中于东征抉择及夷陵战区。",
+    "urgency": 94, "severity": 100, "credibility": 98, "interests": ["蜀汉", "东吴", "荆州"], "audiences": ["刘备", "陆逊", "赵云"],
+    "trigger_year": 221, "trigger_month": 7, "trigger_end_year": 222, "trigger_end_month": 9, "is_historical": true,
+    "precondition": "刘备与孙权政权均存续，双方仍有发动东线战争的军队。", "require": {}, "trigger_gate": {},
+    "roles": {"蜀军统帅": {"primary": "刘备", "alternates": [], "required": true}, "吴军都督": {"primary": "陆逊", "alternates": ["吕蒙", "孙权"], "required": true}, "蜀军谏臣": {"primary": "赵云", "alternates": ["诸葛亮", "黄权"], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei", "sun_quan"]},
+    "variants": [
+      {"id": "historical_yiling_defeat", "title": "东征军受重挫", "effects": {"metric_delta": {"军心": -18, "粮秣": -15, "民望": -6}}},
+      {"id": "campaign_aborted", "title": "中止东征", "effects": {"metric_delta": {"军心": -3, "粮秣": 3}}},
+      {"id": "eastern_victory", "title": "东线获胜", "effects": {"metric_delta": {"军心": 12, "名分": 5}, "relation_delta": {"power": "sun_quan", "trust": -20}}}
+    ]
+  },
+  {
+    "id": "baidi_entrustment", "title": "白帝托孤", "kind": "终局", "event_type": "node",
+    "summary": "223年四月的政权继承窗口，实际结局由刘备生命状态、天下局势与硬规则决定。",
+    "urgency": 100, "severity": 100, "credibility": 100, "interests": ["刘备家族", "蜀汉政权", "顾命体制"], "audiences": ["刘备", "刘禅", "诸葛亮", "李严"],
+    "trigger_year": 223, "trigger_month": 1, "trigger_end_year": 223, "trigger_end_month": 4, "is_historical": true,
+    "precondition": "刘备与蜀汉政权尚存；若历史病势被改写，则转入存活收束。", "require": {}, "trigger_gate": {},
+    "roles": {"托孤之主": {"primary": "刘备", "alternates": [], "required": true}, "顾命大臣": {"primary": "诸葛亮", "alternates": ["李严"], "required": true}, "继承人": {"primary": "刘禅", "alternates": [], "required": true}},
+    "hard_conditions": {"required_powers_active": ["liu_bei"]},
+    "variants": [
+      {"id": "historical_entrustment", "title": "完成顾命安排", "effects": {"metric_delta": {"士族支持": 8, "军心": -5}}},
+      {"id": "rewritten_survival", "title": "刘备存活收束", "effects": {"metric_delta": {"军心": 4, "民望": 3}}},
+      {"id": "succession_crisis", "title": "继承危机", "effects": {"metric_delta": {"士族支持": -12, "军心": -10}}}
+    ]
+  }
+]

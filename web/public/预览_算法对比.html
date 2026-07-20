@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>上庸 vs 夜郎 - 算法对比</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Source Han Serif", "Noto Serif SC", serif; background: #1a1610; color: #e8d9b5; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  h1 { text-align: center; margin-bottom: 16px; color: #f2deb5; font-size: 22px; }
+  .info { text-align: center; margin-bottom: 16px; font-size: 12px; color: #a89878; }
+  .map-wrap { position: relative; background: #0a0806; border: 1px solid #6d5539; border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+  .map-wrap img { display: block; width: 100%; height: auto; }
+  .map-wrap svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .legend { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; font-size: 12px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend i { width: 20px; height: 3px; display: inline-block; }
+  .legend i.angle { background: #4CAF50; border-top: 2px dashed #4CAF50; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔍 上庸 vs 夜郎 - 路径算法对比</h1>
+  <div class="info">绿色虚线 = 极角排序算法（按角度顺序连接，保证不交叉）</div>
+  <div class="legend">
+    <span><i class="angle"></i> 极角排序路径</span>
+    <span>● 标注点</span>
+    <span>● 中心点</span>
+  </div>
+  <div class="map-wrap">
+    <img src="./底图_preview.jpg?v=20260718-retouch" alt="底图">
+    <svg viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <rect x="840" y="518" width="241" height="203" fill="rgba(0,0,0,0.5)" stroke="#666" stroke-width="2" stroke-dasharray="8 4"/>
+    <path d="M 894 608 L 907 597 L 926 579 L 943 568 L 960 571 L 976 571 L 1003 575 L 999 593 L 1023 582 L 1012 600 L 1031 604 L 1029 622 L 1005 631 L 1021 637 L 989 632 L 966 633 L 963 649 L 953 664 L 936 665 L 927 664 L 914 671 L 912 653 L 897 643 L 890 625 Z" fill="rgba(76,175,80,0.3)" stroke="#4CAF50" stroke-width="3" stroke-dasharray="8 4"/>
+    <circle cx="999" cy="593" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1031" cy="604" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1029" cy="622" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1005" cy="631" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="989" cy="632" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="966" cy="633" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="963" cy="649" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="953" cy="664" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="936" cy="665" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="927" cy="664" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="914" cy="671" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="897" cy="643" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="960" cy="571" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="976" cy="571" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1003" cy="575" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1023" cy="582" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="926" cy="579" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="890" cy="625" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="907" cy="597" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="894" cy="608" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="943" cy="568" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="912" cy="653" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1012" cy="600" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="1021" cy="637" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="962" cy="618" r="6" fill="#ff0" stroke="#000" stroke-width="2"/>
+    <text x="962" y="603" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold" paint-order="stroke" stroke="#000" stroke-width="3">上庸 (极角排序)</text>
+    <rect x="519" y="749" width="417" height="264" fill="rgba(0,0,0,0.5)" stroke="#666" stroke-width="2" stroke-dasharray="8 4"/>
+    <path d="M 569 859 L 583 857 L 598 849 L 612 841 L 628 831 L 649 822 L 672 814 L 688 806 L 703 799 L 730 801 L 740 802 L 755 804 L 766 810 L 783 817 L 797 819 L 811 824 L 829 830 L 841 841 L 886 860 L 864 862 L 827 866 L 848 870 L 811 881 L 826 898 L 834 914 L 822 921 L 799 921 L 786 920 L 774 913 L 748 914 L 740 924 L 711 924 L 689 950 L 695 926 L 664 963 L 656 945 L 635 944 L 620 930 L 607 917 L 599 897 L 585 894 L 578 879 Z" fill="rgba(76,175,80,0.3)" stroke="#4CAF50" stroke-width="3" stroke-dasharray="8 4"/>
+    <circle cx="864" cy="862" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="848" cy="870" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="811" cy="881" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="834" cy="914" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="786" cy="920" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="748" cy="914" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="740" cy="924" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="711" cy="924" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="695" cy="926" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="689" cy="950" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="664" cy="963" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="656" cy="945" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="635" cy="944" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="620" cy="930" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="607" cy="917" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="599" cy="897" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="628" cy="831" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="598" cy="849" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="672" cy="814" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="649" cy="822" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="740" cy="802" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="703" cy="799" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="766" cy="810" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="783" cy="817" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="811" cy="824" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="827" cy="866" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="841" cy="841" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="730" cy="801" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="797" cy="819" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="829" cy="830" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="755" cy="804" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="612" cy="841" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="688" cy="806" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="583" cy="857" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="578" cy="879" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="585" cy="894" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="569" cy="859" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="886" cy="860" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="822" cy="921" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="799" cy="921" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="774" cy="913" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="826" cy="898" r="5" fill="#fff" stroke="#4CAF50" stroke-width="2"/>
+    <circle cx="723" cy="873" r="6" fill="#ff0" stroke="#000" stroke-width="2"/>
+    <text x="723" y="858" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold" paint-order="stroke" stroke="#000" stroke-width="3">夜郎 (极角排序)</text>
+    </svg>
+  </div>
+</div>
+</body>
+</html>

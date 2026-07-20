@@ -1,0 +1,24 @@
+{
+  "traits": [
+    {"name": "仁德", "effects": [{"context": "pacification", "attribute": "public_support", "delta": 15, "category": "ruler_virtue"}, {"context": "recruitment", "attribute": "success", "delta": 10, "category": "recruitment"}]},
+    {"name": "武圣", "effects": [{"context": "field_battle", "attribute": "melee", "delta": 12, "category": "combat"}, {"context": "intimidation", "attribute": "enemy_morale", "delta": -6, "category": "intimidation"}]},
+    {"name": "突击", "effects": [{"context": "field_battle", "attribute": "opening_damage", "delta": 10, "category": "assault"}]},
+    {"name": "护卫", "effects": [{"context": "protect_liu_bei", "attribute": "casualty_reduction", "delta": 30, "category": "guard"}]},
+    {"name": "神机", "effects": [{"context": "scheme", "attribute": "tactic_success", "delta": 15, "category": "strategy"}]},
+    {"name": "水战", "effects": [{"context": "river_battle", "attribute": "water_combat", "delta": 15, "category": "water_command"}]},
+    {"name": "水战熟练", "effects": [{"context": "river_battle", "attribute": "water_combat", "delta": 8, "category": "water_command"}]},
+    {"name": "火攻", "effects": [{"context": "fire_attack", "attribute": "tactic_success", "delta": 12, "category": "fire_tactic"}]},
+    {"name": "守城", "effects": [{"context": "siege_defense", "attribute": "fortification", "delta": 15, "category": "siege_defense"}]},
+    {"name": "攻城", "effects": [{"context": "siege_attack", "attribute": "progress", "delta": 15, "category": "siege_attack"}]},
+    {"name": "山地", "effects": [{"context": "mountain_battle", "attribute": "combat", "delta": 12, "category": "terrain"}]},
+    {"name": "骑战", "effects": [{"context": "plain_battle", "attribute": "combat", "delta": 10, "category": "terrain"}]},
+    {"name": "西凉威望", "effects": [{"context": "liangzhou_recruitment", "attribute": "success", "delta": 15, "category": "regional_prestige"}]},
+    {"name": "治政", "effects": [{"context": "governance", "attribute": "progress", "delta": 10, "category": "governance"}]},
+    {"name": "财政", "effects": [{"context": "economy", "attribute": "income", "delta": 8, "category": "finance"}]},
+    {"name": "外交", "effects": [{"context": "negotiation", "attribute": "success", "delta": 12, "category": "diplomacy"}]},
+    {"name": "反间", "effects": [{"context": "counterintelligence", "attribute": "enemy_loyalty_pressure", "delta": 10, "category": "intelligence"}]},
+    {"name": "军纪", "effects": [{"context": "army_discipline", "attribute": "desertion_reduction", "delta": 20, "category": "discipline"}]},
+    {"name": "统合", "effects": [{"context": "battle_command", "attribute": "coordination", "delta": 8, "category": "coordination"}]},
+    {"name": "守成", "effects": [{"context": "crisis_governance", "attribute": "support_loss_reduction", "delta": 15, "category": "stability"}]}
+  ]
+}

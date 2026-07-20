@@ -1,0 +1,1197 @@
+"""大臣 Agent 工具集：查询工具 + court tools（拟旨/退下/换人）。L5。"""
+
+from __future__ import annotations
+
+import json
+from typing import List
+
+from ming_sim.constants import TURN_UNIT
+from ming_sim.context import _ctx as _content_ctx, state_context
+from ming_sim.models import Character, CourtContext
+from ming_sim.skills import skill_template
+
+_STATUS_CN = {
+    "active": "在朝",
+    "dismissed": "已罢黜",
+    "imprisoned": "下狱",
+    "exiled": "流放",
+    "retired": "致仕",
+    "dead": "已故",
+}
+
+_INTEL_CATEGORY_KEYWORDS = {
+    "military": (
+        "军", "兵", "战", "攻", "守", "打", "敌", "士气", "补给", "粮草", "粮道",
+        "疲劳", "军械", "俘", "围城", "突袭", "撤退", "驻军", "编制",
+    ),
+    "internal": (
+        "郡", "县", "城防", "粮仓", "粮产", "民心", "民望", "动乱", "商税",
+        "道路", "投资", "经营", "屯田", "江夏", "江陵", "成都",
+    ),
+    "diplomacy": (
+        "外交", "使臣", "联盟", "盟", "孙权", "曹操", "刘琦", "刘璋", "借粮",
+        "条约", "谈判", "联姻", "违约", "荆州归属",
+    ),
+    "personnel": (
+        "人事", "任事", "任命", "职位", "官职", "谁来", "诸葛亮", "张飞",
+        "关羽", "赵云", "糜竺", "换将", "用谁",
+    ),
+    "secret": ("密令", "暗查", "暗流", "细作", "刺探", "密谈", "密报"),
+    "monthly": ("月报", "月总计", "上月", "本月", "军政总计", "天下动向"),
+    "memory": ("旧事", "以前", "此前", "来龙去脉", "起居注", "邸报"),
+}
+
+
+def classify_intel_categories(message: str) -> List[str]:
+    """按玩家问话粗分必须预查的案卷类别。只做召见证据门，不改变世界。"""
+    text = str(message or "")
+    categories: List[str] = []
+    for category, keywords in _INTEL_CATEGORY_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            categories.append(category)
+    return categories
+
+
+def _mentioned_values(db, table: str, name_col: str, text: str, limit: int = 3) -> List[str]:
+    try:
+        if table == "characters":
+            rows = db.conn.execute("SELECT name AS id, name AS name FROM characters").fetchall()
+        else:
+            rows = db.conn.execute(f"SELECT id,{name_col} AS name FROM {table}").fetchall()
+    except Exception:
+        return []
+    hits: List[str] = []
+    for row in rows:
+        rid = str(row["id"])
+        name = str(row["name"] or "")
+        if (name and name in text) or (rid and rid in text):
+            hits.append(name or rid)
+        if len(hits) >= limit:
+            break
+    return hits
+
+
+def build_evidence_gate_context(character: Character, context: CourtContext, message: str) -> str:
+    """系统侧证据门：玩家问话触发事实类主题时，先调用只读案卷工具取真信息。
+
+    返回的文本会前置给人物 Agent。它不调用任何写库工具，也不改变世界状态。
+    """
+    categories = classify_intel_categories(message)
+    if not categories:
+        return ""
+    tools = {
+        getattr(tool, "__name__", ""): tool
+        for tool in build_minister_tools(character, context, use_roster_tool=True, use_army_tool=True)
+    }
+    text = str(message or "")
+    sections: List[str] = ["【证据门：系统已先查只读案卷】"]
+    sections.append("以下为本轮问答已取的当前盘面事实；回答中的具体数字、条款、状态必须以此或后续工具结果为据。")
+    if "military" in categories and "query_military_intel" in tools:
+        names = _mentioned_values(context.db, "armies", "name", text)
+        sections.append(tools["query_military_intel"](names))
+    if "internal" in categories and "query_internal_intel" in tools:
+        regions = _mentioned_values(context.db, "regions", "name", text)
+        sections.append(tools["query_internal_intel"](regions))
+    if "diplomacy" in categories and "query_diplomacy_intel" in tools:
+        powers = _mentioned_values(context.db, "powers", "name", text)
+        sections.append(tools["query_diplomacy_intel"](powers))
+    if "personnel" in categories and "query_personnel_intel" in tools:
+        names = _mentioned_values(context.db, "characters", "name", text)
+        sections.append(tools["query_personnel_intel"](names))
+    if "secret" in categories and "query_secret_intel" in tools:
+        sections.append(tools["query_secret_intel"]("own" if character.name in text else "public"))
+    if "monthly" in categories and "query_monthly_intel" in tools:
+        section = ""
+        for label in ("军事", "内政", "外交", "人事", "密令", "天下", "口碑"):
+            if label in text:
+                section = label
+                break
+        sections.append(tools["query_monthly_intel"](section))
+    if "memory" in categories and "search_memories" in tools:
+        keywords = ",".join(word for word in ("江夏", "江陵", "荆州", "孙权", "曹操", "刘备", "诸葛亮", "张飞") if word in text)
+        sections.append(tools["search_memories"](keywords))
+    return "\n\n".join(section for section in sections if section)
+
+
+def _duty_location(office: str, office_type: str, status: str) -> str:
+    if status == "dead":
+        return "已故，不在任事。"
+    if status == "imprisoned":
+        return "系狱待勘，具体羁押处以处置缘由为准。"
+    if status in {"dismissed", "exiled", "retired", "offstage"}:
+        return "不在朝任事。"
+    text = office or office_type
+    if not text:
+        return "在朝但现职未明。"
+    # 现职文本已写明在野（罢居/致仕/养病/丁忧某地）的，按文本说，不再脑补"在京师衙署任事"。
+    if any(w in text for w in ("罢居", "罢闲", "赋闲", "养病", "丁忧", "致仕", "归籍", "在野")):
+        return "现非实任，" + text + "。"
+    region_markers = [
+        "陕西", "辽东", "宁远", "关宁", "山西", "河南", "山东", "湖广", "四川", "福建",
+        "广东", "广西", "浙江", "江西", "南直隶", "北直隶", "南京", "登莱", "宣大", "延绥",
+    ]
+    for marker in region_markers:
+        if marker in text:
+            return f"按现职在{marker}任事。"
+    if office_type in {"内阁", "吏部", "户部", "礼部", "兵部", "工部", "都察院", "翰林院", "司礼监", "锦衣卫", "东厂", "内廷"}:
+        return f"按现职在京师{office_type}衙署任事。"
+    if office_type == "边镇":
+        return "按现职在所辖边镇任事。"
+    if office_type == "地方":
+        return "按现职在地方任事。"
+    return "按现职任事，具体地点需看官衔所辖。"
+
+
+def build_minister_tools(character: Character, context: CourtContext,
+                         use_roster_tool: bool = False, use_army_tool: bool = False):
+    def _power_name(power_id: str) -> str:
+        row = context.db.conn.execute("SELECT name FROM powers WHERE id=?", (power_id,)).fetchone()
+        return str(row["name"] or power_id) if row else power_id
+
+    def _region_investment_line(region_key: str) -> str:
+        row = context.db.conn.execute(
+            """
+            SELECT ri.*, r.name AS region_name
+            FROM region_investments ri
+            LEFT JOIN regions r ON r.id=ri.region_id
+            WHERE ri.region_id=? OR r.name=?
+            ORDER BY ri.updated_at DESC LIMIT 1
+            """,
+            (region_key, region_key),
+        ).fetchone()
+        if row is None:
+            return "当前未见进行中投资。"
+        return f"当前投资：{row['category']}，进度{row['progress']}%，状态{row['status']}。"
+
+    def query_world_index(category: str = "") -> str:
+        """查可用案卷分类与本月热点索引。category 可填 军事/内政/外交/人事/密令/月报/旧事。"""
+        cat = (category or "").strip()
+        categories = {
+            "军事": "query_military_intel(names=[])：军队编制、兵力、补给、疲劳、军械、战役、战俘。",
+            "内政": "query_internal_intel(regions=[])：郡县粮仓、城防、民心、动乱、商税、道路、投资。",
+            "外交": "query_diplomacy_intel(targets=[])：势力关系、条约、使臣进展、违约风险。",
+            "人事": "query_personnel_intel(names=[])：人物状态、官职、任事效果、职位空缺。",
+            "密令": "query_secret_intel(scope='own|public')：自己承办密令详情或公开暗流摘要。",
+            "月报": "query_monthly_intel(section='')：按月报章节查询上月军政总计。",
+            "旧事": "search_memories(keywords='', year=0, period=0)：查邸报、起居注、旧事来龙去脉。",
+        }
+        if cat:
+            key = next((name for name in categories if cat in name or name in cat), "")
+            return categories.get(key, f"未见分类「{cat}」。可查分类：" + "、".join(categories))
+        metrics = "；".join(
+            f"{key}{context.state.metrics.get(key, 0)}"
+            for key in ("军资", "粮秣", "民望", "名分", "军心", "士族支持")
+        )
+        issues = context.db.list_active_issues()
+        issue_text = "；".join(f"#{row['id']}{row['title']}" for row in issues[:6]) or "无在办事项"
+        return (
+            "【君主案头可查案卷】\n"
+            + "\n".join(f"- {name}：{desc}" for name, desc in categories.items())
+            + f"\n【本月轻索引】{context.state.year}年{context.state.period}月，{metrics}。在办：{issue_text}。"
+        )
+
+    def query_military_intel(names: List[str] = []) -> str:
+        """查军事情报。names 为空返回重点军情索引；传军名/id列表返回指定军队编制、补给、疲劳、军械等详情。"""
+        clean = [str(name).strip() for name in (names or []) if str(name).strip()]
+        if clean:
+            lines = ["【军事细案】"]
+            for name in clean:
+                try:
+                    lines.append(context.db.army_detail(name))
+                except ValueError:
+                    lines.append(context.db.army_roster(filter_names=[name], index_only=False))
+            return "\n".join(lines)
+        if hasattr(context.db, "military_intel_brief"):
+            return context.db.military_intel_brief(context.state.turn)
+        return context.db.army_report(limit=8)
+
+    def query_internal_intel(regions: List[str] = []) -> str:
+        """查内政郡县情报。regions 为空返回重点地区索引；传地区名/id返回粮仓、城防、民心、道路、投资等详情。"""
+        clean = [str(region).strip() for region in (regions or []) if str(region).strip()]
+        if not clean:
+            active = context.db.conn.execute(
+                """
+                SELECT ri.region_id, r.name AS region_name, ri.category, ri.progress, ri.status
+                FROM region_investments ri LEFT JOIN regions r ON r.id=ri.region_id
+                WHERE ri.status='active'
+                ORDER BY ri.region_id LIMIT 8
+                """
+            ).fetchall()
+            invest = "；".join(
+                f"{row['region_name'] or row['region_id']}:{row['category']}进度{row['progress']}%"
+                for row in active
+            ) or "暂无进行中郡县投资"
+            return context.db.region_report(limit=8) + "\n郡县投资：" + invest
+        lines = ["【内政郡县案卷】"]
+        for region in clean:
+            try:
+                detail = context.db.region_detail(region)
+            except ValueError as exc:
+                detail = f"未找到地区「{region}」：{exc}"
+            lines.append(detail)
+            lines.append(_region_investment_line(region))
+        return "\n".join(lines)
+
+    def query_diplomacy_intel(targets: List[str] = []) -> str:
+        """查外交情报。targets 为空返回关系、条约、使臣索引；传势力名/id返回相关外交案卷。"""
+        clean = [str(target).strip() for target in (targets or []) if str(target).strip()]
+        power_rows = context.db.conn.execute("SELECT id,name,status,stance,agenda FROM powers ORDER BY id").fetchall()
+        wanted_ids = set()
+        if clean:
+            for target in clean:
+                for row in power_rows:
+                    if target in {str(row["id"]), str(row["name"])}:
+                        wanted_ids.add(str(row["id"]))
+        def keep_power(value: str) -> bool:
+            return not wanted_ids or value in wanted_ids
+        lines = ["【外交案卷】", "势力态势："]
+        for row in power_rows:
+            if keep_power(str(row["id"])):
+                lines.append(f"- {row['name']}({row['id']})：{row['status']}，{row['stance']}，目标：{row['agenda']}")
+        rels = context.db.conn.execute(
+            "SELECT * FROM diplomatic_relations ORDER BY power_a,power_b LIMIT 20"
+        ).fetchall()
+        rel_lines = []
+        for row in rels:
+            if keep_power(str(row["power_a"])) or keep_power(str(row["power_b"])):
+                rel_lines.append(
+                    f"{_power_name(str(row['power_a']))}-{_power_name(str(row['power_b']))}:"
+                    f"关系{row['public_relation']} 信任{row['trust']} 军事协同{row['military_coordination']} 状态{row['status']}"
+                )
+        lines.append("关系：" + ("；".join(rel_lines[:10]) if rel_lines else "未见相关关系记录"))
+        treaties = context.db.list_diplomacy_treaties() if hasattr(context.db, "list_diplomacy_treaties") else []
+        treaty_lines = []
+        for treaty in treaties:
+            if keep_power(str(treaty.get("proposer", ""))) or keep_power(str(treaty.get("target", ""))):
+                treaty_lines.append(
+                    f"#{treaty.get('id')} {treaty.get('treaty_type')} "
+                    f"{_power_name(str(treaty.get('proposer', '')))}→{_power_name(str(treaty.get('target', '')))} "
+                    f"状态{treaty.get('status')} 条款{treaty.get('terms')}"
+                )
+        lines.append("条约：" + ("；".join(treaty_lines[:8]) if treaty_lines else "未见相关条约"))
+        envoys = context.db.conn.execute("SELECT * FROM envoy_missions ORDER BY id DESC LIMIT 12").fetchall()
+        envoy_lines = []
+        for row in envoys:
+            if keep_power(str(row["target_power"])):
+                envoy_lines.append(f"#{row['id']} {row['envoy']}赴{_power_name(str(row['target_power']))}：{row['goal']}，状态{row['status']}")
+        lines.append("使臣：" + ("；".join(envoy_lines[:8]) if envoy_lines else "未见相关使臣任务"))
+        return "\n".join(lines)
+
+    def query_personnel_intel(names: List[str] = []) -> str:
+        """查人事情报。names 为空返回人物索引与任事职位；传姓名列表返回指定人物官职、状态。"""
+        clean = [str(name).strip() for name in (names or []) if str(name).strip()]
+        roster = query_court_roster(clean)
+        try:
+            from ming_sim.government import office_effect
+
+            office_rows = context.db.conn.execute("SELECT office_key FROM government_offices ORDER BY office_key").fetchall()
+            office_keys = [str(row["office_key"]) for row in office_rows] or list(context.db.content.sanguo_offices)
+            offices = [office_effect(context.db, key) for key in office_keys]
+            office_lines = [
+                f"{item.get('name')}：{item.get('character_name') or '空缺'}，效率{item.get('efficiency')}，影响{item.get('effect')}"
+                for item in offices
+            ]
+        except Exception:
+            office_lines = []
+        return "【人事案卷】\n" + roster + ("\n【任事职位】\n" + "\n".join(office_lines) if office_lines else "")
+
+    def query_secret_intel(scope: str = "public") -> str:
+        """查密令暗流。scope='own' 只查自己承办密令详情；scope='public' 查公开摘要，不泄他人密档正文。"""
+        mode = (scope or "public").strip().lower()
+        if mode == "own":
+            orders = [
+                order for order in context.db.list_secret_orders()
+                if str(order.get("minister_name") or "") == character.name
+            ]
+            if not orders:
+                return f"{character.name}名下未见进行中或待核议密令。"
+            lines = [f"【{character.name}承办密令】"]
+            for order in orders[:8]:
+                due = int(order.get("due_turn") or 0)
+                due_text = "无硬限" if due <= 0 else f"第{due}回合核议"
+                lines.append(
+                    f"#{order['id']}「{order['title']}」状态{order['status']}，{due_text}。"
+                    f"任务：{order.get('content') or '未见正文'}。进展：{order.get('result') or '尚无'}"
+                )
+            return "\n".join(lines)
+        orders = context.db.list_secret_orders()
+        if not orders:
+            return "未见公开密令暗流。"
+        lines = ["【公开密令暗流摘要】"]
+        for order in orders[:8]:
+            due = int(order.get("due_turn") or 0)
+            due_text = "无硬限" if due <= 0 else f"第{due}回合核议"
+            lines.append(f"#{order['id']}「{order['title']}」承办{order['minister_name']}，状态{order['status']}，{due_text}。")
+        return "\n".join(lines)
+
+    def query_monthly_intel(section: str = "") -> str:
+        """查每月总计。section 可填 military/internal/diplomacy/personnel/secret/world/reputation 或中文章节名。"""
+        from ming_sim.monthly_report import build_monthly_report
+
+        report = build_monthly_report(context.db, context.state)
+        key = (section or "").strip().lower()
+        section_aliases = {
+            "军事": "military", "军务": "military", "military": "military",
+            "内政": "internal", "郡县": "internal", "internal": "internal",
+            "外交": "diplomacy", "diplomacy": "diplomacy",
+            "人事": "personnel", "任事": "personnel", "personnel": "personnel",
+            "密令": "secret", "暗流": "secret", "secret": "secret",
+            "天下": "world", "天下动向": "world", "world": "world",
+            "口碑": "reputation", "仁义": "reputation", "reputation": "reputation",
+        }
+        wanted = section_aliases.get(key, "")
+        sections = [s for s in report["sections"] if not wanted or s["id"] == wanted]
+        if not sections:
+            return f"未见月报章节「{section}」。"
+        lines = [f"【{report['title']}】"]
+        for sec in sections:
+            lines.append(f"{sec['title']}：{sec['summary']}")
+            for item in sec["items"][:6]:
+                lines.append(f"- {item['kind']}｜{item['title']}：{item['summary']}")
+        return "\n".join(lines)
+
+    def query_court_roster(names: List[str] = []) -> str:
+        """查在朝人事名册。names 为空返回全部姓名+状态索引；传姓名列表返回指定人物详情（现职/官署/派系/状态）。"""
+        db = context.db
+        results = []
+        for c in _content_ctx().characters.values():
+            if getattr(c, "power_id", "") != "liu_bei":
+                continue
+            status, reason = db.get_character_status(c.name)
+            if status == "offstage":
+                continue
+            if names and c.name not in names:
+                continue
+            if names:
+                state_cell = f"{status}（{reason}）" if reason else status
+                results.append("|".join((c.name, c.office or "无现任官职", c.office_type, c.faction, state_cell)))
+            else:
+                state_cell = f"{status}（{reason}）" if reason else status
+                results.append(f"{c.name}：{state_cell}")
+        if not results:
+            return "未找到指定人物。" if names else "当前无在朝人物。"
+        return "\n".join(results)
+
+    def query_army_roster(names: List[str] = []) -> str:
+        """查全军名册。names 为空返回军名+欠饷+状态索引；传军名列表返回指定军队完整信息。"""
+        return context.db.army_roster(filter_names=names if names else None, index_only=not names)
+
+    def list_memorials() -> str:
+        """查看当前在办的所有事项（issue）。"""
+        rows = context.db.list_active_issues()
+        if not rows:
+            return f"本{TURN_UNIT}无在办事项。"
+        lines = []
+        for idx, row in enumerate(rows, 1):
+            kind_tag = "系统" if row["kind"] == "situation" else "皇帝推动"
+            lines.append(
+                f"{idx}. #{row['id']}[{kind_tag}]{row['title']}"
+                f"（bar {int(row['bar_value'])}/{row['bar_good_meaning']}，{row['stage_text']}）"
+            )
+        return "\n".join(lines)
+
+    def inspect_memorial(slot: int) -> str:
+        """查看某条在办事项的细节。slot 是事项编号（由 list_memorials 给出）。"""
+        rows = context.db.list_active_issues()
+        try:
+            n = int(slot)
+        except (ValueError, TypeError):
+            return f"slot 必须是整数 1-{len(rows)}。"
+        if n < 1 or n > len(rows):
+            return f"slot 越界 {n}。本{TURN_UNIT}有 {len(rows)} 条在办事项。"
+        row = rows[n - 1]
+        return (
+            f"#{row['id']} {row['title']}（bar {int(row['bar_value'])}，{row['bar_bad_meaning']}↔{row['bar_good_meaning']}）。"
+            f"阶段：{row['stage_text']}。牵涉：{row['faction_hint'] or '—'}。"
+            f"结案条件：{row['resolve_condition'] or '（未填）'}。失败条件：{row['fail_condition'] or '（未填）'}。"
+        )
+
+    def list_regions() -> str:
+        f"""查看两京十三省最危险地区和账面{TURN_UNIT}税。"""
+        return context.db.region_report(limit=6)
+
+    def inspect_region(region_name: str) -> str:
+        """查看某一地区人口、民心、动乱、天灾、人祸、田亩和税收。"""
+        try:
+            return context.db.region_detail(region_name)
+        except ValueError as e:
+            return f"未找到地区 '{region_name}'。可先调 list_regions 看地区 id/名称列表。错误：{e}"
+
+    def list_buildings() -> str:
+        """查看全国在册建筑（火炮厂、矿厂、常平仓、边堡、织造局等）的等级、完好、维护费与产出。"""
+        return context.db.buildings_report()
+
+    def inspect_building(building_name: str) -> str:
+        """查看某座建筑的类别、等级、完好、维护费、风险与产出。"""
+        try:
+            return context.db.building_detail(building_name)
+        except ValueError as e:
+            return f"未找到建筑 '{building_name}'。可先调 list_buildings 看建筑列表。错误：{e}"
+
+    def estimate_resistance(slot: int) -> str:
+        """估算某条在办事项若下旨推动的主要阻力。slot 是事项编号（由 list_memorials 给出）。"""
+        rows = context.db.list_active_issues()
+        try:
+            n = int(slot)
+        except (ValueError, TypeError):
+            return f"slot 必须是整数 1-{len(rows)}。"
+        if n < 1 or n > len(rows):
+            return f"slot 越界 {n}。本{TURN_UNIT}有 {len(rows)} 条在办事项。"
+        row = rows[n - 1]
+        db = context.db
+        faction_lev_avg = db.conn.execute("SELECT AVG(leverage) AS v FROM factions").fetchone()["v"] or 50
+        resistance = int(row["severity"]) // 4 + int(faction_lev_avg) // 6
+        tags = row["faction_hint"] or ""
+        if any(t in tags for t in ("边", "军")):
+            # arrears 是累计欠饷万两，按 maintenance 归一成"平均欠饷月数"再加权
+            row_av = db.conn.execute(
+                "SELECT AVG(arrears * 1.0 / NULLIF(maintenance_per_turn, 0)) AS months "
+                "FROM armies WHERE maintenance_per_turn > 0"
+            ).fetchone()
+            months = float(row_av["months"] or 0)
+            resistance += int(months * 2)
+        if any(t in tags for t in ("百姓", "地方", "士绅")):
+            unrest_avg = db.conn.execute("SELECT AVG(unrest) AS v FROM regions").fetchone()["v"] or 0
+            resistance += int(unrest_avg) // 12
+        if any(t in tags for t in ("财", "粮", "军资")):
+            resistance += max(0, 50 - int(context.state.metrics.get("军资", 0))) // 5
+        if resistance >= 28:
+            level = "高"
+        elif resistance >= 18:
+            level = "中"
+        else:
+            level = "低"
+        return f"{row['title']}阻力{level}，主要牵涉：{tags or '—'}。估算阻力值：{resistance}。"
+
+    def read_past_report(year: int = 0, month: int = 0) -> str:
+        """读某年某月邸报全文，了解此前朝局走向、地方动静、灾兵祸福，避免接旨时凭空臆议。
+        **上月邸报已固定注入上下文（见 system 末尾【上回合邸报全文】），无须再调本工具查上月**；
+        本工具用于查更早月份。
+        参数：
+        - year：年份（如 1628）。缺省（0）默认查上上月（上月已在上下文，故缺省往前再退一月）。
+        - month：月份（1-12）。缺省（0）配 year 缺省即上上月；若给了 year 而 month=0，按 1 月算。
+        所求年月未到、无邸报存档或在登基之前 → 提示『未见正式记录』。"""
+        # 缺省：查上上月（state.year/period - 2）——上月邸报已固定在上下文，缺省再往前退一月。
+        if not year:
+            target_year = context.state.year
+            target_month = context.state.period - 2
+            while target_month < 1:
+                target_month += 12
+                target_year -= 1
+        else:
+            target_year = int(year)
+            target_month = int(month) if month else 1
+            target_month = max(1, min(12, target_month))
+        row = context.db.conn.execute(
+            "SELECT turn, report FROM turn_reports WHERE year=? AND period=?",
+            (target_year, target_month),
+        ).fetchone()
+        if not row or not row["report"]:
+            return f"{target_year}年{target_month}月未见正式邸报记录。"
+        return f"【{target_year}年{target_month}月邸报】\n{row['report']}"
+
+    def search_memories(keywords: str = "", year: int = 0, period: int = 0) -> str:
+        """检索起居注章节旧事。支持两种方式（可同时用）：
+        - keywords: 逗号分隔关键词，如 "魏忠贤,下狱" 或 "山东,民变"；
+        - year+period: 按年月检索，取前后2月窗口，如 year=1628, period=3。
+        两种场景必须调用：1.皇帝问及某人/某地/某事；2.拟旨前涉及人事处置，先查旧况避免重复。
+        """
+        all_ch = context.db.list_chapter_memories(upto_turn=context.state.turn)
+        hits = []
+        if year:
+            ref_turn = (int(year) - 1627) * 12 + (int(period or 1) - 10) + 1
+            hits = [c for c in all_ch if abs(int(c["turn"]) - ref_turn) <= 2]
+        kw_list = [k.strip() for k in str(keywords or "").split(",") if k.strip()]
+        if kw_list:
+            kw_hits = [
+                c for c in all_ch
+                if any(kw in (c.get("body") or "") or kw in (c.get("title") or "") for kw in kw_list)
+            ]
+            seen = {c["turn"] for c in hits}
+            hits += [c for c in kw_hits if c["turn"] not in seen]
+        if not hits:
+            desc = f"「{'、'.join(kw_list)}」" if kw_list else f"{year}年{period}月前后"
+            return f"未找到与{desc}相关的起居注记载。"
+        tlog(f"[search_memories] kw={kw_list} year={year} period={period} hit={len(hits)}")
+        label = " ".join(kw_list) or f"{year}年{period}月"
+        lines = [f"【起居注检索：{label}】"]
+        for c in hits[-8:]:
+            body = (c.get("body") or c.get("title") or "").strip()
+            lines.append(f"- {c['year']}年{c['period']}月：{body}")
+        return "\n".join(lines)
+
+    def check_treasury() -> str:
+        """查刘备政权六项核心资源。"""
+        return skill_template("check_treasury_prefix") + "；".join(
+            f"{key}{context.state.metrics.get(key, 0)}"
+            for key in ("军资", "粮秣", "民望", "名分", "军心", "士族支持")
+        )
+
+    def inspect_treasury_ledger(account: str = "内库", turns: int = 6) -> str:
+        """查国库或内库的历史流水明细（每笔收支原因、金额、余额）。
+        涉及内库/国库调动来源、历史拨款、查抄收益、赏赐开销时调用。
+        account: "国库" 或 "内库"；turns: 查最近几回合（默认6）。
+        """
+        acc = (account or "内库").strip()
+        if acc not in {"国库", "内库"}:
+            return "account 须为「国库」或「内库」。"
+        try:
+            t = max(1, min(24, int(turns)))
+        except (TypeError, ValueError):
+            t = 6
+        return context.db.treasury_ledger(acc, t)
+
+    def adjust_tax(tax: str, ratio: float, region: str = "", reason: str = "") -> str:
+        """户部奏请调整税额，立为一道可追踪调税事项（issue）。
+        非即时改账：事项进度推到满才落库，推演期间会被士绅抗税/有司阳奉顶回——加征越狠越难磨平。
+        tax 须为 田赋/辽饷/盐税/商税 之一；
+        ratio 为新额倍率：1.0=不变，1.3=加三成，0.7=减三成，0=罢废该税；
+        region 留空=全国一律，填省名（如「南直隶」「浙江」）=仅该省定向调，保住省间税差；
+        reason 为调税缘由。皇庄/田亩量级走后台，不在此 tool。"""
+        tx = (tax or "").strip()
+        if tx not in ("田赋", "辽饷", "盐税", "商税"):
+            return f"调税失败：税种须为 田赋/辽饷/盐税/商税 之一，收到「{tx}」。"
+        try:
+            r = float(ratio)
+        except (TypeError, ValueError):
+            return f"调税失败：倍率须为数字，收到「{ratio}」。"
+        if r < 0:
+            return "调税失败：倍率不能为负（0=罢废，1.0=不变）。"
+        import json as _json
+        payload = _json.dumps(
+            {"tax": tx, "ratio": r,
+             "region": (region or "").strip(),
+             "reason": (reason or "").strip()},
+            ensure_ascii=False,
+        )
+        return f"__adjust_tax__{payload}"
+
+    def propose_directive(decree_text: str) -> str:
+        """把你这次议定的处置方案拟成一道圣旨草稿呈皇帝审阅。decree_text 必须是你**自己新撰写**的完整圣旨正文，
+        针对当前这件交办的事来写；绝不可照抄、复述上下文里【已核定草案】中别的大臣已入档的旨意。"""
+        text = (decree_text or "").strip()
+        if not text:
+            return "拟旨失败：圣旨正文为空。"
+        # 返回草稿标记，由 minister_chat / GameSession.chat 截获展示给皇帝确认，不在此入库。
+        return f"__pending_directive__{text}"
+
+    def propose_appointment(name: str, office: str, faction: str = "中立", reason: str = "", replaces: str = "") -> str:
+        """吏部铨选拟任。name 为拟任者，office 为拟授官职，replaces 为需腾缺的现任官员。"""
+        nm = (name or "").strip()
+        off = (office or "").strip()
+        if not nm or not off:
+            return "铨选失败：姓名或拟授官职为空。"
+        import json as _json
+        payload = _json.dumps(
+            {
+                "name": nm, "office": off,
+                "faction": (faction or "中立").strip(),
+                "reason": (reason or "").strip(),
+                "replaces": (replaces or "").strip(),
+            },
+            ensure_ascii=False,
+        )
+        return f"__pending_appointment__{payload}"
+
+    def dispatch_arms(army: str, troop_type: str, weapon: str, qty: int, reason: str = "") -> str:
+        """从国家军备总库拨发军械给某军的某兵种（兵部/工部专属）。army＝受拨军号、
+        troop_type＝受拨兵种（如「火炮队」「非正规步兵」「手枪骑兵」，须是该军编制内兵种；
+        留空则拨给该军主力兵种）、weapon＝武器型号（如「红夷大炮」「火铳」「燧发枪」）、qty＝拨发件数。
+        装备入该兵种的军械库（军→兵种→装备），凑够实物该兵种方可升级。
+        注意：只能拨总库现有之械，库存不足按现存量照发；皇帝准奏后落地。"""
+        a = (army or "").strip()
+        t = (troop_type or "").strip()
+        w = (weapon or "").strip()
+        if not a or not w:
+            return "拨发失败：受拨军号或武器型号为空。"
+        try:
+            n = int(qty)
+        except (TypeError, ValueError):
+            return "拨发失败：拨发件数须为整数。"
+        if n <= 0:
+            return "拨发失败：拨发件数须为正。"
+        import json as _json
+        payload = _json.dumps(
+            {"army": a, "troop_type": t, "weapon": w, "qty": n, "reason": (reason or "").strip()},
+            ensure_ascii=False,
+        )
+        return f"__pending_arms_dispatch__{payload}"
+
+    def register_unlisted_person(
+        name: str,
+        office: str,
+        office_type: str,
+        faction: str = "中立",
+        aliases_json: str = "[]",
+        summary: str = "",
+        source: str = "historical",
+        summon_after: bool = True,
+    ) -> str:
+        """登记名册外人物，使其进入本局可召见人物池。
+
+        仅在两种情况下调用：
+        1. source="historical"：名册无此人，但你高置信确认其为史实人物（含异体字、误写、近音、别名归一）。
+        2. source="user_confirmed"：名册无此人且非明确史实，但皇帝已经说明其身份背景。
+
+        不可用于正式升迁、外放或替换现任官缺；正式任官仍走吏部铨选或圣旨。
+        aliases_json 填 JSON 数组字符串，如 ["李若璉","李若链","李若莲"]。
+        """
+        nm = (name or "").strip()
+        off = (office or "").strip()
+        kind = (office_type or "").strip()
+        if not nm or not off or not kind:
+            return "登记失败：姓名、职衔、官署类型不能为空。"
+        try:
+            aliases = json.loads(aliases_json or "[]")
+        except (ValueError, TypeError):
+            aliases = []
+        if not isinstance(aliases, list):
+            aliases = []
+        payload = json.dumps(
+            {
+                "name": nm,
+                "office": off,
+                "office_type": kind,
+                "faction": (faction or "中立").strip(),
+                "aliases": [str(alias).strip() for alias in aliases if str(alias).strip()],
+                "summary": (summary or "").strip(),
+                "source": (source or "historical").strip(),
+                "summon_after": bool(summon_after),
+            },
+            ensure_ascii=False,
+        )
+        return f"__pending_unlisted_person__{payload}"
+
+    def secret_order(
+        action: str,
+        title: str = "",
+        content: str = "",
+        tags_json: str = "[]",
+        assignee: str = "",
+        deadline_months: int = 0,
+        order_id: int = 0,
+        progress: str = "",
+        claim: str = "",
+        reason: str = "",
+    ) -> str:
+        """密令统一入口。action 取值：
+        - "issue"：下达新密令。需填 title、content；assignee 留空默认当前大臣；deadline_months=0 无硬限。
+                  限制：不得重复下同一道密令；进行中密令的个人上限与全朝总上限以游戏设置为准。
+        - "progress"：汇报进展（兼查历史）。填 order_id；progress 非空且本月未推进则落档。
+        - "submit"：提交结案。填 order_id、claim（办结陈词200字内）。
+        - "rush"：催办加急。填 order_id；deadline_months=1 下月核议，0=本月即核。
+        """
+        act = (action or "").strip().lower()
+        if act == "issue":
+            return _secret_order_issue(title, content, tags_json, assignee, deadline_months)
+        if act == "progress":
+            return _secret_order_progress(order_id, progress)
+        if act == "submit":
+            return _secret_order_submit(order_id, claim)
+        if act == "rush":
+            return _secret_order_rush(order_id, deadline_months, reason)
+        return f"未知 action={action!r}，可选：issue / progress / submit / rush。"
+
+    def _secret_order_issue(title: str, content: str, tags_json: str = "[]", assignee: str = "", deadline_months: int = 0) -> str:
+        """皇帝下达密令，直接登记入档并返回密令编号。
+
+        title：密令标题（20字内）。
+        content：密令详情，交代任务目标、保密要求、期限等。
+        tags_json：JSON 数组，填相关人名/地区/事项关键词，用于日后检索，如 '["辽饷","兵部","密查"]'。
+        assignee：实际承办人姓名。留空则默认为当前召见的大臣；若皇帝指名他人承办（如"命毕自严去查"），填该人全名。
+        deadline_months：硬期限月数；0 表示无硬期限。若皇帝说"下月务必结案"填 1，说"三个月内结案"填 3。
+        """
+        t = (title or "").strip()[:20]
+        c = (content or "").strip()
+        if not t or not c:
+            return "密令下达失败：标题或内容为空。"
+        try:
+            tags = json.loads(tags_json or "[]")
+            if not isinstance(tags, list):
+                tags = []
+        except (ValueError, TypeError):
+            tags = []
+        tags_clean = [str(k).strip() for k in tags if str(k).strip()]
+        real_assignee = (assignee or "").strip() or character.name
+        try:
+            deadline = max(0, min(int(deadline_months or 0), 36))
+        except (TypeError, ValueError):
+            deadline = 0
+        try:
+            order_id = context.db.create_secret_order(
+                context.state, real_assignee, t, c, tags_clean, deadline_months=deadline
+            )
+        except ValueError as e:
+            return f"密令下达失败：{e}"
+        except Exception as e:
+            return f"__secret_order__{json.dumps({'title': t, 'content': c, 'tags': tags_clean, 'assignee': real_assignee, 'deadline_months': deadline}, ensure_ascii=False)}"
+        print(f"[secret_order/tool] 直接落库 id={order_id} assignee={real_assignee} title={t!r}")
+        deadline_text = f"，御限 {deadline} 个月" if deadline else ""
+        return f"__secret_order_registered__{order_id}__密令已登记入档，编号 #{order_id}，承办：{real_assignee}{deadline_text}，标题：{t}。"
+
+    def _own_secret_order(order_id: int):
+        """取本承办人名下密令；非承办人或不存在返回 (None, 提示串)。"""
+        oid = int(order_id) if str(order_id).isdigit() else 0
+        if not oid:
+            return None, "密令编号无效。"
+        order = context.db.get_secret_order(oid)
+        if order is None:
+            return None, f"查无此密令（编号 #{oid}）。"
+        if order["minister_name"] != character.name:
+            return None, f"密令 #{oid} 由{order['minister_name']}承办，非你职掌，无从查问。"
+        return order, ""
+
+    def _secret_order_progress(order_id: int, progress: str = "") -> str:
+        order, err = _own_secret_order(order_id)
+        if order is None:
+            return err
+        if order["status"] != "active":
+            return f"密令 #{order['id']} 已{order['status']}，不能再记进展。"
+        already_advanced = context.db._has_secret_order_period_line(
+            order["id"], "result", context.state.year, context.state.period
+        )
+        is_issuing_turn = int(order.get("turn_issued") or 0) == int(context.state.turn)
+        note = (progress or "").strip()[:200]
+        saved = False
+        if note and not is_issuing_turn:
+            # 同月再报 = 替换当月进度行（修改最新进度），非建档当月即可
+            saved = context.db.update_secret_order_progress(
+                order["id"], note, year=context.state.year, period=context.state.period
+            )
+        order = context.db.get_secret_order(order["id"]) or order
+        parts = [f"密令 #{order['id']}「{order['title']}」状态：{order['status']}。"]
+        parts.append(f"查办经过（按月，末行最新）：\n{order['result'] or '尚无进展记录。'}")
+        if order.get("sim_note"):
+            parts.append(f"外间动静（按月，末行最新）：\n{order['sim_note']}")
+        if saved and already_advanced:
+            parts.append(f"✅ 本月进度已更新（替换当月旧记）：{note}")
+        elif saved:
+            parts.append(f"✅ 本月新进展已落档：{note}")
+        elif is_issuing_turn:
+            parts.append("⚠️ 本月即建档当月，须待下月起才可查得头绪——本次未落档。")
+        elif not note:
+            parts.append("ℹ️ 未提供 progress，本月仍未推进。")
+        return "\n".join(parts)
+
+    def _secret_order_submit(order_id: int, claim: str) -> str:
+        order, err = _own_secret_order(order_id)
+        if order is None:
+            return err
+        if order["status"] != "active":
+            return f"密令 #{order['id']} 当前状态 {order['status']}，不可重复提交核议。"
+        text = (claim or "").strip()
+        if not text:
+            return "提交失败：claim 为空。"
+        ok = context.db.submit_secret_order_for_review(
+            order["id"], text, year=context.state.year, period=context.state.period
+        )
+        if not ok:
+            return f"密令 #{order['id']} 提交失败。"
+        return f"密令 #{order['id']}「{order['title']}」已提交待推演核议，本月不再可推进。"
+
+    def _secret_order_rush(order_id: int, deadline_months: int = 1, reason: str = "") -> str:
+        order, err = _own_secret_order(order_id)
+        if order is None:
+            return err
+        if order["status"] != "active":
+            return f"密令 #{order['id']} 当前状态 {order['status']}，不能再催办。"
+        try:
+            rushed = context.db.rush_secret_order(
+                order["id"], context.state, deadline_months=deadline_months, reason=reason
+            )
+        except Exception as exc:
+            return f"密令 #{order['id']} 催办失败：{exc}"
+        if rushed["status"] == "pending_review":
+            return f"密令 #{order['id']}「{order['title']}」已奉旨即核，转入待核议。"
+        remain = max(0, int(rushed["due_turn"]) - int(context.state.turn))
+        return f"密令 #{order['id']}「{order['title']}」已奉旨加急，限 {remain} 个月内核议。"
+
+    def dismiss_minister() -> str:
+        """结束本次召见，退朝。"""
+        return "__dismiss__"
+
+    def summon_minister(name: str) -> str:
+        """传召另一位大臣入殿。name 填大臣姓名。"""
+        return f"__summon__{name}"
+
+    tools = [
+        query_world_index,
+        query_military_intel,
+        query_internal_intel,
+        query_diplomacy_intel,
+        query_personnel_intel,
+        query_secret_intel,
+        query_monthly_intel,
+        list_memorials,
+        inspect_memorial,
+        list_regions,
+        inspect_region,
+        list_buildings,
+        inspect_building,
+        estimate_resistance,
+        read_past_report,
+        search_memories,
+        inspect_treasury_ledger,
+        propose_directive,
+        secret_order,
+        dismiss_minister,
+        summon_minister,
+        register_unlisted_person,
+    ]
+    if use_roster_tool:
+        tools.append(query_court_roster)
+    if use_army_tool:
+        tools.append(query_army_roster)
+    # office 专属 court tool 授权走 skills.json office_default_skills[office].court_tools，
+    # 加新 office / 改授权只改 JSON，不改这里。present_consort_candidates 在 registry 单独挂，不在此表生效。
+    _COURT_TOOL_FUNCS = {
+        "propose_appointment": propose_appointment,
+        "check_treasury": check_treasury,
+        "adjust_tax": adjust_tax,
+        "dispatch_arms": dispatch_arms,
+    }
+    grant = context.db.get_office_court_grant(character.office_type)
+    for tool_name in (grant.get("court_tools") or []):
+        fn = _COURT_TOOL_FUNCS.get(tool_name)
+        if fn is not None:
+            tools.append(fn)
+    unique_tools = []
+    seen_tool_names: set = set()
+    for tool in tools:
+        name = getattr(tool, "__name__", str(tool))
+        if name in seen_tool_names:
+            continue
+        seen_tool_names.add(name)
+        unique_tools.append(tool)
+    return unique_tools
+
+
+
+def build_board_query_tools(context: CourtContext):
+    """推演官与档房书办共用的只读盘面查询工具集。
+
+    支持按名称或 id 查询，两者均接受，自动 fallback。
+    无 court tool，无 skill 闸，纯只读。
+    """
+    def view_state() -> str:
+        """查看刘备政权六指标及派系、地方群体、势力总览。"""
+        return (
+            state_context(context.state)
+            + "\n派系：" + context.db.faction_report()
+            + "\n" + context.db.class_report()
+            + "\n势力：" + context.db.power_report(exclude_self=True)
+        )
+
+    def check_treasury() -> str:
+        """查军资、粮秣、民望、名分、军心与士族支持。"""
+        return "；".join(f"{key}{value}" for key, value in context.state.metrics.items())
+
+    def list_regions() -> str:
+        f"""查看两京十三省危情概览（动乱/民心/军压/欠饷等排序）。"""
+        return context.db.region_report(limit=8)
+
+    def inspect_region(region: str) -> str:
+        """查某一地区详细数值：public_support/unrest/grain_output/grain_stock/gentry_resistance/
+        military_pressure/corruption/population/registered_land/hidden_land/tax_per_turn/status。
+        region 可传地区名（如"陕西"）或 region_id（如"shaanxi"），两者均支持。"""
+        try:
+            return context.db.region_detail(region)
+        except ValueError:
+            row = context.db.conn.execute(
+                "SELECT id,name,public_support,unrest,gentry_resistance,"
+                "military_pressure,json_extract(fiscal,'$.corruption') as corruption,"
+                "json_extract(fiscal,'$.grain_output') as grain_output,"
+                "json_extract(fiscal,'$.grain_stock') as grain_stock,"
+                "population,registered_land,hidden_land,tax_per_turn,status "
+                "FROM regions WHERE id=?", (region,)
+            ).fetchone()
+            if row is None:
+                return f"未找到地区 {region!r}。可先调 list_regions 查名称/id 列表。"
+            return str(dict(row))
+
+    def list_armies() -> str:
+        """查看当前地图军队的驻地、兵力、补给、士气、疲劳与军令状态。"""
+        return context.db.army_report(limit=8)
+
+    def inspect_army(army: str) -> str:
+        """查某支军队详细数值：补给/士气/训练/装备/欠饷/机动/忠诚/
+        人数/维护费/驻地/统帅/主管/兵种/状态。
+        army 可传军队名（如"关宁军"）或 army_id（如"guanning"），两者均支持。"""
+        try:
+            return context.db.army_detail(army)
+        except ValueError:
+            row = context.db.conn.execute(
+                "SELECT id,name,station,commander,controller,troop_type,manpower,"
+                "maintenance_per_turn,supply,morale,training,equipment,arrears,mobility,loyalty,status "
+                "FROM armies WHERE id=?", (army,)
+            ).fetchone()
+            if row is None:
+                return f"未找到军队 {army!r}。可先调 list_armies 查名称/id 列表。"
+            return str(dict(row))
+
+    def list_powers() -> str:
+        """查看曹操、孙权及其他割据势力的当前态势。"""
+        return context.db.power_report(exclude_self=True)
+
+    def inspect_power(power: str) -> str:
+        """查某势力完整数值：leverage/satisfaction/military_strength/cohesion/supply/
+        leader/stance/agenda/status/last_action。
+        power 可传势力名或 power_id，两者均支持。"""
+        row = context.db.conn.execute(
+            "SELECT * FROM powers WHERE id=? OR name=?", (power, power)
+        ).fetchone()
+        if row is None:
+            return f"未找到势力 {power!r}。可先调 list_powers 查名称/id 列表。"
+        return str(dict(row))
+
+    def list_issues() -> str:
+        """查看当前在办的所有事项（issue）清单及进度。"""
+        rows = context.db.list_active_issues()
+        if not rows:
+            return f"本{TURN_UNIT}无在办事项。"
+        lines = []
+        for row in rows:
+            kind_tag = "系统" if row["kind"] == "situation" else "皇帝推动"
+            lines.append(
+                f"#{row['id']}[{kind_tag}]{row['title']}"
+                f"（bar {int(row['bar_value'])}/{row['bar_good_meaning']}，{row['stage_text']}）"
+            )
+        return "\n".join(lines)
+
+    def inspect_issue(issue_id: int) -> str:
+        """查某条在办事项完整详情：bar_value/inertia/kind/cancellable/stage/
+        resolve_condition/fail_condition/faction_hint。issue_id 是数字编号（list_issues 里的 # 数字）。"""
+        rows = context.db.list_active_issues()
+        try:
+            n = int(issue_id)
+        except (ValueError, TypeError):
+            return "issue_id 必须是整数。"
+        row = next((r for r in rows if int(r["id"]) == n), None)
+        if row is None:
+            return f"未找到在办事项 #{n}。可先调 list_issues 看清单。"
+        return (
+            f"#{row['id']} {row['title']} bar={int(row['bar_value'])} "
+            f"inertia={row['inertia']} kind={row['kind']} cancellable={row['cancellable']}\n"
+            f"阶段：{row['stage_text']}。承办：{(row['assignee'] if 'assignee' in row.keys() else '') or '—'}。牵涉：{row['faction_hint'] or '—'}。\n"
+            f"结案条件：{row['resolve_condition'] or '（未填）'}。"
+            f"失败条件：{row['fail_condition'] or '（未填）'}。"
+        )
+
+    def get_active_ministers() -> str:
+        """查当前在朝（active）官员名单：姓名、官职、派系。
+        写 office_changes / character_status_changes 前必查，核实人物是否确实在朝。"""
+        rows = context.db.conn.execute(
+            "SELECT name,office,faction FROM characters WHERE status='active' AND power_id='liu_bei' ORDER BY rowid"
+        ).fetchall()
+        return "\n".join(f"{r['name']}：{r['office']}，{r['faction']}" for r in rows)
+
+    def get_faction_class_state() -> str:
+        """查派系满意度与各阶级满意度/影响力（全国汇总）。
+        写 faction_delta / class_delta 前查当前基准值。"""
+        return context.db.faction_report() + "\n" + context.db.class_report()
+
+    return [
+        view_state,
+        check_treasury,
+        list_regions,
+        inspect_region,
+        list_armies,
+        inspect_army,
+        list_powers,
+        inspect_power,
+        list_issues,
+        inspect_issue,
+        get_active_ministers,
+        get_faction_class_state,
+    ]
+
+
+def build_simulator_tools(context: CourtContext):
+    """月末推演日讲官工具集：共用查询工具 + submit_report 提交工具。"""
+    tools = build_board_query_tools(context)
+
+    _captured_report: list[str] = []
+
+    def submit_report(report_text: str) -> str:
+        """提交本月末奏章全文。盘面查清、奏章写完后调用，调用后本月推演即结束。
+
+        ══ 奏章结构 ══
+        总标题一句诗（七言或五言），切本月最痛之事，不空泛。
+        章节按「实际发生了什么」切，不要「诏书纪要/各方反应」机械分段。3-6章不等，
+        每章一句标题+叙事150-300字，相关事可合并。末两章固定：
+          「陛下未知者」（本月发生但未上达/被压的事，1-3条，无则写"无可隐之事"）
+          「待办未解」（见下）
+
+        ══ 笔法 ══
+        历代邸报体：有时序、有人、有地、有冷暖、留钩子。
+        具体数字鼓励写：拨银几万两、调兵几千、流民几万、屠某族几人、谷价几钱、
+        灾区几县、限期几日、奏疏几道——越具体越好，给档房足够锚点判强度。
+        禁用游戏机制token：bar、±N、N→N、「正向：重」「中度推进」之类强度标签。
+        不写「激化/酝酿/阳阴违」抽象词，要写就写谁怎么拖（「巡按上疏推诿，称缇骑越权，留中」）。
+        本朝文体：陛下、准奏、具题、留中、奉旨、塘报、是夜、漏二刻。不出戏。
+        民生基调要诚实：盘面public_support低/satisfaction低时，写怨声载道铤而走险，不唱赞歌。
+
+        ══ 局势推进 ══
+        新局势只两个来源，不自创、不冠「新」字：
+          - candidate_events里本月判定触发的——在章节写清来由，对上title，档房转局势
+          - 玩家诏书明文强推的长期工程/改革——档房自己识别，邸报不代办
+        地方衍生动静（土司争讼/兵丁鼓噪/饥民抢仓）只叙事，并入既有局势，不入库。
+        一锤子事当月了结：拿人/罢官/查抄/申饬，本月写定局，不写「会审待覆」拖到下月。
+        叙事把因果讲到位：手段+规模+波及面+对手反扑都从文字自现，不写强度词。
+        candidate_events逐条判断是否浮现：is_historical=true则原则上必发生（结果受玩家影响）；
+        is_historical=false则结合盘面/诏书/局势走向判断。触发的写进叙事，不触发的不写。
+        止损原则：对症之策给正向advance，无作为才滑向fail_condition，不造死局。
+
+        ══ 讣闻 ══
+        deaths_this_turn里的人本月病逝：关键人物写派系动荡/官缺待补/政策中断；边缘人物一句。
+        不为讣闻新立局势。
+
+        ══ 任官与独缺顶替 ══
+        诏书任命某官必须点名+写明新官职，在朝者写旧职→新职，新进者写所授官职。
+        独占实职（总督/巡抚/总兵/某部尚书）任新人前，先查get_active_ministers有无现任者：
+        有则写「原任X 去职/改调/夺职」再写「Y接任」，两人都进人事除目。
+        debuts_this_turn是程序自动登场，不进人事除目，简短提一笔到任即可。
+
+        ══ 末章固定 ══
+        「人事除目」（有人事变动时必列，无则不列）：
+          任官：旧职→新职 or 起用姓名为官职  → 档房抽office_changes
+          去职：姓名+去职缘由（革/狱/流/仕/卒）  → 档房抽character_status_changes
+        「待办未解」：只列active_issues在册局势，逐条写本月正向或负向变化；
+        每条一句话点局势名与id，不写bar数字，不写from→to，不写“暂无变化/仍待观察”。
+        有实旨、人财物、权限、盘面利好则写向解决端推进；无对症行动、钱粮未到、拖延反扑则写向失败端退。
+        带承办人的局势必须写此人本月办得如何；承办人能力影响完成度百分比，不是直接加点：
+        先判本月基准进度，再按承办修正%=(能力-50)*1.6+(忠诚-50)*0.6+(清廉-50)*0.5+(胆略-50)*0.4 折算；
+        与帝国修正同口径：base>=0乘(1+pct/100)，base<0乘(1-pct/100)。无承办人则写责任无着或部院互推。
+        「建筑只叙事」：不代标数值、不代立新建筑；新建/扩建走局势effect落地，不在邸报直造。
+
+        ══ 输出格式 ══
+        《诗题》
+        {年}年{月}月 月末奏章
+
+        一、（章节名）
+        （叙事段）
+        ...
+        N、人事除目
+        任官：孙传庭 由永城知县 擢 陕西总督
+        去职：魏忠贤 革职拿问下诏狱
+        N+1、待办未解
+        1. #12 江南清查 — 户部主事至苏州，松江徐氏先具实田
+        2. #15 陕西饥荒 — 赈粮未到，延安饥民结伙
+        """
+        _captured_report.append(report_text)
+        return "__report_submitted__"
+
+    context._simulator_report = _captured_report  # type: ignore[attr-defined]
+    return tools + [submit_report]
+
+
+def build_extractor_tools(context: CourtContext):
+    """档房书办工具集：共用查询工具 + submit_extraction 提交工具。"""
+    tools = build_board_query_tools(context)
+
+    _captured: list[str] = []
+    context._extractor_result = _captured  # type: ignore[attr-defined]
+
+    def submit_extraction(json_str: str) -> str:
+        """提交本月结算抽取结果。json_str 是严格 JSON 字符串（无 Markdown 包裹）。
+        调用后本月 extractor 即结束；只能调用一次。
+
+        ══ 必须包含的 16 个顶层字段（无内容填 {} 或 []）══
+
+        metric_delta        两量表增量 {"民心":N,"皇威":N}（增量非新值）
+        economy_moves       浮动收支列表，每项 {account(国库/内库),delta,category,reason}
+                            单位万两；程序已落账的月度固定收支（税/军饷/建筑维护等）不重复写
+                            account按钱出自哪个库定：内帑/内库拨出=内库，户部/太仓=国库
+        faction_delta       派系满意度增量 {阉党/皇党/军队/东林/宗室/中立/西学: N}
+        class_delta         阶级满意度/影响力增量
+                            key="农民"(全国)或"农民@shaanxi"(省级切片)
+                            value={"satisfaction":N,"leverage":N}（可只写一个）
+        region_delta        地区数值变化 {region_id: {字段:增量}}
+                            合法字段：public_support/unrest/grain_output/grain_stock/gentry_resistance/
+                            military_pressure/corruption/population/registered_land/
+                            hidden_land/tax_per_turn/natural_disaster/human_disaster/status
+                            减人口写人口，禁止写军队人数
+        army_delta          军队变化 {army_id: {field:delta_for_numeric_or_new_text}}
+                            field 用短键：supply/morale/training/equipment/mobility/loyalty/
+                            manpower/maintenance_per_turn/station/commander/troop_type/status/owner_power
+                            数值字段一律是增量；既有军 manpower/maintenance_per_turn 只许增加或减少，
+                            "补至八万/现有八万"须先按盘面换算差额，不能填目标值/现状值
+                            owner_power 值可写中文势力名；禁止写 arrears/cohesion
+        power_updates       别的势力三项简单属性 {power_id: {"威望":N,"实力":N,"经济":N}}
+                            只写非大明势力；三项均为整数增量；不写立场/近动/状态
+        world_advance       外交态度 KV；key 为势力名或 power_id，value 为简短态度字符串
+                            如 {"后金":"敌对","蒙古":"摇摆","朝鲜":"倾明"}；无内容填 {}
+        issue_advances      既有局势推进列表
+                            每项：{issue_id(integer),delta_bar,stage_text,narrative,可选inertia_delta}
+                            delta_bar=本月该 issue 的明确变化量，必须非 0（不含自然漂移inertia，系统自动算）
+                            档位：极端±40~50、重大±20~35、中等±8~15、轻度±1~5
+                            承办人能力用帝国修正同款百分比：base>=0乘(1+pct/100)，base<0乘(1-pct/100)，不是直接+N
+                            本月未被实旨推动的，也要按拖延/反扑/自然恶化给 -1~-5，
+                            或按已投入资源、既有办理惯性给 +1~+5；禁止填 0
+        new_issues          本月新立局势
+                            来源(a) origin_kind:"decree"——诏书明文长期工程/改革，需全字段：
+                              kind(initiative/situation),title,origin_kind,bar_value(0-100),
+                              expected_months(整数),stage_text,resolve_condition,fail_condition,
+                              ongoing_effects,effect_on_resolve,effect_on_fail,
+                              cancellable(decree/never/by_progress),assignee(承办人，可选但建议填在册姓名)
+                              effect_on_resolve/fail 可含 metrics/economy/factions/buildings
+                              buildings每项：{action:create/modify/remove,...}
+                            来源(b) origin_kind:"event_pool"——只两字段：origin_kind+"id"(从candidate_events选)
+                            一锤子事（当回合即办结）不立局势，直接落metric_delta等
+        cancels             撤销局势 [{issue_id,applied_cost,narrative}]
+        close_issues        结案/失败 [{issue_id,reason(resolved/failed),narrative}]
+                            对照resolve_condition/fail_condition判，条件命中即报
+                            不可崩坏局势（天灾/大旱等effect_on_fail为空）禁止reason=failed
+        fiscal_changes      制度性财政变化 [{key,mode,value,reason}]
+                            mode枚举：set_value(设为原始值)/delta_value(增减原始值)/
+                            set_amount(月额设为)/delta_amount(月额增减)/
+                            scale_amount(月额按比例增减，value填百分比，削三成=-30)。
+                            例：宗室禄米总额减至每月30万两 → {key:"宗室禄米_base",mode:"set_amount",value:30}
+                            同段口径互相算不通（减至X、实减Y、从A到B矛盾）则留空，不猜增量。
+                            key只从财政系数表现有项逐字选，不在表里的税基变化不要写这里。
+                            田赋/辽饷/盐税/商税走region_delta里的田赋亩率/辽饷亩率/盐税基数/商税基数。
+        appointments        仅后宫纳妃 [{name,office,office_type:"后宫",reason,approved}]
+                            decree_text明文"纳/册封/封/选 某某 为 位号"才立；朝臣一律不进此字段
+        character_status_changes  大臣状态变更 [{name,status,reason}]
+                            status 直接写中文：罢黜/下狱/流放/致仕/身故/离场
+                            name 必须逐字出现在本月 decree_text 或 narrative 原文里；
+                            邸报明文写到此人此事才立；既已罢黜/身故的不重复
+        office_changes      朝臣官职变更 [{name,new_office,reason,可选faction/new_office_type}]
+                            任何人任某官（新进朝堂/调任/升迁）一律走此字段，不分新旧任
+                            name 必须逐字出现在本月 decree_text 或 narrative 原文里；
+                            new_office必须是明制实官名；去职走character_status_changes
+
+        ══ 档位判定标准 ══
+        极端：屠戮全族/抄家灭门/决定性战胜败  bar±40~50  metric±20~30  faction±20~40
+        重大：严旨+钱粮到位+硬办/抓多人/决定性战役/关键阁臣罢免  bar±20~35  metric±10~20  faction±10~20
+        中等：遭抗争但在动/单人下狱/单地清丈到位/单战小胜败/单臣罢黜  bar±8~15  metric±3~10  faction±3~10
+        轻度：只走流程/上疏留中/申饬/零星骚动/礼仪赏赐  bar±1~5  metric±1~3  faction±1~3
+
+        民心严控：只有实打实惠民才正向（+1~3封顶）；横征暴敛/灾荒无救=-5~-15
+        皇威严控：只有强势办成硬事才正向；例行推进0~+2；旨意被拖/战败=-3~-12
+        禁止双重计账：issue effect_on_resolve已给过皇威，metric_delta不要再给
+
+        ══ 输出 JSON 骨架示例 ══
+        {
+          "metric_delta": {"民心": -3, "皇威": 2},
+          "economy_moves": [{"account":"国库","delta":-15,"category":"赈灾","reason":"陕西赈粮"}],
+          "faction_delta": {"阉党": -5, "东林": 4},
+          "class_delta": {"农民@shaanxi": {"satisfaction": -6, "leverage": 5}},
+          "region_delta": {"shaanxi": {"unrest": 5, "public_support": -3}},
+          "army_delta": {"guanning": {"morale": -3, "loyalty": -2}},
+          "power_updates": {"houjin": {"威望": -4, "实力": -3, "经济": -2}},
+          "world_advance": {"后金": "敌对", "蒙古": "摇摆", "朝鲜": "倾明"},
+          "issue_advances": [{"issue_id":12,"delta_bar":15,"stage_text":"户部主事至苏州","narrative":"..."}],
+          "new_issues": [{"kind":"initiative","title":"火器营试设","origin_kind":"decree","bar_value":20,"expected_months":10,"stage_text":"...","resolve_condition":"...","fail_condition":"...","ongoing_effects":{},"effect_on_resolve":{"metrics":{"皇威":3}},"effect_on_fail":{"metrics":{"皇威":-4}},"cancellable":"by_progress"}],
+          "cancels": [],
+          "close_issues": [{"issue_id":9,"reason":"resolved","narrative":"..."}],
+          "fiscal_changes": [{"key":"宗室禄米_base","mode":"delta_amount","value":-10,"reason":"裁减宗藩月支"}],
+          "appointments": [],
+          "character_status_changes": [{"name":"魏忠贤","status":"流放","reason":"发配凤阳"}],
+          "office_changes": [{"name":"孙传庭","new_office":"陕西总督","new_office_type":"督抚","reason":"永城知县擢用"}]
+        }
+        """
+        _captured.append(json_str)
+        return "__extraction_submitted__"
+
+    return tools + [submit_extraction]

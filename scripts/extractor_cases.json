@@ -1,0 +1,2258 @@
+{
+  "_comment": "extractor 全字段覆盖测试集。每 case：directive=诏书草案文本；expect_fields=本诏书应触发的顶层字段（抽出 JSON 里非空即命中）；start_ym/jump_to/sql/set_metric/cheat 可选（透传 direct_decree_probe 同名参数）。cheat 把既成事实直接拼到邸报喂 extractor，用于强制某字段必现。覆盖 4 档房 21 顶层字段：internal(国势变化/钱粮收支/财政制度变化/新立月度收支/裁撤月度收支/派系变化/阶级变化/地区变化) issues(局势推进/新立局势/撤销局势/结案局势) military_external(军队变化/新建军队/军备变化/势力变化/四方动向) personnel_secret(人物变化/后宫册封/密令进度/密令结案/崇祯结局)。注：personnel_secret 现行 prompt 把任免/状态/降敌合并为单一『人物变化』，旧的『人事变更/人物状态变化/人物易主』三分字段已废。",
+  "all_fields": [
+    "国势变化",
+    "钱粮收支",
+    "财政制度变化",
+    "新立月度收支",
+    "裁撤月度收支",
+    "派系变化",
+    "阶级变化",
+    "地区变化",
+    "局势推进",
+    "新立局势",
+    "撤销局势",
+    "结案局势",
+    "军队变化",
+    "新建军队",
+    "军备变化",
+    "势力变化",
+    "四方动向",
+    "人物变化",
+    "后宫册封",
+    "密令进度",
+    "密令结案",
+    "崇祯结局"
+  ],
+  "cases": [
+    {
+      "id": "c001_chaojia_neiku",
+      "directive": "查抄魏忠贤逆党田宅赀财，本月已籍没实银四百六十万两，尽充内帑入内库",
+      "cheat": "本月抄没魏党逆产实收银四百六十万两，已入内库内帑。",
+      "expect_fields": [
+        "钱粮收支"
+      ],
+      "expect_values": {
+        "钱粮收支": [
+          {
+            "账户": "内库",
+            "增量": 460
+          }
+        ]
+      },
+      "note": "抄没入内库：正数460"
+    },
+    {
+      "id": "c002_chaojia_guoku",
+      "directive": "外朝贪墨巡抚某某赃银已籍没解太仓，实收八十万两归户部",
+      "cheat": "本月外朝贪官赃银籍没解太仓，实入国库八十万两。",
+      "expect_fields": [
+        "钱粮收支"
+      ],
+      "expect_values": {
+        "钱粮收支": [
+          {
+            "账户": "国库",
+            "增量": 80
+          }
+        ]
+      },
+      "note": "解太仓入国库：正数80"
+    },
+    {
+      "id": "c003_zhenzai_chuzhang",
+      "directive": "陕西大饥，已自国库拨赈灾银十五万两运抵西安平粜",
+      "cheat": "本月国库已发赈灾银十五万两抵陕西，平粜放赈。",
+      "expect_fields": [
+        "钱粮收支",
+        "地区变化"
+      ],
+      "expect_values": {
+        "钱粮收支": [
+          {
+            "账户": "国库",
+            "增量": -15
+          }
+        ]
+      },
+      "note": "国库出账赈灾：负数-15"
+    },
+    {
+      "id": "c004_bushang_guanning",
+      "directive": "辽东欠饷急，已自内帑拨银六十万两发关宁军清欠",
+      "cheat": "本月内库已拨六十万两至关宁军补足欠饷。",
+      "expect_fields": [
+        "钱粮收支"
+      ],
+      "expect_values": {
+        "钱粮收支": [
+          {
+            "账户": "内库",
+            "增量": -60,
+            "用途": "补饷",
+            "目标编号": "guanning"
+          }
+        ]
+      },
+      "note": "内库直发军补饷：负数,用途补饷,目标编号=军id"
+    },
+    {
+      "id": "c005_lianglib_huboge",
+      "directive": "发内帑二十万两入太仓充国库经费",
+      "cheat": "本月内库拨二十万两入太仓，已充国库一般经费。",
+      "expect_fields": [
+        "钱粮收支"
+      ]
+    },
+    {
+      "id": "c006_jiazheng_shangshui",
+      "directive": "于各钞关加征商税，月增额三十万两",
+      "cheat": "本月已加钞关商税，各省商税基数按地区财政字段上调，月增三十万两落账。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c007_jianshui_tianfu",
+      "directive": "陕西灾重，蠲免田赋亩率",
+      "cheat": "本月已减陕西田赋亩率，陕西田赋月入下降。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c008_xinli_guanshui",
+      "directive": "于江南钞关新设关税一项，月入约二十万两归国库",
+      "cheat": "本月新设关税科目，月入约二十万两入国库，已建账。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "账户": "国库",
+            "方向": "income",
+            "初值": 20
+          }
+        ]
+      },
+      "note": "固定月额新收税：账户/方向(落英文income)/初值20"
+    },
+    {
+      "id": "c009_xinli_yuefeng",
+      "directive": "新设通政司专司，定月俸三万两常支，入官俸支出",
+      "cheat": "本月新立通政司月俸三万两常设支出，已建账。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "方向": "expense",
+            "初值": 3
+          }
+        ]
+      },
+      "note": "固定月额新支：方向(落英文expense),初值3"
+    },
+    {
+      "id": "c010_caiche_kuangshui",
+      "directive": "罢天下矿监税使，永停矿税一项",
+      "cheat": "本月矿税永罢绝征，科目整项删除、往后不再逐月落账（非减额、非降率）。须输出 裁撤月度收支：[{键: 矿税_base, 原因: 永罢矿监税使}]，不要写进财政制度变化。",
+      "expect_fields": [
+        "裁撤月度收支"
+      ],
+      "expect_values": {
+        "裁撤月度收支": [
+          {
+            "键": "矿税_base"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c011_caiche_liaoxiang",
+      "directive": "辽事既缓，裁革辽饷加派，永停此项",
+      "cheat": "本月辽饷加派永裁绝征，各省辽饷亩率按地区财政字段归零，往后不再逐月征收。不要写进财政制度变化。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c012_minxin_huangwei",
+      "directive": "亲赴太庙祭告，颁罪己诏抚慰天下，又减苏松加派以安民",
+      "cheat": "本月减苏松加派、颁罪己诏，民心稍安、皇威略振。",
+      "expect_fields": [
+        "国势变化"
+      ]
+    },
+    {
+      "id": "c013_paixi_yandang",
+      "directive": "彻查阉党余孽，褫夺崔呈秀党羽官职，剪除其朝中羽翼",
+      "cheat": "本月清算阉党羽翼，崔呈秀党人去职，阉党满意度与影响力俱跌。",
+      "expect_fields": [
+        "派系变化",
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c014_jieji_nongmin",
+      "directive": "陕西免赋赈灾并安抚流民，缓饥民聚众之势",
+      "cheat": "本月陕西赈济到位，农民满意度回升、聚众闹事之势收束。",
+      "expect_fields": [
+        "阶级变化",
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c015_jieji_shenshen",
+      "directive": "苏松清丈隐田，触动东南士绅田产，士绅抱团抗法",
+      "cheat": "本月苏松清丈触怒士绅，士绅满意度跌、抗法影响力升。",
+      "expect_fields": [
+        "阶级变化",
+        "地区变化",
+        "士绅阻力"
+      ]
+    },
+    {
+      "id": "c016_diqu_diaoliang",
+      "directive": "京通仓调粟二百万石入陕西赈饥，沿途折其四",
+      "cheat": "本月京通仓调粟二百万石入陕西，折其四到境。北直隶粮储减、陕西粮储增。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c017_diqu_tianzai",
+      "directive": "山东大旱蝗灾并发，仓储见底，民变四起",
+      "cheat": "本月山东旱蝗并发，粮储锐减、动乱大涨、民心跌。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c018_diqu_kongzhi_xianluo",
+      "directive": "后金陷遵化，城破易帜归后金所有",
+      "cheat": "本月遵化陷落，控制权由 ming 转 houjin。",
+      "expect_fields": [
+        "地区变化",
+        "军事压力"
+      ]
+    },
+    {
+      "id": "c019_xinli_juchu_gongcheng",
+      "directive": "设立火器试制局，挂兵部，徐光启提督，首拨内库银十万两清基动工",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c020_xinli_juchu_qingzhang",
+      "directive": "敕命户部于江南大举清丈隐田，三年为期，专委干员督办",
+      "cheat": "本月诏书启动江南清丈隐田，系三年期长期事项。须输出 新立局势：[{来源类型: decree, 类型: initiative, 题材: 经济, 标题: 江南清丈隐田, 当前进度: 15, 预计月数: 36, 阶段: 干员受命待赴任, 解决条件: 清丈竣事田册入库, 失败条件: 士绅抗法清丈废止, 持续效果: {}, 解决效果: {}, 失败效果: {}, 可撤销: by_progress}]。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c021_xinli_xiaogongcheng",
+      "directive": "于通州改旧仓设常平仓一所，足银足匠即日开工",
+      "cheat": "本月常平仓足银足匠强督开工，进度大半。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c022_xinli_bumen",
+      "directive": "新设市舶提举司一衙门，专理海贸抽分",
+      "cheat": "本月明诏新设市舶提举司衙门。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c023_xinli_keji",
+      "directive": "敕徐光启译西洋火炮铸法，立铸炮新法为常制",
+      "cheat": "本月明诏立西洋铸炮新法。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c024_tuijin_zhuankuan",
+      "directive": "为已立之火器局再拨专款十万两、点钦差专督，限期半年成炮",
+      "cheat": "本月火器局（局势编号取盘面在办 issue）获专款十万两、钦差到任开炉，进度大步推进。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "note": "需盘面已有在办 issue 方能命中；无则跳过判定"
+    },
+    {
+      "id": "c025_jiean_resolved",
+      "directive": "常平仓已落成开始储粮，著结案",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, resolve_condition, cancellable) VALUES (701, 'initiative', '通州常平仓营建', 'decree', 1, 92, 'active', '常平仓落成开始储粮', 'by_progress')"
+      ],
+      "cheat": "本月常平仓（局势编号701）落成开仓储粮，达解决条件。须输出 结案局势：[{局势编号: 701, 原因: resolved, 叙述: 常平仓落成储粮}]。",
+      "expect_fields": [
+        "结案局势"
+      ]
+    },
+    {
+      "id": "c026_chexiao",
+      "directive": "前命之清丈劳民伤财，著即罢停办",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (702, 'initiative', '江南清丈隐田', 'decree', 1, 30, 'active', 'by_progress')"
+      ],
+      "cheat": "本月奉旨停办清丈（局势编号702）。须输出 撤销局势：[{局势编号: 702, 叙述: 奉旨停办清丈}]。",
+      "expect_fields": [
+        "撤销局势"
+      ]
+    },
+    {
+      "id": "c027_jundui_kuobian",
+      "directive": "关宁军扩编补兵一千五百，增饷械",
+      "cheat": "本月关宁军扩编补兵一千五百，维护费增。",
+      "expect_fields": [
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c028_jundui_diaodu",
+      "directive": "调宣大军移防遵化一线",
+      "cheat": "本月宣大军移防遵化，驻地变更。",
+      "expect_fields": [
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c029_jundui_gaizhushuai",
+      "directive": "以孙承宗代领关宁军",
+      "cheat": "本月关宁军易帅，孙承宗接统。",
+      "expect_fields": [
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c030_jundui_toudi",
+      "directive": "辽东大凌河祖大寿被困粮尽救援不至，准其降清，本部成建制投后金",
+      "cheat": "本月祖大寿大凌河降清，其本部成建制归 houjin。",
+      "expect_fields": [
+        "军队变化",
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c031_xinjianjun_guanbing",
+      "directive": "命孙传庭于陕西募秦军新营八千，置统帅饷械",
+      "cheat": "本月孙传庭于陕西新募秦军新营八千，已置营伍统帅。",
+      "expect_fields": [
+        "新建军队"
+      ]
+    },
+    {
+      "id": "c032_xinjianjun_panjun",
+      "directive": "陕北饥民聚众数万成股，李自成部坐大成军",
+      "cheat": "本月陕北饥民数万聚众成军，李自成部成股流寇。",
+      "expect_fields": [
+        "新建军队"
+      ]
+    },
+    {
+      "id": "c033_shili_bianhua",
+      "directive": "明军大破后金于宁远城下，挫其锋",
+      "cheat": "本月明军宁远挫败后金，后金威望、实力、经济俱损。",
+      "expect_fields": [
+        "势力变化",
+        "四方动向"
+      ]
+    },
+    {
+      "id": "c034_sifang_dongxiang",
+      "directive": "遣使抚谕蒙古诸部，离间其与后金",
+      "cheat": "本月蒙古诸部态度转摇摆，朝鲜倾明。",
+      "expect_fields": [
+        "四方动向"
+      ]
+    },
+    {
+      "id": "c035_renshi_renguan",
+      "directive": "擢孙传庭为陕西总督，专办剿务",
+      "cheat": "本月擢孙传庭为陕西总督。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c036_renshi_ruge",
+      "directive": "起复徐光启入阁办事",
+      "cheat": "本月徐光启入阁。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c037_zhuangtai_bachu",
+      "directive": "袁崇焕通敌罪著下狱论死",
+      "cheat": "本月袁崇焕下狱论罪。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c038_zhuangtai_liufang",
+      "directive": "魏忠贤发配凤阳安置",
+      "cheat": "本月魏忠贤流放凤阳。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c039_yizhu_guizheng",
+      "directive": "流寇头目刘国能就抚归正，复归朝廷授官",
+      "cheat": "本月流寇刘国能就抚反正，归 ming。须输出 人物变化：[{姓名: 刘国能, new_power: ming, 原因: 就抚归正复归朝廷}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "刘国能",
+            "new_power": "ming"
+          }
+        ]
+      },
+      "note": "归正必抽 new_power=ming；原『某某』占位违反姓名原文命中铁律故改真名"
+    },
+    {
+      "id": "c040_hougong_cefeng",
+      "directive": "册封田氏为贵妃，正位中宫之次",
+      "cheat": "本月诏书明文册封田氏为贵妃。",
+      "expect_fields": [
+        "后宫册封"
+      ]
+    },
+    {
+      "id": "c041_hougong_feizhi",
+      "directive": "册封某氏为皇贵妃",
+      "cheat": "本月诏书明文册封某氏为皇贵妃。",
+      "expect_fields": [
+        "后宫册封"
+      ]
+    },
+    {
+      "id": "c042_miling_fuzuoyong",
+      "directive": "密旨查办盐政贪墨一案，本月查至两淮运司账目",
+      "sql": [
+        "INSERT INTO secret_orders (id, turn_issued, due_turn, year_issued, period_issued, minister_name, title, content, status) VALUES (901, 1, 4, 1631, 8, '骆养性', '密查盐政', '密查两淮盐政贪墨', 'active')"
+      ],
+      "cheat": "密旨动向：盐政密查（密令编号901）本月已查至两淮运司账目，下一步指向运同某某，风声渐有走漏。",
+      "expect_fields": [
+        "密令进度"
+      ]
+    },
+    {
+      "id": "c043_miling_jiean",
+      "directive": "盐政密查案核议已毕，实据齐全",
+      "sql": [
+        "INSERT INTO secret_orders (id, turn_issued, due_turn, year_issued, period_issued, minister_name, title, content, status) VALUES (902, 1, 4, 1631, 8, '骆养性', '盐政核议', '盐政密查核议', 'pending_review')"
+      ],
+      "cheat": "密旨核议：盐政密查（密令编号902）实据齐全，可据此拿人定罪，案当办结。",
+      "expect_fields": [
+        "密令结案"
+      ]
+    },
+    {
+      "id": "c050_combo_chaojia_bushang",
+      "directive": "查抄阉党逆产入内库四百万，并发内帑三十万两补宣大欠饷",
+      "cheat": "本月抄阉党逆产四百万入内库；又发内帑三十万两补宣大军欠饷。",
+      "expect_fields": [
+        "钱粮收支",
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c051_combo_zhenzai_jieji",
+      "directive": "陕西拨赈十五万两放粮，安抚饥民聚众之势",
+      "cheat": "本月陕西放赈十五万两，农民满意度升、动乱降、聚众势收。",
+      "expect_fields": [
+        "钱粮收支",
+        "地区变化",
+        "阶级变化"
+      ]
+    },
+    {
+      "id": "c052_combo_qingdang",
+      "directive": "彻查崔呈秀逆党，下狱抄家，剪阉党羽翼",
+      "cheat": "本月崔呈秀下狱抄家入国库一百万，阉党满意度影响力俱跌。",
+      "expect_fields": [
+        "钱粮收支",
+        "人物变化",
+        "派系变化"
+      ]
+    },
+    {
+      "id": "c053_combo_xinjun_renshi",
+      "directive": "命孙传庭督陕并新募秦军八千",
+      "cheat": "本月擢孙传庭陕西总督，并新募秦军新营八千。",
+      "expect_fields": [
+        "人物变化",
+        "新建军队"
+      ]
+    },
+    {
+      "id": "c054_combo_gongcheng_xinli_caiche",
+      "directive": "新设火器局开工，同时永罢矿税",
+      "cheat": "本月新设火器局立项动工，并永罢矿税整项裁撤。",
+      "expect_fields": [
+        "新立局势",
+        "裁撤月度收支"
+      ]
+    },
+    {
+      "id": "c055_combo_xianluo_jundui",
+      "directive": "后金陷遵化，守军溃散，城归后金",
+      "cheat": "本月遵化陷落控制转 houjin，守军军队军事压力增。",
+      "expect_fields": [
+        "地区变化",
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c056_combo_shili_sifang",
+      "directive": "明军宁远大捷重创后金",
+      "cheat": "本月宁远大捷，后金威望实力经济俱损，蒙古转摇摆。",
+      "expect_fields": [
+        "势力变化",
+        "四方动向",
+        "国势变化"
+      ]
+    },
+    {
+      "id": "c057_combo_xinli_keji_bumen",
+      "directive": "立铸炮新法并新设军器监衙门",
+      "cheat": "本月明诏立铸炮新法、新设军器监衙门，各单立。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c058_combo_jiean_diguoxiuzheng",
+      "directive": "阉党尽除朝纲一肃，著结案并定其功罪",
+      "cheat": "本月阉党尽除达结案条件，朝纲整肃，皇威国库长期向好。",
+      "expect_fields": [
+        "结案局势"
+      ]
+    },
+    {
+      "id": "c059_combo_hougong_renshi",
+      "directive": "册封田氏为贵妃，并擢礼部侍郎某某为礼部尚书",
+      "cheat": "本月册封田氏贵妃；擢某某为礼部尚书。",
+      "expect_fields": [
+        "后宫册封",
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c060_combo_caiche_jiazheng",
+      "directive": "裁革辽饷一项，另加商税月增二十万",
+      "cheat": "本月两事并行：辽饷永罢绝征，各省辽饷亩率归零；商税加征，各省商税基数合计月增二十万。两者都走地区财政字段，不要写进财政制度变化。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c061_chaojia_huanguan",
+      "directive": "司礼监太监某某伏诛，私财本月籍没充内帑",
+      "cheat": "本月宦官某某私财籍没入内库，实银三十万两。",
+      "expect_fields": [
+        "钱粮收支"
+      ]
+    },
+    {
+      "id": "c062_bushang_xuanda",
+      "directive": "宣大军欠饷急，已自国库发饷二十万两清欠",
+      "cheat": "本月国库已拨二十万两至宣大军补欠饷。",
+      "expect_fields": [
+        "钱粮收支"
+      ]
+    },
+    {
+      "id": "c063_bushang_jizhen",
+      "directive": "蓟镇兵哗，已发内帑十五万两就地补饷弹压",
+      "cheat": "本月内库已拨十五万两至蓟镇军补饷。",
+      "expect_fields": [
+        "钱粮收支"
+      ]
+    },
+    {
+      "id": "c064_jinwei_xiaoe",
+      "directive": "查没某劣绅赀财，实收四千六百两入太仓",
+      "cheat": "本月籍没劣绅赀财实收四千六百两解太仓。",
+      "expect_fields": [
+        "钱粮收支"
+      ],
+      "expect_values": {
+        "钱粮收支": [
+          {
+            "账户": "国库",
+            "增量": 0.46
+          }
+        ]
+      },
+      "note": "小额换算：四千六百两=0.46万两"
+    },
+    {
+      "id": "c065_jiazheng_yanshui",
+      "directive": "严查两淮私盐，盐课月增额上调",
+      "cheat": "本月查私盐成效，盐税月额上调，按地区财政字段上调盐税基数。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c066_zhidu_shewei",
+      "directive": "削宗室禄米实发率，定为五成五",
+      "cheat": "本月明诏宗室禄米实发率改为55%（设为新值，非增减）。须输出 财政制度变化：[{键: 宗室禄米_rate, 口径: 设为原始值, 数值: 55, 原因: 削藩定实发率为五成五}]。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "expect_values": {
+        "财政制度变化": [
+          {
+            "键": "宗室禄米_rate",
+            "口径": "设为原始值",
+            "数值": 55
+          }
+        ]
+      },
+      "note": "口径=设为原始值：数值即新值"
+    },
+    {
+      "id": "c066b_zhidu_zengjian_yuan",
+      "directive": "议加宗室禄米实发率，较前上调五个百分点",
+      "cheat": "本月宗室禄米实发率在原基础上上调5点（增减原始值，非设为）。须输出 财政制度变化：[{键: 宗室禄米_rate, 口径: 增减原始值, 数值: 5, 原因: 实发率上调五点}]。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "expect_values": {
+        "财政制度变化": [
+          {
+            "键": "宗室禄米_rate",
+            "口径": "增减原始值",
+            "数值": 5
+          }
+        ]
+      },
+      "note": "口径=增减原始值：数值为增量"
+    },
+    {
+      "id": "c066c_zhidu_yuee_shewei",
+      "directive": "裁宗室禄米总额，定为每月三十万两",
+      "cheat": "本月宗室禄米月度总额定为30万两（月额设为，程序按base×rate反推，禁自行换rate）。须输出 财政制度变化：[{键: 宗室禄米_base, 口径: 月额设为, 数值: 30, 原因: 总额定为每月三十万两}]。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "expect_values": {
+        "财政制度变化": [
+          {
+            "键": "宗室禄米_base",
+            "口径": "月额设为",
+            "数值": 30
+          }
+        ]
+      },
+      "note": "口径=月额设为：数值=新总额万两"
+    },
+    {
+      "id": "c066d_zhidu_yuee_zengjian",
+      "directive": "宗室禄米每月核减十万两",
+      "cheat": "本月宗室禄米每月减少10万两（月额增减，数值带符号负）。须输出 财政制度变化：[{键: 宗室禄米_base, 口径: 月额增减, 数值: -10, 原因: 每月核减十万两}]。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "expect_values": {
+        "财政制度变化": [
+          {
+            "键": "宗室禄米_base",
+            "口径": "月额增减",
+            "数值": -10
+          }
+        ]
+      },
+      "note": "口径=月额增减：数值为月额增量带符号"
+    },
+    {
+      "id": "c066e_zhidu_yuee_bili",
+      "directive": "削宗室禄米三成",
+      "cheat": "本月削宗室禄米三成（月额按比例增减，削减为负百分比）。须输出 财政制度变化：[{键: 宗室禄米_base, 口径: 月额按比例增减, 数值: -30, 原因: 削宗室禄米三成}]。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "expect_values": {
+        "财政制度变化": [
+          {
+            "键": "宗室禄米_base",
+            "口径": "月额按比例增减",
+            "数值": -30
+          }
+        ]
+      },
+      "note": "口径=月额按比例增减：数值=百分比，削为负"
+    },
+    {
+      "id": "c066f_zhidu_zhizao_zeng",
+      "directive": "增苏杭织造月上缴，每月加征两万两",
+      "cheat": "本月织造每月加征2万两（月额增减，正数）。须输出 财政制度变化：[{键: 织造_base, 口径: 月额增减, 数值: 2, 原因: 织造月额加征两万}]。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "expect_values": {
+        "财政制度变化": [
+          {
+            "键": "织造_base",
+            "口径": "月额增减",
+            "数值": 2
+          }
+        ]
+      },
+      "note": "增额方向：月额增减正数"
+    },
+    {
+      "id": "c066g_neg_koujing_maodun",
+      "directive": "议宗室禄米，言官各执一词：或云总额压至三十万，或云实减二万，或云实发率自百分百降至五成五",
+      "expect_fields": [],
+      "neg_check_fields": [
+        "财政制度变化"
+      ],
+      "neg_note": "口径矛盾陷阱（prompt 6.2 末）：同段并出『总额压至30万』『实减2万』『率100→55』三种互斥口径，算不出唯一增量，财政制度变化应留空，不得猜一个值。负样本不给cheat"
+    },
+    {
+      "id": "c067_xinli_qishui",
+      "directive": "于各关市新设契税，月入约十万两入国库",
+      "cheat": "本月新设契税科目月入十万入国库，已建账。",
+      "expect_fields": [
+        "新立月度收支"
+      ]
+    },
+    {
+      "id": "c068_xinli_jintie",
+      "directive": "立边军津贴一项常设月支五万两",
+      "cheat": "本月新立边军津贴五万两常设月支，已建账。",
+      "expect_fields": [
+        "新立月度收支"
+      ]
+    },
+    {
+      "id": "c068a_xinli_dingfu",
+      "directive": "新立丁赋，按人丁岁征银，每丁每年一钱",
+      "cheat": "本月新设丁赋科目，按人口动态计征，每人每年0.1两=1000毫。须输出 新立月度收支：[{键: 丁赋_base, 账户: 国库, 方向: 收, 显示名: 丁赋, 初值: 1000, 计税公式: 按税基, 计税依据: 人口, 税率单位: 毫/人/年, 原因: 新立丁赋按丁岁征}]。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "账户": "国库",
+            "方向": "income",
+            "计税公式": "per_basis",
+            "计税依据": "population"
+          }
+        ]
+      },
+      "note": "动态人头税：formula=per_basis,basis=population（键由LLM自拟dingfu_base不断言；初值单位毫易混不入断言）"
+    },
+    {
+      "id": "c068b_xinli_mushui",
+      "directive": "新立练饷，按在册官民田亩岁派银，每亩加征三毫",
+      "cheat": "本月新设练饷科目，按在册田亩动态计征，每亩每年3毫。须输出 新立月度收支：[{键: 练饷_base, 账户: 国库, 方向: 收, 显示名: 练饷, 初值: 3, 计税公式: 按税基, 计税依据: 在册田亩, 税率单位: 毫/亩/年, 原因: 新立练饷按亩岁派}]。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "账户": "国库",
+            "方向": "income",
+            "计税公式": "per_basis",
+            "计税依据": "registered_land"
+          }
+        ]
+      },
+      "note": "动态田亩税：basis=registered_land（落英文）"
+    },
+    {
+      "id": "c068c_caiche_zhizao",
+      "directive": "永罢苏杭织造一项，停其岁缴",
+      "cheat": "本月织造科目整项永罢，往后不再逐月上缴入内库（整项删除，非减额非降率）。须输出 裁撤月度收支：[{键: 织造_base, 原因: 永罢苏杭织造}]，不要写进财政制度变化。",
+      "expect_fields": [
+        "裁撤月度收支"
+      ],
+      "expect_values": {
+        "裁撤月度收支": [
+          {
+            "键": "织造_base"
+          }
+        ]
+      },
+      "note": "裁撤的是支出/收入固定科目，与c010矿税(收入)互补，此为内库收入项永罢"
+    },
+    {
+      "id": "c069_caiche_yanke",
+      "directive": "罢废盐课一项，永停征",
+      "cheat": "本月盐课盐税永罢绝征，各省盐税基数按地区财政字段归零，往后不再逐月征收。不要写进财政制度变化。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c070_minxin_zheng",
+      "directive": "平定山东民变，开仓赈济流民复业",
+      "cheat": "本月山东平乱赈济见效，全国民心升、皇威振。",
+      "expect_fields": [
+        "国势变化",
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c071_minxin_fu",
+      "directive": "加派三饷于天下，民怨沸腾",
+      "cheat": "本月加派三饷，全国民心大跌。",
+      "expect_fields": [
+        "国势变化"
+      ]
+    },
+    {
+      "id": "c072_paixi_donglin",
+      "directive": "采东林清议，起复钱谦益为礼部尚书、文震孟入翰林",
+      "cheat": "本月起复钱谦益为礼部尚书、文震孟入翰林，东林满意度影响力俱升。须输出 人物变化（钱谦益→礼部尚书、文震孟→翰林）与 派系变化（东林 satisfaction/leverage 升）。",
+      "expect_fields": [
+        "派系变化",
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c073_jieji_junhu",
+      "directive": "九边补足欠饷，安抚军户哗变之势",
+      "cheat": "本月九边补饷，军户满意度升、哗变影响力降。",
+      "expect_fields": [
+        "阶级变化"
+      ]
+    },
+    {
+      "id": "c074_jieji_shangren",
+      "directive": "弛海禁通商，商人额手称庆",
+      "cheat": "本月弛海禁，商人满意度升。",
+      "expect_fields": [
+        "阶级变化"
+      ]
+    },
+    {
+      "id": "c075_diqu_fengshou",
+      "directive": "湖广大熟，仓廪充实粮价回落",
+      "cheat": "本月湖广丰收，粮储增、粮价回落。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c076_diqu_shoufu",
+      "directive": "明军收复遵化，城归大明",
+      "cheat": "本月收复遵化，控制权由 houjin 转 ming。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c077_diqu_fubai",
+      "directive": "巡按查实某省赈银被吞，追赃惩贪",
+      "cheat": "本月某省查实赈银被吞，追赃惩贪，腐败度降。",
+      "expect_fields": [
+        "地区变化"
+      ]
+    },
+    {
+      "id": "c078_xinli_zhaofu",
+      "directive": "敕熊文灿招抚郧阳流寇，许其归农授田",
+      "cheat": "本月诏书启动郧阳招抚，系多回合长期事项。须输出 新立局势：[{来源类型: decree, 类型: initiative, 题材: 军事, 标题: 招抚郧阳流寇, 当前进度: 20, 预计月数: 6, 阶段: 熊文灿赴郧阳宣抚, 解决条件: 流寇归农受抚, 失败条件: 招抚破裂复叛, 持续效果: {}, 解决效果: {}, 失败效果: {}, 可撤销: by_progress}]。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c079_xinli_an",
+      "directive": "立钱龙锡通敌案，敕三法司会审究问",
+      "cheat": "本月诏书启动钱龙锡通敌案，系跨月会审大案。须输出 新立局势：[{来源类型: decree, 类型: initiative, 题材: 政治, 标题: 钱龙锡通敌案, 当前进度: 15, 预计月数: 4, 阶段: 三法司会审取证, 解决条件: 案结定谳, 失败条件: 查无实据释罪, 持续效果: {}, 解决效果: {}, 失败效果: {}, 可撤销: decree}]。",
+      "expect_fields": [
+        "新立局势"
+      ]
+    },
+    {
+      "id": "c080_xinli_bingzhi",
+      "directive": "立京营兵制清查为常制，核冒滥汰老弱",
+      "cheat": "本月明诏立京营兵制清查常制，系不产生军队实体变化的军务章程改革，作改革 issue 立项（不新建军队）。须输出 新立局势：[{来源类型: decree, 类型: initiative, 题材: 军事, 标题: 京营兵制清查, 当前进度: 20, 预计月数: 6, 阶段: 诏下兵部核查京营冒滥, 解决条件: 冒滥汰除兵制肃清, 失败条件: 勋贵阻挠清查废止, 持续效果: {}, 解决效果: {}, 失败效果: {}, 可撤销: decree}]。",
+      "expect_fields": [
+        "新立局势"
+      ],
+      "note": "军务章程类改革(非军队实体变化)走新立局势；原 cheat 未明示立issue致LLM当一锤子事 FAIL"
+    },
+    {
+      "id": "c081_tuijin_zhonggongcheng",
+      "directive": "为已立之清丈再委干员、拨册银、限期严办",
+      "cheat": "本月清丈案获干员到任拨银，进度推进。",
+      "expect_fields": [
+        "局势推进"
+      ]
+    },
+    {
+      "id": "c082_tuijin_wuxiao",
+      "directive": "下旨催办火器局，然钱粮未到部院仍议",
+      "cheat": "本月催办火器局但钱粮未到、部院仍议，无实质推进。",
+      "expect_fields": []
+    },
+    {
+      "id": "c083_jiean_failed",
+      "directive": "郧阳招抚彻底破裂，流寇复叛攻城，著以失败结案",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, fail_condition, cancellable) VALUES (705, 'initiative', '招抚郧阳流寇', 'decree', 1, 20, 'active', '招抚破裂复叛', 'by_progress')"
+      ],
+      "cheat": "本月郧阳招抚（局势编号705）破裂、流寇复叛攻城，达失败结案条件。须输出 结案局势：[{局势编号: 705, 原因: failed, 叙述: 招抚破裂流寇复叛}]。",
+      "expect_fields": [
+        "结案局势"
+      ],
+      "expect_values": {
+        "结案局势": [
+          {
+            "局势编号": 705,
+            "原因": "failed"
+          }
+        ]
+      },
+      "note": "失败结案：须预置 active issue 方有编号可结案；原缺 sql 致无 issue 可结故 FAIL"
+    },
+    {
+      "id": "c084_jiean_diguo",
+      "directive": "九边整军已成制，著结案并叙其功",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, resolve_condition, cancellable) VALUES (703, 'initiative', '九边整军', 'decree', 1, 95, 'active', '九边整军成制', 'never')"
+      ],
+      "cheat": "本月九边整军（局势编号703）成制达解决条件，边防长期向好。须输出 结案局势：[{局势编号: 703, 原因: resolved, 叙述: 九边整军成制}]。",
+      "expect_fields": [
+        "结案局势"
+      ]
+    },
+    {
+      "id": "c085_chexiao_2",
+      "directive": "前命之某工程劳费过巨，著即停办撤项",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (704, 'initiative', '某大工程营建', 'decree', 1, 25, 'active', 'by_progress')"
+      ],
+      "cheat": "本月奉旨停办某工程（局势编号704）。须输出 撤销局势：[{局势编号: 704, 叙述: 工程劳费过巨停办}]。",
+      "expect_fields": [
+        "撤销局势"
+      ]
+    },
+    {
+      "id": "c086_jundui_gaibianzhi",
+      "directive": "改关宁军为车骑混编，增火器操典",
+      "cheat": "本月关宁军改编制为车骑混编，兵种装备变更。",
+      "expect_fields": [
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c087_jundui_caiche",
+      "directive": "裁汰登莱冗兵三千，减其饷额",
+      "cheat": "本月登莱军裁汰三千，人数维护费减。",
+      "expect_fields": [
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c088_jundui_chexiao",
+      "directive": "某营溃散无存，著撤销其番号，余部并入关宁",
+      "cheat": "本月某营撤销番号，余部并入关宁军。",
+      "expect_fields": [
+        "军队变化"
+      ]
+    },
+    {
+      "id": "c089_xinjianjun_houjin",
+      "directive": "后金招降明军改编为汉军一旗",
+      "cheat": "本月后金招降明军改编为全新一军「汉军旗」。须输出 新建军队：[{id: hanjun_qi, name: 汉军旗, owner_power: houjin, station: 建州/赫图阿拉, commander: 佟养性, troop_type: 降军改编, manpower: 6000, maintenance_per_turn: 0, supply: 50, morale: 55, training: 45, equipment: 50, mobility: 50, loyalty: 50, status: 新编汉军旗}]。",
+      "expect_fields": [
+        "新建军队"
+      ]
+    },
+    {
+      "id": "c090_xinjianjun_menggu",
+      "directive": "蒙古某部新组骑兵团助后金",
+      "cheat": "本月蒙古察哈尔部新组全新一军「察哈尔骑兵团」。须输出 新建军队：[{id: chahar_cavalry, name: 察哈尔骑兵团, owner_power: mongol, station: 漠南/归化, commander: 林丹汗部将, troop_type: 游牧骑兵, manpower: 5000, maintenance_per_turn: 0, supply: 50, morale: 60, training: 50, equipment: 45, mobility: 70, loyalty: 50, status: 新组骑兵团}]。",
+      "expect_fields": [
+        "新建军队"
+      ]
+    },
+    {
+      "id": "c091_shili_zhuangda",
+      "directive": "后金破朝鲜，掠地拓土势张",
+      "cheat": "本月后金破朝鲜，威望实力经济俱升。",
+      "expect_fields": [
+        "势力变化",
+        "四方动向"
+      ]
+    },
+    {
+      "id": "c092_sifang_chaoxian",
+      "directive": "朝鲜遣使乞援，愿倾明拒金",
+      "cheat": "本月朝鲜态度转倾明。",
+      "expect_fields": [
+        "四方动向"
+      ]
+    },
+    {
+      "id": "c092a_junbei_ganzhi",
+      "directive": "敕工部赶制鸟铳五千杆、红夷大炮四门，本月已成解京入库",
+      "cheat": "本月工部赶制成红夷大炮四门、鸟铳五千杆，已解京入军备总库。须输出 军备变化：{红夷大炮: 4, 鸟铳: 5000, reason: 工部赶制红夷四门鸟铳五千成入库}。",
+      "expect_fields": [
+        "军备变化"
+      ]
+    },
+    {
+      "id": "c092b_junbei_huojiao",
+      "directive": "某营操炮炸膛，又遇敌溃散遗械，火铳红夷俱损",
+      "cheat": "本月某营操炮红夷大炮炸膛一门、溃散遗失火铳八百杆，俱自军备总库核减。须输出 军备变化：{红夷大炮: -1, 火铳: -800, reason: 炸膛损红夷一门、溃散遗火铳八百}。",
+      "expect_fields": [
+        "军备变化"
+      ]
+    },
+    {
+      "id": "c092c_junbei_aomen",
+      "directive": "遣使澳门购红夷大炮二十门，本月运抵入库",
+      "cheat": "本月澳门购红夷大炮二十门运抵京师，已入军备总库。须输出 军备变化：{红夷大炮: 20, reason: 澳门购炮二十门到货入库}。",
+      "expect_fields": [
+        "军备变化"
+      ]
+    },
+    {
+      "id": "c093_renshi_diaoren",
+      "directive": "调洪承畴自延绥总督改任三边总督",
+      "cheat": "本月洪承畴改任三边总督。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c094_zhuangtai_zhishi",
+      "directive": "准内阁首辅周道登致仕还乡",
+      "cheat": "本月首辅周道登致仕去职。须输出 人物变化：[{姓名: 周道登, 状态: 致仕, 原因: 准致仕还乡}]。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c095_zhuangtai_shengu",
+      "directive": "蓟辽督师某某战殁于阵",
+      "cheat": "本月督师某某战殁身故。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c096_yizhu_jiangdi",
+      "directive": "副将某某哗变投后金",
+      "cheat": "本月副将某某哗变降后金，new_power houjin。",
+      "expect_fields": [
+        "人物变化"
+      ]
+    },
+    {
+      "id": "c097_hougong_feijun",
+      "directive": "选某氏入宫为嫔",
+      "cheat": "本月诏书明文选某氏为嫔。",
+      "expect_fields": [
+        "后宫册封"
+      ]
+    },
+    {
+      "id": "c098_jieju_null",
+      "directive": "京师戒严，崇祯帝亲临城头督战，安然无恙",
+      "cheat": "本月京师戒严，崇祯帝督战无恙，未退位未身死。",
+      "expect_fields": [],
+      "expect_emperor_fate": null
+    },
+    {
+      "id": "c099_jieju_suicide",
+      "directive": "京师陷落，崇祯帝缢于煤山",
+      "cheat": "本月京师陷落，崇祯帝自缢殉国于煤山。",
+      "expect_fields": [
+        "崇祯结局"
+      ],
+      "expect_emperor_fate": "suicide"
+    },
+    {
+      "id": "c100_jieju_abdicate",
+      "directive": "崇祯帝下诏逊国禅让",
+      "cheat": "本月崇祯帝明诏退位逊国禅让。",
+      "expect_fields": [
+        "崇祯结局"
+      ],
+      "expect_emperor_fate": "abdicate"
+    },
+    {
+      "id": "c101_neg_jiuanchongti",
+      "directive": "邸报回顾旧事：魏忠贤前已下狱、阉党前已查抄完毕，俱属既成往事，本月无新动作",
+      "expect_fields": [],
+      "neg_check_fields": [
+        "人物变化",
+        "钱粮收支"
+      ],
+      "skip_in_summary": true,
+      "neg_note": "【已知无效负样本，不计入有效结果】directive 把『魏忠贤已下狱』明写进文本，extractor 据文本抽人物状态变化不算错；真正的『旧案判重』要靠盘面 court_roster 预置该人已下狱态，但纯净开局魏忠贤 1627 已故、不在盘面，无从判重。保/跳 simulator 均 FAIL。要测须精构盘面前置态"
+    },
+    {
+      "id": "c102_neg_taolun",
+      "directive": "陕西巡抚请赈银三十万，户部称库空未能给，仅在朝堂讨论未决",
+      "expect_fields": [],
+      "neg_check_fields": [
+        "钱粮收支"
+      ],
+      "skip_in_summary": true,
+      "neg_note": "【已知无效负样本，不计入有效结果】directive 写了具体赈银数目，extractor 易据此抽钱粮收支；『讨论未决不落账』需 simulator 把请款演成讨论叙事，LLM 判定不稳。属测试构造难度，非 extractor bug"
+    },
+    {
+      "id": "c103_neg_qianxiang_weidao",
+      "directive": "宣大诸军欠饷六十万，户部尚在筹画，无银离库",
+      "expect_fields": [],
+      "neg_check_fields": [
+        "钱粮收支"
+      ],
+      "neg_note": "欠额存在但无收支，不应写补饷（负样本不给cheat）"
+    },
+    {
+      "id": "c103b_neg_guding_chongchou",
+      "directive": "本月太仓如常发宗室禄米、百官俸禄，金花银织造如常入内库，皆制度常支常入",
+      "expect_fields": [],
+      "neg_check_fields": [
+        "钱粮收支"
+      ],
+      "neg_note": "重抽固定项陷阱（prompt 5.2 第7条）：宗室禄米/官俸/金花银/织造是 fiscal_config 固定月度收支，程序自动落账，extractor 不得再写进钱粮收支（重抽=双扣）。负样本不给cheat"
+    },
+    {
+      "id": "c103c_neg_zhidu_vs_xianjin",
+      "directive": "削宗室禄米三成以纾国用",
+      "cheat": "本月削宗室禄米三成，制度月额下调，本月并无一次性银两入库出库。须输出 财政制度变化（宗室禄米_base 月额按比例 -30），钱粮收支留空（改额度非一次性现金收支）。",
+      "expect_fields": [
+        "财政制度变化"
+      ],
+      "neg_check_fields": [
+        "钱粮收支"
+      ],
+      "neg_note": "区分『改月度额度』(财政制度变化)与『一次性现金』(钱粮收支)：削禄米是改额度，不产生本月现金流，钱粮收支不得抽"
+    },
+    {
+      "id": "c104_miling_fuzuoyong2",
+      "directive": "密旨查办勋戚走私一案，本月已查至京营某将名下",
+      "sql": [
+        "INSERT INTO secret_orders (id, turn_issued, due_turn, year_issued, period_issued, minister_name, title, content, status) VALUES (903, 1, 5, 1631, 8, '骆养性', '密查勋戚走私', '密查勋戚通番走私', 'active')"
+      ],
+      "cheat": "密旨动向：勋戚走私密查（密令编号903）本月已查至京营某将名下，下一步指向其姻亲，已有人察觉风声。",
+      "expect_fields": [
+        "密令进度"
+      ]
+    },
+    {
+      "id": "c105_miling_jiean2",
+      "directive": "勋戚走私密查核议，然线索中断证据不足",
+      "sql": [
+        "INSERT INTO secret_orders (id, turn_issued, due_turn, year_issued, period_issued, minister_name, title, content, status) VALUES (904, 1, 5, 1631, 8, '骆养性', '走私核议', '勋戚走私核议', 'pending_review')"
+      ],
+      "cheat": "密旨核议：勋戚走私密查（密令编号904）线索中断、证据不足，案以失败了结。",
+      "expect_fields": [
+        "密令结案"
+      ]
+    },
+    {
+      "id": "c106_combo_full_neizheng",
+      "directive": "查抄某逆产二百万入国库，加征商税月增十万，并赈陕西十万两放粮安民",
+      "cheat": "本月抄逆产二百万入国库；加征商税月增十万（不分省，用地区变化『全国』key 上调商税基数10，程序按省摊派；不走财政制度变化/新立月度收支）；陕西放赈十万两，农民满意度升、动乱降、民心略振。",
+      "expect_fields": [
+        "钱粮收支",
+        "地区变化",
+        "阶级变化",
+        "国势变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "全国": {
+            "商税基数": 10
+          }
+        }
+      },
+      "neg_check_fields": [
+        "新立月度收支",
+        "财政制度变化"
+      ],
+      "note": "全国不分省加征商税→地区变化『全国』key 摊派；禁止再建新立科目(双账)或写财政制度变化"
+    },
+    {
+      "id": "c107_combo_xinjun_junbei",
+      "directive": "命孙传庭于陕西新募秦军八千，同时工部赶制鸟铳三千、虎蹲炮六门配发新营",
+      "cheat": "本月孙传庭于陕西新募秦军新营八千，已置营伍统帅；又工部赶制成鸟铳三千杆、虎蹲炮六门入军备总库。须输出 新建军队（秦军新营）与 军备变化：{鸟铳: 3000, 虎蹲炮: 6, reason: 工部赶制配发新营}。",
+      "expect_fields": [
+        "新建军队",
+        "军备变化"
+      ]
+    },
+    {
+      "id": "c220_diqu_minxin",
+      "directive": "陕西大赈，民心回暖",
+      "cheat": "本月陕西赈济到位。须输出 地区变化：{shaanxi:{民心:6}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "民心": 6
+          }
+        }
+      }
+    },
+    {
+      "id": "c221_diqu_dongluan",
+      "directive": "陕西流贼蜂起，动乱大涨",
+      "cheat": "本月陕西盗匪坐大。须输出 地区变化：{shaanxi:{动乱:15}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "动乱": 15
+          }
+        }
+      }
+    },
+    {
+      "id": "c222_diqu_liangchan",
+      "directive": "陕西大兴水利垦荒，粮食年产升",
+      "cheat": "本月陕西垦复水利。须输出 地区变化：{shaanxi:{粮食年产:12}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "粮食年产": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "c223_diqu_cunliang",
+      "directive": "调粟二十万石入陕西仓",
+      "cheat": "本月调粮入陕西仓。须输出 地区变化：{shaanxi:{存粮:20}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "存粮": 20
+          }
+        }
+      }
+    },
+    {
+      "id": "c224_diqu_shenshen",
+      "directive": "陕西清丈触怒士绅，阻力升",
+      "cheat": "本月陕西清丈遇阻。须输出 地区变化：{shaanxi:{士绅阻力:10}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "士绅阻力": 10
+          }
+        }
+      }
+    },
+    {
+      "id": "c225_diqu_junshi",
+      "directive": "后金压境陕北，军事压力升",
+      "cheat": "本月陕西边患加剧。须输出 地区变化：{shaanxi:{军事压力:8}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "军事压力": 8
+          }
+        }
+      }
+    },
+    {
+      "id": "c226_diqu_fubai",
+      "directive": "陕西巡按查实贪腐坐大，腐败度升",
+      "cheat": "本月陕西贪腐。须输出 地区变化：{shaanxi:{腐败度:7}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "腐败度": 7
+          }
+        }
+      }
+    },
+    {
+      "id": "c227_diqu_guanmintian",
+      "directive": "陕西清出隐田入官民田册",
+      "cheat": "本月陕西清丈隐田入册。须输出 地区变化：{shaanxi:{官民田:5,隐田:-5}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "官民田": 5,
+            "隐田": -5
+          }
+        }
+      }
+    },
+    {
+      "id": "c228_diqu_wangtian",
+      "directive": "清查陕西藩王侵占庄田归官",
+      "cheat": "本月陕西夺回藩田。须输出 地区变化：{shaanxi:{藩王庄田:-4,官民田:4}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "藩王庄田": -4
+          }
+        }
+      }
+    },
+    {
+      "id": "c229_diqu_huangzhuang",
+      "directive": "退陕西皇庄归民",
+      "cheat": "本月陕西裁皇庄归民。须输出 地区变化：{shaanxi:{皇庄:-3,官民田:3}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "皇庄": -3
+          }
+        }
+      }
+    },
+    {
+      "id": "c230_diqu_tianfuli",
+      "directive": "陕西加征田赋亩率",
+      "cheat": "本月陕西加赋。须输出 地区变化：{shaanxi:{田赋亩率:20}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "田赋亩率": 20
+          }
+        }
+      }
+    },
+    {
+      "id": "c231_diqu_liaoxiangli",
+      "directive": "陕西加派辽饷亩率",
+      "cheat": "本月陕西加派辽饷。须输出 地区变化：{shaanxi:{辽饷亩率:9}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "辽饷亩率": 9
+          }
+        }
+      }
+    },
+    {
+      "id": "c232_diqu_yanshui",
+      "directive": "江南查私盐整盐课，盐税基数升",
+      "cheat": "本月江南整盐课。须输出 地区变化：{nanzhili:{盐税基数:5}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "nanzhili": {
+            "盐税基数": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "c233_diqu_shangshui",
+      "directive": "江南设钞关抽分，商税基数升",
+      "cheat": "本月江南设钞关。须输出 地区变化：{nanzhili:{商税基数:6}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "nanzhili": {
+            "商税基数": 6
+          }
+        }
+      }
+    },
+    {
+      "id": "c234_diqu_renkou",
+      "directive": "陕西招抚流民复业，人口增",
+      "cheat": "本月陕西招抚复业。须输出 地区变化：{shaanxi:{人口:10}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "人口": 10
+          }
+        }
+      }
+    },
+    {
+      "id": "c235_diqu_tianmu",
+      "directive": "陕西清丈新增在册田亩",
+      "cheat": "本月陕西田亩入册。须输出 地区变化：{shaanxi:{田亩:8}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "田亩": 8
+          }
+        }
+      }
+    },
+    {
+      "id": "c236_diqu_yintian",
+      "directive": "陕西查出大量隐田",
+      "cheat": "本月陕西查隐田。须输出 地区变化：{shaanxi:{隐田:-7}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "隐田": -7
+          }
+        }
+      }
+    },
+    {
+      "id": "c237_diqu_shuishou",
+      "directive": "陕西整顿税收增",
+      "cheat": "本月陕西税收增。须输出 地区变化：{shaanxi:{税收:4}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "税收": 4
+          }
+        }
+      }
+    },
+    {
+      "id": "c238_diqu_tianzai",
+      "directive": "陕西旱蝗天灾",
+      "cheat": "本月陕西天灾。须输出 地区变化：{shaanxi:{天灾:6}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "天灾": 6
+          }
+        }
+      }
+    },
+    {
+      "id": "c239_diqu_renhuo",
+      "directive": "陕西兵燹人祸",
+      "cheat": "本月陕西人祸。须输出 地区变化：{shaanxi:{人祸:5}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "人祸": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "c240_diqu_kongzhi",
+      "directive": "后金陷陕北榆林，控制权易手",
+      "cheat": "本月榆林陷落控制权转后金。须输出 地区变化：{shaanxi:{控制:houjin}}。",
+      "expect_fields": [
+        "地区变化"
+      ],
+      "expect_values": {
+        "地区变化": {
+          "shaanxi": {
+            "控制": "houjin"
+          }
+        }
+      }
+    },
+    {
+      "id": "c209_paixi_sat",
+      "directive": "严旨申饬东林党魁，夺其票拟之权",
+      "cheat": "本月东林被夺权失利。须输出 派系变化：{东林:{satisfaction:-6,leverage:-4}}。",
+      "expect_fields": [
+        "派系变化"
+      ],
+      "expect_values": {
+        "派系变化": {
+          "东林": {
+            "满意": -6,
+            "影响力": -4
+          }
+        }
+      }
+    },
+    {
+      "id": "c211_jieji_nongmin",
+      "directive": "陕西免赋赈灾安抚农民",
+      "cheat": "本月陕西农民利益得纾。须输出 阶级变化：{农民@shaanxi:{satisfaction:6,leverage:-2}}。",
+      "expect_fields": [
+        "阶级变化"
+      ],
+      "expect_values": {
+        "阶级变化": {
+          "农民@shaanxi": {
+            "满意": 6,
+            "影响力": -2
+          }
+        }
+      }
+    },
+    {
+      "id": "c200_guoshi_minxin",
+      "directive": "颁罪己诏减苏松加派以安天下",
+      "cheat": "本月减派颁诏，全国民心略振。须输出 国势变化：{民心:4}。",
+      "expect_fields": [
+        "国势变化"
+      ],
+      "expect_values": {
+        "国势变化": {
+          "民心": 4
+        }
+      }
+    },
+    {
+      "id": "c201_guoshi_huangwei",
+      "directive": "强督办成辽东大捷，皇威大振",
+      "cheat": "本月强势办成硬事，皇威升。须输出 国势变化：{皇威:5}。",
+      "expect_fields": [
+        "国势变化"
+      ],
+      "expect_values": {
+        "国势变化": {
+          "皇威": 5
+        }
+      }
+    },
+    {
+      "id": "c205_xinli_guanmin",
+      "directive": "新立官民田亩税，按官民田岁派",
+      "cheat": "本月新设按官民田计征科目。须输出 新立月度收支：[{键:亩派_base,账户:国库,方向:收,显示名:亩派,初值:3,计税公式:按税基,计税依据:官民田,税率单位:毫/亩/年,原因:按官民田岁派}]。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "计税公式": "per_basis",
+            "计税依据": "guan_min_tian"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c206_xinli_huangzhuang",
+      "directive": "新立皇庄租银，按皇庄岁征入内库",
+      "cheat": "本月新设按皇庄计征科目。须输出 新立月度收支：[{键:皇庄租_base,账户:内库,方向:收,显示名:皇庄租,初值:5,计税公式:按税基,计税依据:皇庄,税率单位:两/亩/年,原因:按皇庄岁征}]。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "计税公式": "per_basis",
+            "计税依据": "huang_tian"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c207_xinli_wangtian",
+      "directive": "新立藩田助饷，按藩王庄田岁派",
+      "cheat": "本月新设按藩王庄田计征科目。须输出 新立月度收支：[{键:藩助_base,账户:国库,方向:收,显示名:藩田助饷,初值:4,计税公式:按税基,计税依据:藩王庄田,税率单位:毫/亩/年,原因:按藩庄岁派}]。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "计税公式": "per_basis",
+            "计税依据": "wang_tian"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c208_xinli_yintian",
+      "directive": "清出隐田后立隐田补税，按隐田岁征",
+      "cheat": "本月新设按隐田计征科目。须输出 新立月度收支：[{键:隐补_base,账户:国库,方向:收,显示名:隐田补税,初值:3,计税公式:按税基,计税依据:隐田,税率单位:毫/亩/年,原因:按隐田岁征}]。",
+      "expect_fields": [
+        "新立月度收支"
+      ],
+      "expect_values": {
+        "新立月度收支": [
+          {
+            "计税公式": "per_basis",
+            "计税依据": "hidden_land"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c250_tuijin_verygood",
+      "directive": "为在办火器局拨巨款点钦差强督，超预期大成",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (801, 'initiative', '火器局营建', 'decree', 1, 40, 'active', 'by_progress')"
+      ],
+      "cheat": "本月火器局（局势编号801）超预期大成，进展verygood。须输出 局势推进：[{局势编号:801,进度增量:35,阶段:大成在即,叙述:钦差强督大成}]。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "expect_values": {
+        "局势推进": [
+          {
+            "局势编号": 801,
+            "进度增量": 35
+          }
+        ]
+      }
+    },
+    {
+      "id": "c251_tuijin_good",
+      "directive": "为在办清丈拨款见效，确有推进",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (802, 'initiative', '江南清丈', 'decree', 1, 40, 'active', 'by_progress')"
+      ],
+      "cheat": "本月清丈（局势编号802）投入见效，进展good。须输出 局势推进：[{局势编号:802,进度增量:12,阶段:推进中,叙述:投入见效}]。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "expect_values": {
+        "局势推进": [
+          {
+            "局势编号": 802,
+            "进度增量": 12
+          }
+        ]
+      }
+    },
+    {
+      "id": "c252_tuijin_normal",
+      "directive": "在办事项小步推进",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (803, 'initiative', '漕运整顿', 'decree', 1, 40, 'active', 'by_progress')"
+      ],
+      "cheat": "本月漕运（局势编号803）小步推进，进展normal。须输出 局势推进：[{局势编号:803,进度增量:4,阶段:小步推进,叙述:略有进展}]。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "expect_values": {
+        "局势推进": [
+          {
+            "局势编号": 803,
+            "进度增量": 4
+          }
+        ]
+      }
+    },
+    {
+      "id": "c253_tuijin_bad",
+      "directive": "在办事项受阻拖延",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (804, 'initiative', '盐法改革', 'decree', 1, 40, 'active', 'by_progress')"
+      ],
+      "cheat": "本月盐法（局势编号804）受阻拖延，进展bad。须输出 局势推进：[{局势编号:804,进度增量:-4,阶段:受阻,叙述:推诿拖延}]。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "expect_values": {
+        "局势推进": [
+          {
+            "局势编号": 804,
+            "进度增量": -4
+          }
+        ]
+      }
+    },
+    {
+      "id": "c254_tuijin_verybad",
+      "directive": "在办事项严重反扑大败",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (805, 'initiative', '裁辽饷', 'decree', 1, 40, 'active', 'by_progress')"
+      ],
+      "cheat": "本月裁辽饷（局势编号805）严重反扑，进展verybad。须输出 局势推进：[{局势编号:805,进度增量:-30,阶段:大败,叙述:边镇哗变反扑}]。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "expect_values": {
+        "局势推进": [
+          {
+            "局势编号": 805,
+            "进度增量": -30
+          }
+        ]
+      }
+    },
+    {
+      "id": "c255_tuijin_zhuankuan",
+      "directive": "承办人从专款支银办事",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable, budget_pool, budget_source) VALUES (806, 'initiative', '火器试制', 'decree', 1, 50, 'active', 'by_progress', 20, '国库')"
+      ],
+      "cheat": "本月火器试制（局势编号806，专款余额20万两）承办人从专款实支8万两购料，进展good。务必在 局势推进 里给 局势编号806 这一条单独补 专款支取:8 字段（万两）。须输出 局势推进 含：{局势编号:806,进度增量:8,专款支取:8,阶段:购料,叙述:支专款八万购料}。",
+      "expect_fields": [
+        "局势推进"
+      ],
+      "expect_values": {
+        "局势推进": [
+          {
+            "局势编号": 806,
+            "专款支取": 8
+          }
+        ]
+      },
+      "note": "专款支取字段：qwen 易漏，cheat 已强化；仍漏则属模型抖动非断言错"
+    },
+    {
+      "id": "c260_xinli_caishi_gongcheng",
+      "directive": "敕建新火器局，挂兵部，拨款动工",
+      "cheat": "本月明诏新建火器局（大工程）。须输出 新立局势：[{来源类型:decree,类型:initiative,题材:工程,标题:新建火器局,当前进度:15,预计月数:12,阶段:动工,解决条件:火器局落成开炉,失败条件:挪用废止,可撤销:decree,解决效果:{建筑:[{动作:create,地区编号:beizhili,名称:京师火器局,类别:军事}]}}]。",
+      "expect_fields": [
+        "新立局势"
+      ],
+      "expect_values": {
+        "新立局势": [
+          {
+            "类型": "initiative",
+            "tags": "工程",
+            "可撤销": "decree"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c262_xinli_caishi_zhengzhi",
+      "directive": "新设市舶提举司衙门专理海贸",
+      "cheat": "本月明诏新设市舶提举司（政治新设衙门）。须输出 新立局势：[{来源类型:decree,类型:initiative,题材:政治,标题:设市舶提举司,当前进度:20,预计月数:6,阶段:筹设,解决条件:衙门设立运转,失败条件:廷议否决,可撤销:never,解决效果:{部门:[{动作:create,名称:市舶提举司}]}}]。",
+      "expect_fields": [
+        "新立局势"
+      ],
+      "expect_values": {
+        "新立局势": [
+          {
+            "tags": "政治",
+            "可撤销": "never"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c263_xinli_caishi_keji",
+      "directive": "敕立西洋铸炮新法为常制",
+      "cheat": "本月明诏立铸炮新法（科技改革）。须输出 新立局势：[{来源类型:decree,类型:initiative,题材:科技,标题:西洋铸炮新法,当前进度:15,预计月数:8,阶段:译法,解决条件:新法成制可量产,失败条件:法不可行,可撤销:by_progress,解决效果:{科技:[{动作:create,名称:西洋铸炮法}]}}]。",
+      "expect_fields": [
+        "新立局势"
+      ],
+      "expect_values": {
+        "新立局势": [
+          {
+            "tags": "科技",
+            "可撤销": "by_progress"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c264_xinli_caishi_junshi",
+      "directive": "立九边整军章程为长期事项",
+      "cheat": "本月立军务整顿（军事题材，非建军实体）。须输出 新立局势：[{来源类型:decree,类型:initiative,题材:军事,标题:九边军务清查,当前进度:15,预计月数:18,阶段:清查,解决条件:军册核实兵制整肃,失败条件:将帅抵制废止,可撤销:by_progress}]。",
+      "expect_fields": [
+        "新立局势"
+      ],
+      "expect_values": {
+        "新立局势": [
+          {
+            "tags": "军事"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c273_chexiao_value",
+      "directive": "前命清丈劳民著即停办",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, cancellable) VALUES (810, 'initiative', '江南清丈', 'decree', 1, 30, 'active', 'decree')"
+      ],
+      "cheat": "本月奉旨停办清丈（局势编号810）。须输出 撤销局势：[{局势编号:810,叙述:奉旨停办}]。",
+      "expect_fields": [
+        "撤销局势"
+      ],
+      "expect_values": {
+        "撤销局势": [
+          {
+            "局势编号": 810
+          }
+        ]
+      }
+    },
+    {
+      "id": "c274_jiean_resolved_value",
+      "directive": "常平仓落成开仓储粮著结案",
+      "sql": [
+        "INSERT INTO issues (id, kind, title, origin_kind, origin_turn, bar_value, status, resolve_condition, cancellable) VALUES (811, 'initiative', '常平仓营建', 'decree', 1, 95, 'active', '常平仓落成储粮', 'by_progress')"
+      ],
+      "cheat": "本月常平仓（局势编号811）落成储粮达解决条件。须输出 结案局势：[{局势编号:811,原因:resolved,叙述:落成储粮}]。",
+      "expect_fields": [
+        "结案局势"
+      ],
+      "expect_values": {
+        "结案局势": [
+          {
+            "局势编号": 811,
+            "原因": "resolved"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c280_jun_kuobian",
+      "directive": "京营扩编补兵增饷",
+      "cheat": "本月京营扩编补兵两千、月饷增三万。须输出 军队变化：{京营:{manpower:2000,maintenance_per_turn:3}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "京营": {
+            "manpower": 2000,
+            "maintenance_per_turn": 3
+          }
+        }
+      }
+    },
+    {
+      "id": "c281_jun_caiche",
+      "directive": "裁汰蓟镇老弱",
+      "cheat": "本月蓟镇兵裁汰老弱一千五、月饷减二万。须输出 军队变化：{蓟镇兵:{manpower:-1500,maintenance_per_turn:-2}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "蓟镇兵": {
+            "manpower": -1500
+          }
+        }
+      }
+    },
+    {
+      "id": "c282_jun_fanhao",
+      "directive": "赐陕西边军新军号",
+      "cheat": "本月陕西边军赐号秦威营、改番号。须输出 军队变化：{陕西边军:{name:秦威营,状态:赐军号}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "陕西边军": {
+            "name": "秦威营"
+          }
+        }
+      }
+    },
+    {
+      "id": "c284_jun_zhushuai",
+      "directive": "以孙承宗代领宣大边军",
+      "cheat": "本月宣大边军易帅孙承宗接统。须输出 军队变化：{宣大边军:{commander:孙承宗,状态:易帅}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "宣大边军": {
+            "commander": "孙承宗"
+          }
+        }
+      }
+    },
+    {
+      "id": "c285_jun_diaodu",
+      "directive": "调蓟镇兵移防遵化",
+      "cheat": "本月蓟镇兵移防遵化、驻地变更。须输出 军队变化：{蓟镇兵:{station:遵化,状态:移防}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "蓟镇兵": {
+            "station": "遵化"
+          }
+        }
+      }
+    },
+    {
+      "id": "c287_jun_morale",
+      "directive": "京营连月欠饷士气低落忠诚动摇",
+      "cheat": "本月京营欠饷三月，士气大跌忠诚降。须输出 军队变化：{京营:{morale:-8,loyalty:-5}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "京营": {
+            "morale": -8,
+            "loyalty": -5
+          }
+        }
+      }
+    },
+    {
+      "id": "c288_jun_train_equip",
+      "directive": "严训京营并补发军械",
+      "cheat": "本月京营严加操练、补发军械，训练装备升。须输出 军队变化：{京营:{training:10,equipment:8}}。",
+      "expect_fields": [
+        "军队变化"
+      ],
+      "expect_values": {
+        "军队变化": {
+          "京营": {
+            "training": 10,
+            "equipment": 8
+          }
+        }
+      }
+    },
+    {
+      "id": "c290_junbei_jiaohuo",
+      "directive": "宁远缴获后金鸟铳入库",
+      "cheat": "本月宁远缴获后金鸟铳三千杆入军备库。须输出 军备变化：{鸟铳:3000}。",
+      "expect_fields": [
+        "军备变化"
+      ],
+      "expect_values": {
+        "军备变化": {
+          "鸟铳": 3000
+        }
+      }
+    },
+    {
+      "id": "c291_junbei_sunhui",
+      "directive": "某营溃散遗失火铳",
+      "cheat": "本月某营溃散遗失火铳八百杆。须输出 军备变化：{火铳:-800}。",
+      "expect_fields": [
+        "军备变化"
+      ],
+      "expect_values": {
+        "军备变化": {
+          "火铳": -800
+        }
+      }
+    },
+    {
+      "id": "c33b_shili_value",
+      "directive": "明军宁远大破后金挫其锋",
+      "cheat": "本月后金宁远受挫，威望实力经济俱损。须输出 势力变化：{houjin:{威望:-4,实力:-3,经济:-2}}。",
+      "expect_fields": [
+        "势力变化"
+      ],
+      "expect_values": {
+        "势力变化": {
+          "houjin": {
+            "威望": -4,
+            "实力": -3,
+            "经济": -2
+          }
+        }
+      }
+    },
+    {
+      "id": "c292_sifang_diqui",
+      "directive": "后金犯边态度敌对",
+      "cheat": "本月后金态度敌对。须输出 四方动向：{后金:敌对}。",
+      "expect_fields": [
+        "四方动向"
+      ],
+      "expect_values": {
+        "四方动向": {
+          "后金": "敌对"
+        }
+      }
+    },
+    {
+      "id": "c293_sifang_qingming",
+      "directive": "遣使抚谕朝鲜倾明",
+      "cheat": "本月朝鲜倾明。须输出 四方动向：{朝鲜:倾明}。",
+      "expect_fields": [
+        "四方动向"
+      ],
+      "expect_values": {
+        "四方动向": {
+          "朝鲜": "倾明"
+        }
+      }
+    },
+    {
+      "id": "c294_sifang_baidong",
+      "directive": "离间蒙古诸部态度摇摆",
+      "cheat": "本月蒙古态度摇摆。须输出 四方动向：{蒙古:摇摆}。",
+      "expect_fields": [
+        "四方动向"
+      ],
+      "expect_values": {
+        "四方动向": {
+          "蒙古": "摇摆"
+        }
+      }
+    },
+    {
+      "id": "c300_renwu_renguan",
+      "directive": "擢孙传庭为陕西总督专办剿务",
+      "cheat": "本月擢孙传庭为陕西总督。须输出 人物变化：[{姓名:孙传庭,新官职:陕西总督,新官署类别:督抚,当前所在:陕西,原因:专办剿务}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "孙传庭",
+            "新官职": "陕西总督"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c301_renwu_bachu",
+      "directive": "崔呈秀党附阉竖著即罢黜",
+      "cheat": "本月崔呈秀罢黜去职。须输出 人物变化：[{姓名:崔呈秀,状态:罢黜,原因:党附阉竖}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "崔呈秀",
+            "状态": "罢黜"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c302_renwu_xiayu",
+      "directive": "袁崇焕通敌罪著下诏狱",
+      "cheat": "本月袁崇焕下狱论罪。须输出 人物变化：[{姓名:袁崇焕,状态:下狱,当前所在:诏狱,原因:通敌罪}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "袁崇焕",
+            "状态": "下狱"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c303_renwu_liufang",
+      "directive": "魏忠贤逆党著发配凤阳流放",
+      "cheat": "本月魏忠贤流放凤阳。须输出 人物变化：[{姓名:魏忠贤,状态:流放,当前所在:凤阳,原因:发配}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "魏忠贤",
+            "状态": "流放"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c304_renwu_zhishi",
+      "directive": "准首辅韩爌致仕归里",
+      "cheat": "本月韩爌致仕归乡。须输出 人物变化：[{姓名:韩爌,状态:致仕,当前所在:原籍,原因:乞休}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "韩爌",
+            "状态": "致仕"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c305_renwu_shengu",
+      "directive": "督师卢象升力战殉国",
+      "cheat": "本月卢象升战殁殉国。须输出 人物变化：[{姓名:卢象升,状态:身故,原因:力战殉国}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "卢象升",
+            "状态": "身故"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c306_renwu_paixi",
+      "directive": "起复钱谦益入朝授官",
+      "cheat": "本月钱谦益起复入朝，系东林。须输出 人物变化：[{姓名:钱谦益,新官职:礼部侍郎,派系:东林,新官署类别:内阁,原因:起复}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "钱谦益",
+            "派系": "东林"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c308_renwu_suozai",
+      "directive": "以洪承畴为蓟辽总督镇山海关",
+      "cheat": "本月洪承畴任蓟辽总督驻山海关。须输出 人物变化：[{姓名:洪承畴,新官职:蓟辽总督,新官署类别:督抚,当前所在:山海关,原因:镇辽}]。",
+      "expect_fields": [
+        "人物变化"
+      ],
+      "expect_values": {
+        "人物变化": [
+          {
+            "姓名": "洪承畴",
+            "当前所在": "山海关"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c310_hougong_guifei",
+      "directive": "册封田氏为贵妃",
+      "cheat": "本月诏书明文册封田氏为贵妃。须输出 后宫册封：[{姓名:田氏,位号:贵妃,官署类别:后宫,准许:true,原因:诏书册封}]。",
+      "expect_fields": [
+        "后宫册封"
+      ],
+      "expect_values": {
+        "后宫册封": [
+          {
+            "位号": "贵妃",
+            "官署类别": "后宫",
+            "准许": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "c311_hougong_pin",
+      "directive": "选袁氏入宫册为嫔",
+      "cheat": "本月诏书明文册袁氏为嫔。须输出 后宫册封：[{姓名:袁氏,位号:嫔,官署类别:后宫,准许:true,原因:诏书册封}]。",
+      "expect_fields": [
+        "后宫册封"
+      ],
+      "expect_values": {
+        "后宫册封": [
+          {
+            "位号": "嫔",
+            "准许": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "c312_hougong_feizhi",
+      "directive": "封某氏为西宫贵人",
+      "cheat": "本月诏书封某氏为『西宫贵人』，非明制宫廷位号。须输出 后宫册封：[{姓名:某氏,位号:西宫贵人,官署类别:后宫,准许:false,原因:非明制宫廷位号}]。",
+      "expect_fields": [
+        "后宫册封"
+      ],
+      "expect_values": {
+        "后宫册封": [
+          {
+            "准许": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "c314_miling_done",
+      "directive": "密查魏党商号事已查实著结案",
+      "sql": [
+        "INSERT INTO secret_orders (id, title, content, status, turn_issued, year_issued, period_issued, minister_name) VALUES (901, '密查魏党商号', '查魏党隐匿赀财商号', 'pending_review', 1, 1627, 10, '骆养性')"
+      ],
+      "cheat": "本月密令（密令编号901）核议办成。须输出 密令结案：[{密令编号:901,状态:done,结果:实据齐全可拿人}]。",
+      "expect_fields": [
+        "密令结案"
+      ],
+      "expect_values": {
+        "密令结案": [
+          {
+            "密令编号": 901,
+            "状态": "done"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c315_jieju_null",
+      "directive": "崇祯亲征议而未行朝局如常",
+      "cheat": "本月崇祯议亲征未成，本人未退位未身死，朝局如常。",
+      "expect_fields": [],
+      "expect_emperor_fate": null,
+      "neg_note": "崇祯结局应为 null（未明写退位/身死）",
+      "neg_check_fields": [
+        "崇祯结局"
+      ],
+      "note": "负样本：崇祯结局须为 null；过度抽的其他字段不计"
+    }
+  ]
+}

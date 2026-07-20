@@ -1,0 +1,125 @@
+{
+  "relations": [
+    {
+      "person_a": "刘备",
+      "person_b": "甘夫人",
+      "relation_type": "spouse",
+      "status": "historical",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "刘禅生母",
+      "succession_risk": "low",
+      "source": "三国演义史实关系"
+    },
+    {
+      "person_a": "刘备",
+      "person_b": "糜夫人",
+      "relation_type": "spouse",
+      "status": "deceased",
+      "start_year": 0,
+      "end_year": 208,
+      "political_effect": "糜氏姻亲",
+      "succession_risk": "none",
+      "source": "三国演义长坂关系"
+    },
+    {
+      "person_a": "刘备",
+      "person_b": "刘禅",
+      "relation_type": "child",
+      "status": "active",
+      "start_year": 207,
+      "end_year": 0,
+      "political_effect": "法定继承人",
+      "succession_risk": "high",
+      "source": "三国演义史实关系"
+    },
+    {
+      "person_a": "刘备",
+      "person_b": "刘封",
+      "relation_type": "adopted_child",
+      "status": "active",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "养子与将领",
+      "succession_risk": "medium",
+      "source": "三国演义史实关系"
+    },
+    {
+      "person_a": "刘备",
+      "person_b": "孙尚香",
+      "relation_type": "political_marriage",
+      "status": "available",
+      "start_year": 209,
+      "end_year": 0,
+      "political_effect": "孙刘联盟与人质风险",
+      "succession_risk": "medium",
+      "source": "三国演义政治联姻"
+    },
+    {
+      "person_a": "刘备",
+      "person_b": "吴夫人",
+      "relation_type": "political_marriage",
+      "status": "future",
+      "start_year": 214,
+      "end_year": 0,
+      "political_effect": "益州本地政治整合",
+      "succession_risk": "low",
+      "source": "三国演义史实关系"
+    },
+    {
+      "person_a": "刘禅",
+      "person_b": "蜀汉政权",
+      "relation_type": "succession",
+      "status": "heir",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "继承稳定与托孤风险",
+      "succession_risk": "high",
+      "source": "三国演义继承线"
+    },
+    {
+      "person_a": "曹操",
+      "person_b": "曹丕",
+      "relation_type": "child",
+      "status": "active",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "曹魏继承主线",
+      "succession_risk": "medium",
+      "source": "三国演义人物关系"
+    },
+    {
+      "person_a": "曹操",
+      "person_b": "曹彰",
+      "relation_type": "child",
+      "status": "active",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "宗室军事竞争",
+      "succession_risk": "medium",
+      "source": "三国演义人物关系"
+    },
+    {
+      "person_a": "曹操",
+      "person_b": "曹植",
+      "relation_type": "child",
+      "status": "active",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "宗室名望竞争",
+      "succession_risk": "medium",
+      "source": "三国演义人物关系"
+    },
+    {
+      "person_a": "关羽",
+      "person_b": "关平",
+      "relation_type": "child",
+      "status": "active",
+      "start_year": 0,
+      "end_year": 0,
+      "political_effect": "荆州军政继承",
+      "succession_risk": "medium",
+      "source": "三国演义人物关系"
+    }
+  ]
+}

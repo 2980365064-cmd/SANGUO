@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "note": "兼容通用事项引擎的三国军政技术。"
+  },
+  "technologies": [
+    {
+      "key": "river_signal_code",
+      "name": "江面旗号规程",
+      "category": "军事",
+      "题材": "军事",
+      "预计月数": 2,
+      "起步进度": 30,
+      "stage_text": "各部旗鼓号令尚未统一。",
+      "resolve_condition": "水军旗号与夜间识别规程完成操演。",
+      "fail_condition": "操演混乱或无水军承办，进度归零。",
+      "effect_on_resolve": {
+        "technologies": [
+          {
+            "action": "create",
+            "key": "river_signal_code"
+          }
+        ]
+      },
+      "effect_on_fail": {},
+      "modifiers": {},
+      "effect_summary": "水军协同更稳定。",
+      "requires": [],
+      "default_unlocked": true
+    }
+  ]
+}

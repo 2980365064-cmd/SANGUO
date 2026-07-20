@@ -1,0 +1,29 @@
+{
+  "_comment": "三国郡级社会群体，仅供低影响治理叙事。",
+  "classes": [
+    {
+      "name": "流民与军户",
+      "region_id": "jiangxia",
+      "population": 12000,
+      "satisfaction": 68,
+      "leverage": 35,
+      "agenda": "求安置、军粮与免受强征。"
+    },
+    {
+      "name": "荆州士人",
+      "region_id": "xiangyang",
+      "population": 8000,
+      "satisfaction": 52,
+      "leverage": 70,
+      "agenda": "维护地方秩序与仕进网络。"
+    },
+    {
+      "name": "益州豪族",
+      "region_id": "chengdu",
+      "population": 10000,
+      "satisfaction": 62,
+      "leverage": 75,
+      "agenda": "维护乡里田产与地方官职。"
+    }
+  ]
+}

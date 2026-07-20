@@ -1,0 +1,15 @@
+{
+  "focuses": [
+    {"id":"han_legitimacy","name":"汉室名分","category":"政治","cost":9,"prerequisites":[],"point_bonus":false,"effects":{"metric_delta":{"名分":8,"民望":3},"modifiers":{"recruitment_pct":5}}},
+    {"id":"jingyi_integration","name":"荆益整合","category":"政治","cost":12,"prerequisites":["han_legitimacy"],"point_bonus":false,"effects":{"metric_delta":{"士族支持":8},"modifiers":{"governance_pct":8}}},
+    {"id":"shuhan_institutions","name":"蜀汉立制","category":"政治","cost":15,"prerequisites":["jingyi_integration"],"point_bonus":true,"effects":{"metric_delta":{"名分":10,"士族支持":5},"modifiers":{"office_efficiency_pct":10}}},
+    {"id":"military_logistics","name":"军屯粮运","category":"军事","cost":10,"prerequisites":[],"point_bonus":false,"effects":{"metric_delta":{"粮秣":8},"modifiers":{"supply_cost_pct":-10}}},
+    {"id":"naval_shipbuilding","name":"水战船政","category":"军事","cost":12,"prerequisites":[],"point_bonus":false,"effects":{"modifiers":{"river_battle_pct":10,"shipbuilding_pct":15}}},
+    {"id":"army_system","name":"攻守军制","category":"军事","cost":12,"prerequisites":[],"point_bonus":false,"effects":{"metric_delta":{"军心":6},"modifiers":{"army_training_pct":10}}},
+    {"id":"cavalry_horse_policy","name":"骑战马政","category":"军事","cost":12,"prerequisites":[],"point_bonus":false,"effects":{"modifiers":{"plain_cavalry_pct":10}}},
+    {"id":"espionage_counterintel","name":"谍报反间","category":"军事","cost":12,"prerequisites":[],"point_bonus":true,"effects":{"modifiers":{"intel_gain":1,"counterintel_pct":12}}},
+    {"id":"agriculture_trade","name":"屯田市易","category":"经济","cost":9,"prerequisites":[],"point_bonus":false,"effects":{"metric_delta":{"粮秣":6,"民望":4},"modifiers":{"grain_output_pct":8}}},
+    {"id":"roads_waterways","name":"道路水运","category":"经济","cost":11,"prerequisites":["agriculture_trade"],"point_bonus":false,"effects":{"modifiers":{"transport_pct":12,"investment_speed_pct":5}}},
+    {"id":"arms_supply","name":"军械供给","category":"经济","cost":11,"prerequisites":["agriculture_trade"],"point_bonus":false,"effects":{"metric_delta":{"军资":6},"modifiers":{"equipment_output_pct":12}}}
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "version": 7,
+  "note": "208 开局四类战略兵种，仅用于通用军需接口。",
+  "unit": "军资/千人/月",
+  "default_tier": "步卒",
+  "tiers": [
+    {
+      "tier": "步卒",
+      "category": "步兵",
+      "per_kilo": 0.1,
+      "keywords": [
+        "步卒",
+        "步兵",
+        "守军"
+      ],
+      "equipment": [
+        "长矛",
+        "刀盾"
+      ],
+      "upgrades": [],
+      "requires_tech": ""
+    },
+    {
+      "tier": "弓弩",
+      "category": "远程",
+      "per_kilo": 0.12,
+      "keywords": [
+        "弓弩",
+        "弓兵",
+        "弩兵"
+      ],
+      "equipment": [
+        "弓弩"
+      ],
+      "upgrades": [],
+      "requires_tech": ""
+    },
+    {
+      "tier": "骑兵",
+      "category": "骑兵",
+      "per_kilo": 0.18,
+      "keywords": [
+        "骑兵",
+        "骑军",
+        "铁骑"
+      ],
+      "equipment": [
+        "战马",
+        "甲胄"
+      ],
+      "upgrades": [],
+      "requires_tech": ""
+    },
+    {
+      "tier": "水军",
+      "category": "水军",
+      "per_kilo": 0.16,
+      "keywords": [
+        "水军",
+        "水师",
+        "舟师"
+      ],
+      "equipment": [
+        "战船",
+        "弓弩"
+      ],
+      "upgrades": [],
+      "requires_tech": ""
+    }
+  ]
+}

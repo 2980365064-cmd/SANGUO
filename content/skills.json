@@ -1,0 +1,91 @@
+{
+  "__office_grant_version": 3,
+  "office_default_skills": {
+    "君主": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    },
+    "军政": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    },
+    "军师": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    },
+    "外交": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    },
+    "政务": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    },
+    "宗室": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    },
+    "在野": {
+      "court_tools": [],
+      "agno_skills": [],
+      "chips": []
+    }
+  },
+  "office_definitions": {
+    "君主": {
+      "tools": [],
+      "authority_scope": "君主职责范围",
+      "power": 70,
+      "responsibility": 70,
+      "corruption_risk": 15
+    },
+    "军政": {
+      "tools": [],
+      "authority_scope": "军政职责范围",
+      "power": 70,
+      "responsibility": 70,
+      "corruption_risk": 15
+    },
+    "军师": {
+      "tools": [],
+      "authority_scope": "军师职责范围",
+      "power": 55,
+      "responsibility": 70,
+      "corruption_risk": 15
+    },
+    "外交": {
+      "tools": [],
+      "authority_scope": "外交职责范围",
+      "power": 55,
+      "responsibility": 70,
+      "corruption_risk": 15
+    },
+    "政务": {
+      "tools": [],
+      "authority_scope": "政务职责范围",
+      "power": 55,
+      "responsibility": 70,
+      "corruption_risk": 15
+    },
+    "宗室": {
+      "tools": [],
+      "authority_scope": "宗室职责范围",
+      "power": 55,
+      "responsibility": 70,
+      "corruption_risk": 15
+    },
+    "在野": {
+      "tools": [],
+      "authority_scope": "在野职责范围",
+      "power": 55,
+      "responsibility": 70,
+      "corruption_risk": 15
+    }
+  }
+}
