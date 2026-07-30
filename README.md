@@ -69,7 +69,7 @@ cd web && npm ci && npm run build
 scenario_id=sanguo_liubei_208
 ```
 
-首次启动只会删除能够明确识别为旧场景、且没有三国场景 id 的 SQLite 主库和存档；不会删除三国档、其他文件或手动创建的无关数据库。每局保留手动存档与最近三个回合的自动存档。
+首次启动自动创建新存档，场景 id 标记为 `sanguo_liubei_208`。每局保留手动存档与最近三个回合的自动存档。
 
 ## 仍保留的内部兼容命名
 
@@ -77,7 +77,7 @@ scenario_id=sanguo_liubei_208
 
 - Python 包名 `ming_sim`。
 - 环境变量前缀 `MING_SIM_*`。
-- 旧 PyInstaller spec 文件保留作历史构建参考；新构建入口为 `SanguoLiubeiBackend.spec` 与 `SanguoLiubei.spec`。
+- 数据库文件名 `ming_sim.db`。
 
 ## License
 

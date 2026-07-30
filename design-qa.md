@@ -26,7 +26,7 @@ final result: passed
 
 final result: passed
 
-Reference direction: public screenshots and coverage of `历史模拟器：崇祯` on Steam/community media and game press coverage.
+Reference direction: public screenshots and coverage of `汉祚再兴·刘备传` on Steam/community media and game press coverage.
 
 Changes:
 
@@ -44,7 +44,7 @@ Verification:
 
 final result: passed
 
-Reference direction: user-provided `历史模拟器：崇祯` style screenshot, with the route-line map replaced by a province-block interaction model.
+Reference direction: user-provided `汉祚再兴·刘备传` style screenshot, with the route-line map replaced by a province-block interaction model.
 
 Changes:
 

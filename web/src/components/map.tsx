@@ -1,28 +1,33 @@
 import React from "react";
-import { Expand, LocateFixed, Map as MapIcon, Minus, Plus, Shrink, X, Sword, Users, Scroll, Building, Loader2 } from "lucide-react";
+import {
+  Building,
+  Expand,
+  Flag,
+  Map as MapIcon,
+  Scroll,
+  Shrink,
+} from "lucide-react";
 
-import { getRegionDetail, startInvestment } from "../api";
-import { DEFAULT_MAP_LAYER, STATIC_MAP_LABEL_POLICY, clampMapZoom, getCommanderyBoundaryBlocks, getProvinceBlocks, getSharedCityBoundaryPath, getTownBlocks } from "../mapLogic";
+import {
+  DEFAULT_MAP_LAYER,
+  STATIC_MAP_LABEL_POLICY,
+  clampMapZoom,
+  getCityTerritoryBlocks,
+  getCommanderyBoundaryBlocks,
+  getTownBlocks,
+  getProvinceBlocks,
+  getSharedCityBoundaryPath,
+} from "../mapLogic";
 import type { MapLayer } from "../mapLogic";
-import type { GameState, Army, RegionDetail } from "../types";
-import { fiscalNumber, REGION_INVESTMENTS, REGION_LEDGER_ITEMS } from "./regionManagementModel";
+import type { AdministrativeScope, Army, GameState } from "../types";
+import { POWER_COLORS } from "../constants/powerColors";
+import { MapInfoDrawer } from "./mapInfo/MapInfoDrawer";
 
-const POWER_COLORS: Record<string, string> = {
-  liu_bei: "#a47b2f", cao_cao: "#49515a", sun_quan: "#2e6e71",
-  liu_qi: "#876a3e", liu_zhang: "#936544", zhang_lu: "#69764f",
-  ma_han: "#745872", gongsun_kang: "#526979", shi_xie: "#687444",
-};
-
-type ContextMenuState = {
-  x: number;
-  y: number;
-  type: "province" | "commandery" | "city";
-  province?: string;
-  commandery?: string;
-  city?: string;
-} | null;
-
-export function StrategicMap({ state, selectedId, selectedArmyId, onSelect, onState }: {
+export function StrategicMap({
+  state,
+  selectedArmyId,
+  onSelect,
+}: {
   state: GameState;
   selectedId: string;
   selectedArmyId: string;
@@ -32,527 +37,546 @@ export function StrategicMap({ state, selectedId, selectedArmyId, onSelect, onSt
   const [zoom, setZoom] = React.useState(1);
   const [pan, setPan] = React.useState({ x: 0, y: 0 });
   const [expanded, setExpanded] = React.useState(false);
-  const [tooltip, setTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null);
+  const [tooltip, setTooltip] = React.useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
   const [mapLayer, setMapLayer] = React.useState<MapLayer>(DEFAULT_MAP_LAYER);
-  const [selectedProvince, setSelectedProvince] = React.useState<string | null>(null);
-  const [selectedCommandery, setSelectedCommandery] = React.useState<string | null>(null);
+  const [selectedProvince, setSelectedProvince] = React.useState<string | null>(
+    null,
+  );
+  const [selectedCommandery, setSelectedCommandery] = React.useState<
+    string | null
+  >(null);
   const [selectedCity, setSelectedCity] = React.useState<string | null>(null);
-  const [contextMenu, setContextMenu] = React.useState<ContextMenuState>(null);
-  const [regionDetails, setRegionDetails] = React.useState<Record<string, RegionDetail | null>>({});
-  const [investmentBusy, setInvestmentBusy] = React.useState("");
-  const drag = React.useRef<{ pointerId: number; x: number; y: number; panX: number; panY: number } | null>(null);
+  const [infoTarget, setInfoTarget] = React.useState<{
+    scope: AdministrativeScope;
+    entityId: string;
+  } | null>(null);
+  const drag = React.useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
 
   const provinceBlocks = getProvinceBlocks(state.map.nodes);
-  const commanderyBlocks = getCommanderyBoundaryBlocks(state.map.nodes);
-  const cityBlocks = getTownBlocks(state.map.nodes);
-  const sharedCommanderyBoundaryPath = React.useMemo(() => getSharedCityBoundaryPath(commanderyBlocks), [commanderyBlocks]);
-  const selectedArmy = state.armies.find((army) => army.id === selectedArmyId);
-
-  const selectedProvinceData = selectedProvince ? provinceBlocks.find((b) => b.province === selectedProvince) : null;
-  const selectedCommanderyBlock = selectedCommandery ? commanderyBlocks.find((b) => b.city === selectedCommandery || b.node?.name === selectedCommandery) : null;
-  const selectedCityBlock = selectedCity ? cityBlocks.find((b) => b.city === selectedCity || b.node?.name === selectedCity) : null;
-  const selectedCommanderyNode = selectedCommanderyBlock?.node || null;
-  const selectedCityNode = selectedCityBlock?.node || null;
-  const selectedProvincePopulation = selectedProvinceData?.nodes.reduce((sum, node) => sum + node.population, 0) || 0;
-  const showProvinceLabels = STATIC_MAP_LABEL_POLICY.provinceLabels === "overlay";
-  const showCommanderyLabels = STATIC_MAP_LABEL_POLICY.commanderyLabels === "overlay";
+  const commanderyBlocks = React.useMemo(
+    () => getCommanderyBoundaryBlocks(state.map.nodes),
+    [state.map.nodes],
+  );
+  // 旧版已校准的城镇坐标是新增城池落位的地理基准，永不由运行时坐标推导覆盖。
+  const historicalTownBlocks = React.useMemo(
+    () => getTownBlocks(state.map.nodes),
+    [state.map.nodes],
+  );
+  const cityBlocks = React.useMemo(
+    () => getCityTerritoryBlocks(state.map.cities || [], commanderyBlocks),
+    [state.map.cities, commanderyBlocks],
+  );
+  const sharedCommanderyBoundaryPath = React.useMemo(
+    () => getSharedCityBoundaryPath(commanderyBlocks),
+    [commanderyBlocks],
+  );
+  // 高亮裁切同一张边界网络；不能另算一条近似曲线。
+  const cityInternalBoundaryPath = React.useMemo(
+    () =>
+      cityBlocks
+        .map((block) => block.boundaryD)
+        .filter(Boolean)
+        .join(" "),
+    [cityBlocks],
+  );
+  const cityBoundaryNetworkPath = `${sharedCommanderyBoundaryPath} ${cityInternalBoundaryPath}`;
+  const cityClipId = (cityId: string) =>
+    `city-highlight-${cityId.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  const showProvinceLabels =
+    STATIC_MAP_LABEL_POLICY.provinceLabels === "overlay";
+  const showCommanderyLabels =
+    STATIC_MAP_LABEL_POLICY.commanderyLabels === "overlay";
   const showCityLabels = STATIC_MAP_LABEL_POLICY.cityLabels === "overlay";
-
-  const powerLabel = (powerId: string) => state.powers.find((power) => power.id === powerId)?.name || "无主";
-  const loadRegionDetail = React.useCallback(async (nodeId: string) => {
-    if (!nodeId) return;
-    try {
-      const detail = await getRegionDetail(nodeId);
-      setRegionDetails((current) => ({ ...current, [nodeId]: detail }));
-    } catch {
-      setRegionDetails((current) => ({ ...current, [nodeId]: null }));
-    }
-  }, []);
-  const investRegion = async (nodeId: string, category: string) => {
-    setInvestmentBusy(`${nodeId}:${category}`);
-    try {
-      const result = await startInvestment(nodeId, category);
-      onState?.(result.state);
-      await loadRegionDetail(nodeId);
-    } finally {
-      setInvestmentBusy("");
-    }
+  const powerLabel = (powerId: string) =>
+    state.powers.find((power) => power.id === powerId)?.name || "无主";
+  const openNodeInfo = (
+    nodeId: string,
+    scope: AdministrativeScope,
+    entityId: string,
+  ) => {
+    onSelect(nodeId);
+    setInfoTarget({ scope, entityId });
   };
-  const regionManagement = (node: typeof state.map.nodes[number] | null) => {
-    if (!node) return null;
-    const detail = regionDetails[node.id];
-    const loading = !(node.id in regionDetails);
-    return <section className="region-management map-region-management">
-      <h3>郡县经营</h3>
-      <div className="region-ledger">
-        {REGION_LEDGER_ITEMS.map((item) => {
-          const value = item.key === "gentry_resistance" ? detail?.gentry_resistance ?? node.military_pressure : fiscalNumber(detail, item.key);
-          return <span className="region-ledger-item" key={item.key} title={item.description} aria-label={`${item.label} ${value}。${item.description}`}>
-            <b>{item.label}</b><strong>{value}</strong><small>{item.short}</small>
-          </span>;
-        })}
-      </div>
-      {detail?.investment && <p className="investment-current">正在推进：{String(detail.investment.category)} · {String(detail.investment.progress)}%</p>}
-      {loading && <p className="empty-note">正在调阅郡县簿册。</p>}
-      {detail && !detail.can_invest && <p className="empty-note">此地非刘备实际控制，只可观察与问策，不能直接投资。</p>}
-      {detail?.can_invest && <div className="investment-actions">{REGION_INVESTMENTS.map((item) => {
-        const busy = investmentBusy === `${node.id}:${item.category}`;
-        return <button key={item.category} onClick={() => void investRegion(node.id, item.category)} disabled={!!investmentBusy || !!detail.investment} title={detail.investment ? `已有投资正在推进：${String(detail.investment.category)}` : item.description} aria-label={`${item.category}：${item.description}`}>
-          {busy ? <Loader2 className="spin" /> : null}<span>{item.category}</span><small>{item.hint}</small>
-        </button>;
-      })}</div>}
-    </section>;
-  };
-
-  const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
-  const changeZoom = (delta: number) => setZoom((value) => clampMapZoom(value + delta));
+  const cityArmies = (cityId: string, commanderyId: string): Army[] =>
+    state.armies.filter(
+      (army) =>
+        army.station_node === cityId || army.station_node === commanderyId,
+    );
   const switchLayer = (layer: MapLayer) => {
     setMapLayer(layer);
     setTooltip(null);
-    setContextMenu(null);
-    if (layer === "province") { setSelectedCommandery(null); setSelectedCity(null); }
-    if (layer === "commandery") { setSelectedProvince(null); setSelectedCity(null); }
-    if (layer === "city") { setSelectedProvince(null); setSelectedCommandery(null); }
+    if (layer === "province") {
+      setSelectedCommandery(null);
+      setSelectedCity(null);
+    }
+    if (layer === "commandery") {
+      setSelectedProvince(null);
+      setSelectedCity(null);
+    }
+    if (layer === "city" || layer === "influence") {
+      setSelectedProvince(null);
+      setSelectedCommandery(null);
+    }
   };
 
-  // 关闭右键菜单
-  React.useEffect(() => {
-    const close = () => setContextMenu(null);
-    window.addEventListener("click", close);
-    window.addEventListener("scroll", close);
-    return () => {
-      window.removeEventListener("click", close);
-      window.removeEventListener("scroll", close);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    const nodeId = selectedCommanderyNode?.id || selectedCityNode?.id || "";
-    if (nodeId) void loadRegionDetail(nodeId);
-  }, [loadRegionDetail, selectedCommanderyNode?.id, selectedCityNode?.id, state.turn.turn, state.region_investments]);
-
-  // 获取州内的军队
-  const getProvinceArmies = (province: string): Army[] => {
-    const provinceNodeIds = provinceBlocks.find((b) => b.province === province)?.nodes.map((n) => n.id) || [];
-    return state.armies.filter((army) => provinceNodeIds.includes(army.station_node));
-  };
-
-  // 获取城池的军队
-  const getCityArmies = (cityName: string): Army[] => {
-    const cityBlock = cityBlocks.find((b) => b.city === cityName || b.node?.name === cityName);
-    const node = cityBlock?.node || state.map.nodes.find((n) => n.name === cityName);
-    if (!node) return [];
-    return state.armies.filter((army) => army.station_node === node.id);
-  };
-
-  // 左键点击州块
-  const handleProvinceClick = (province: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    setSelectedProvince(province);
-    setSelectedCommandery(null);
-    setSelectedCity(null);
-    setContextMenu(null);
-  };
-
-  // 左键点击郡域
-  const handleCommanderyClick = (block: typeof commanderyBlocks[number], event: React.MouseEvent) => {
-    event.stopPropagation();
-    setSelectedCommandery(block.city);
-    setSelectedProvince(null);
-    setSelectedCity(null);
-    setContextMenu(null);
-    if (block.node) onSelect(block.node.id);
-  };
-
-  // 左键点击城池
-  const handleCityClick = (block: typeof cityBlocks[number], event: React.MouseEvent) => {
-    event.stopPropagation();
-    setSelectedCity(block.city);
-    setSelectedProvince(null);
-    setSelectedCommandery(null);
-    setContextMenu(null);
-
-    // 同时选中该城池对应的节点
-    if (block.node) onSelect(block.node.id);
-  };
-
-  // 右键点击郡域
-  const handleCommanderyContextMenu = (commandery: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({ x: event.clientX, y: event.clientY, type: "commandery", commandery });
-  };
-
-  // 右键点击州块
-  const handleProvinceContextMenu = (province: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({ x: event.clientX, y: event.clientY, type: "province", province });
-  };
-
-  // 右键点击城池
-  const handleCityContextMenu = (cityName: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({ x: event.clientX, y: event.clientY, type: "city", city: cityName });
-  };
-
-  return <section className={`strategic-map ${expanded ? "map-expanded" : ""}`} aria-label="天下战略沙盘">
-    <div className="map-caption"><MapIcon /><span>天下州郡<small>拖动舆图 · 滚轮缩放 · 悬停查看州/郡/城镇信息</small></span></div>
-    <div className="map-controls" aria-label="地图缩放控制">
-      <button aria-label="缩小地图" onClick={() => changeZoom(-0.2)}><Minus /></button>
-      <output>{Math.round(zoom * 100)}%</output>
-      <button aria-label="放大地图" onClick={() => changeZoom(0.2)}><Plus /></button>
-      <button aria-label="重置地图视角" onClick={resetView}><LocateFixed /></button>
-      <button aria-label={expanded ? "收起大地图" : "展开大地图"} onClick={() => setExpanded((value) => !value)}>{expanded ? <Shrink /> : <Expand />}</button>
-    </div>
-    <svg
-      viewBox="0 0 1920 1080"
-      preserveAspectRatio="xMidYMid slice"
-      role="img"
-      aria-label="三国十三州分块战略地图"
-      onWheel={(event) => { event.preventDefault(); changeZoom(event.deltaY < 0 ? 0.12 : -0.12); }}
-      onPointerDown={(event) => {
-        if (event.button !== 0) return;
-        event.currentTarget.setPointerCapture(event.pointerId);
-        drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
-      }}
-      onPointerMove={(event) => {
-        if (!drag.current || drag.current.pointerId !== event.pointerId) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        setPan({
-          x: drag.current.panX + (event.clientX - drag.current.x) * 1920 / rect.width,
-          y: drag.current.panY + (event.clientY - drag.current.y) * 1080 / rect.height,
-        });
-      }}
-      onPointerUp={() => { drag.current = null; }}
-      onPointerCancel={() => { drag.current = null; }}
-      onContextMenu={(event) => event.preventDefault()}
+  return (
+    <section
+      className={`strategic-map ${expanded ? "map-expanded" : ""}`}
+      aria-label="天下舆图"
     >
-      <defs>
-        <filter id="map-shadow"><feDropShadow dx="0" dy="4" stdDeviation="5" floodOpacity=".42" /></filter>
-        <filter id="border-roughen" x="-14%" y="-14%" width="128%" height="128%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.052 0.068" numOctaves="3" seed="38" result="noise" />
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="15" xChannelSelector="R" yChannelSelector="G" result="roughLine" />
-          <feDropShadow in="roughLine" dx="0" dy="1" stdDeviation="1" floodColor="#ecd6a8" floodOpacity=".48" />
-        </filter>
-      </defs>
-      <g className="map-zoom-frame" transform={`translate(${960 + pan.x} ${540 + pan.y}) scale(${zoom}) translate(-960 -540)`}>
-        <image href="/底图_expanded.jpg?v=20260720-rect-crop-outpaint" x="-320" y="-180" width="2560" height="1440" preserveAspectRatio="none" />
-
-        {/* 第一层：州地块 */}
-        {mapLayer === "province" && <g className="province-blocks annotated-province-layer">
-          {provinceBlocks.map((block) => {
-            const active = block.province === selectedProvince;
-            const power = powerLabel(block.controller);
-            return <g
-              key={block.province}
-              className={`province-block annotated-province-block ${active ? "selected" : ""}`}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => handleProvinceClick(block.province, event)}
-              onContextMenu={(event) => handleProvinceContextMenu(block.province, event)}
-              onMouseMove={(event) => setTooltip({ x: event.clientX, y: event.clientY, text: `${block.province} · ${power}` })}
-              onMouseLeave={() => setTooltip(null)}
-              role="button"
-              tabIndex={0}
-              aria-label={`${block.province}，${power}据有`}
-              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") handleProvinceClick(block.province, event as unknown as React.MouseEvent); }}
-            >
-              <path className="province-hit-area" d={block.d} />
-              <path className="province-outline" d={block.d} />
-              {showProvinceLabels && <text className="province-label" x={block.labelX} y={block.labelY}>{block.province}</text>}
-            </g>;
-          })}
-        </g>}
-
-        {/* 第二层：郡域线稿 */}
-        {mapLayer === "commandery" && <g className="commandery-blocks annotated-commandery-layer">
-          <path className="commandery-shared-boundaries" d={sharedCommanderyBoundaryPath} aria-hidden="true" />
-          {commanderyBlocks.map((block) => {
-            const node = block.node;
-            const isActive = block.city === selectedCommandery || node?.name === selectedCommandery;
-            return <g
+      <div className="map-caption">
+        <MapIcon />
+        <span>
+          天下舆图<small>拖动舆图 · 滚轮缩放 · 调阅州、郡与城防军府簿</small>
+        </span>
+      </div>
+      <div className="map-controls" aria-label="地图控制">
+        <button
+          aria-label={expanded ? "收起大地图" : "展开大地图"}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? <Shrink /> : <Expand />}
+        </button>
+      </div>
+      <svg
+        viewBox="0 0 1920 1080"
+        preserveAspectRatio="xMidYMid slice"
+        role="img"
+        aria-label="建安十三年天下舆图"
+        onWheel={(event) => {
+          event.preventDefault();
+          setZoom((value) =>
+            clampMapZoom(value + (event.deltaY < 0 ? 0.12 : -0.12)),
+          );
+        }}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          drag.current = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            panX: pan.x,
+            panY: pan.y,
+          };
+        }}
+        onPointerMove={(event) => {
+          if (!drag.current || drag.current.pointerId !== event.pointerId)
+            return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          setPan({
+            x:
+              drag.current.panX +
+              ((event.clientX - drag.current.x) * 1920) / rect.width,
+            y:
+              drag.current.panY +
+              ((event.clientY - drag.current.y) * 1080) / rect.height,
+          });
+        }}
+        onPointerUp={() => {
+          drag.current = null;
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+        }}
+        onContextMenu={(event) => event.preventDefault()}
+      >
+        <defs>
+          <filter
+            id="border-roughen"
+            x="-14%"
+            y="-14%"
+            width="128%"
+            height="128%"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.052 0.068"
+              numOctaves="3"
+              seed="38"
+              result="noise"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="noise"
+              scale="15"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="roughLine"
+            />
+            <feDropShadow
+              in="roughLine"
+              dx="0"
+              dy="1"
+              stdDeviation="1"
+              floodColor="#ecd6a8"
+              floodOpacity=".48"
+            />
+          </filter>
+          <pattern
+            id="siege-hatch"
+            width="11"
+            height="11"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(34)"
+          >
+            <line
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="11"
+              stroke="#9A4037"
+              strokeWidth="2.5"
+              opacity=".7"
+            />
+          </pattern>
+          {commanderyBlocks.map((block) => (
+            <clipPath
+              id={`commandery-highlight-${block.city}`}
               key={block.city}
-              className={`commandery-block annotated-commandery-block ${node ? "game-commandery" : "annotated-only-commandery"} ${isActive ? "selected" : ""}`}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => handleCommanderyClick(block, event)}
-              onContextMenu={(event) => handleCommanderyContextMenu(block.city, event)}
-              onMouseMove={(event) => setTooltip({ x: event.clientX, y: event.clientY, text: node ? `${block.commanderyName} · ${node.province} · 已接入节点` : `${block.commanderyName} · ${block.province} · 待校郡域` })}
-              onMouseLeave={() => setTooltip(null)}
-              role="button"
-              tabIndex={0}
-              aria-label={node ? `${block.commanderyName}，${node.province}` : `${block.commanderyName}，${block.province}`}
-              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") handleCommanderyClick(block, event as unknown as React.MouseEvent); }}
             >
-              <path className="commandery-hit-area" d={block.d} />
-              <path className="commandery-boundary" d={block.d} />
-              {showCommanderyLabels && <text className="commandery-label" x={block.labelX} y={block.labelY}>{block.commanderyName}</text>}
-            </g>;
-          })}
-        </g>}
-
-        {/* 第三层：城镇/治所点位 */}
-        {mapLayer === "city" && <g className="city-nodes city-node-layer">
-          {cityBlocks.map((block) => {
-            const node = block.node;
-            const isActive = block.city === selectedCity || node?.name === selectedCity;
-            const armies = getCityArmies(block.city);
-            const townStatus = block.townKind === "historical-town" ? "历史城镇" : `${armies.length}支军队`;
-            return <g
-              key={node?.id || block.city}
-              className={`city-node annotated-city-node ${block.townKind} ${isActive ? "selected" : ""}`}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => handleCityClick(block, event)}
-              onContextMenu={(event) => handleCityContextMenu(block.city, event)}
-              onMouseMove={(event) => setTooltip({ x: event.clientX, y: event.clientY, text: `${block.townName} · ${block.commanderyName} · ${townStatus}` })}
-              onMouseLeave={() => setTooltip(null)}
-              role="button"
-              tabIndex={0}
-              aria-label={`${block.townName}，${block.commanderyName}`}
-              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") handleCityClick(block, event as unknown as React.MouseEvent); }}
-            >
-              <circle className="city-node-hit-area" cx={block.cx} cy={block.cy} r="22" />
-              <g className={`city-model ${block.townKind} ${node?.is_capital || node?.name === "长安" ? "capital-town" : ""}`} transform={`translate(${block.cx} ${block.cy})`}>
-                <image className="city-sprite" href="/assets/city-watercolor-grounded.png" x="-17.5" y="-25.5" width="35" height="27.5" preserveAspectRatio="xMidYMax meet" />
-                {node && <path className="city-banner" d="M 10 -12.5 L 10 -25 L 21 -21 L 10 -17.5 Z" fill={POWER_COLORS[node.controller] || "#655c4b"} />}
-              </g>
-              {node?.is_capital || node?.name === "长安" ? <text className="capital-star" x={block.cx} y={block.cy - 20}>★</text> : null}
-              {armies.length > 0 && <g className="army-marker city-army-marker" transform={`translate(${block.cx + 13} ${block.cy - 21})`}>
-                <rect width="16" height="12" rx="1" /><text x="8" y="9" fontSize="8">{armies.length}</text>
-              </g>}
-              {showCityLabels && <text
-                className="city-label"
-                x={block.labelX}
-                y={block.labelY + 16}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => handleCityClick(block, event)}
-              >{block.townName}</text>}
-            </g>;
-          })}
-        </g>}
-      </g>
-    </svg>
-
-    {/* 悬停提示 */}
-    {tooltip && <div className="map-province-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-      {tooltip.text}
-    </div>}
-
-    <div className="map-layer-toggle" aria-label="地图图层切换">
-      <button type="button" className={mapLayer === "province" ? "active" : ""} onClick={() => switchLayer("province")} aria-pressed={mapLayer === "province"}><MapIcon />州</button>
-      <button type="button" className={mapLayer === "commandery" ? "active" : ""} onClick={() => switchLayer("commandery")} aria-pressed={mapLayer === "commandery"}><Scroll />郡</button>
-      <button type="button" className={mapLayer === "city" ? "active" : ""} onClick={() => switchLayer("city")} aria-pressed={mapLayer === "city"}><Building />城镇</button>
-    </div>
-
-    <div className="map-legend">
-      <span><i className="ordinary" />{mapLayer === "province" ? "州界" : mapLayer === "commandery" ? "郡界" : "城镇点位"}</span>
-      <span><i className="city-range" />悬停高亮</span>
-      <span>{mapLayer === "province" ? "州图层" : mapLayer === "commandery" ? "郡图层" : "城镇图层"}</span>
-    </div>
-
-    {/* 州详情面板 */}
-    {selectedProvinceData && (
-      <div className="province-detail-panel">
-        <div className="detail-panel-header">
-          <h3>{selectedProvinceData.province}</h3>
-          <button className="detail-close" onClick={() => setSelectedProvince(null)}><X /></button>
-        </div>
-        <div className="detail-panel-content">
-          <div className="detail-section">
-            <span className="detail-label">控制势力</span>
-            <strong>{powerLabel(selectedProvinceData.controller)}</strong>
-          </div>
-          <div className="detail-section">
-            <span className="detail-label">辖下城池 ({selectedProvinceData.nodes.length})</span>
-            <ul className="detail-list">
-              {selectedProvinceData.nodes.map((node) => (
-                <li key={node.id} onClick={() => setSelectedCity(node.name)} style={{ cursor: "pointer" }}>
-                  <span>{node.name}</span>
-                  <small>{getCityArmies(node.name).length} 支军队</small>
-                </li>
+              <path d={block.d} />
+            </clipPath>
+          ))}
+          {cityBlocks.map((block) => (
+            <clipPath id={cityClipId(block.city.id)} key={block.city.id}>
+              <path d={block.d} />
+            </clipPath>
+          ))}
+        </defs>
+        <g
+          className="map-zoom-frame"
+          transform={`translate(${960 + pan.x} ${540 + pan.y}) scale(${zoom}) translate(-960 -540)`}
+        >
+          <image
+            href="/底图_expanded-v2.png?v=20260727-seamless-map"
+            x="-320"
+            y="-180"
+            width="2560"
+            height="1440"
+            preserveAspectRatio="none"
+          />
+          {mapLayer === "province" && (
+            <g className="province-blocks annotated-province-layer">
+              {provinceBlocks.map((block) => (
+                <g
+                  key={block.province}
+                  className={`province-block annotated-province-block ${block.province === selectedProvince ? "selected" : ""}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedProvince(block.province);
+                    setSelectedCommandery(null);
+                    setSelectedCity(null);
+                    const node = block.nodes[0];
+                    if (node) openNodeInfo(node.id, "province", block.province);
+                  }}
+                  onMouseMove={(event) =>
+                    setTooltip({
+                      x: event.clientX,
+                      y: event.clientY,
+                      text: `${block.province} · ${powerLabel(block.controller)}`,
+                    })
+                  }
+                  onMouseLeave={() => setTooltip(null)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${block.province}，${powerLabel(block.controller)}据有`}
+                >
+                  <path className="province-hit-area" d={block.d} />
+                  <path className="province-outline" d={block.d} />
+                  {showProvinceLabels && (
+                    <text
+                      className="province-label"
+                      x={block.labelX}
+                      y={block.labelY}
+                    >
+                      {block.province}
+                    </text>
+                  )}
+                </g>
               ))}
-            </ul>
-          </div>
-          <div className="detail-section">
-            <span className="detail-label">州总人口</span>
-            <strong>{selectedProvincePopulation.toLocaleString()}</strong>
-          </div>
-          <div className="detail-section">
-            <span className="detail-label">州总驻军</span>
-            {getProvinceArmies(selectedProvinceData.province).length > 0 ? (
-              <ul className="army-list">
-                {getProvinceArmies(selectedProvinceData.province).map((army) => (
-                  <li key={army.id}>
-                    <span className="army-name">{army.name}</span>
-                    <small>{army.commander} · {army.manpower.toLocaleString()} 人</small>
-                  </li>
+            </g>
+          )}
+          {mapLayer === "commandery" && (
+            <g className="commandery-blocks annotated-commandery-layer">
+              <path
+                className="commandery-shared-boundaries"
+                d={sharedCommanderyBoundaryPath}
+                aria-hidden="true"
+              />
+              {commanderyBlocks.map((block) => {
+                const node = block.node;
+                return (
+                  <g
+                    key={block.city}
+                    className={`commandery-block annotated-commandery-block ${block.city === selectedCommandery ? "selected" : ""}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedCommandery(block.city);
+                      setSelectedProvince(null);
+                      setSelectedCity(null);
+                      if (node)
+                        openNodeInfo(
+                          node.id,
+                          "commandery",
+                          node.commandery_id || node.id,
+                        );
+                    }}
+                    onMouseMove={(event) =>
+                      setTooltip({
+                        x: event.clientX,
+                        y: event.clientY,
+                        text: `${block.commanderyName} · ${block.province}`,
+                      })
+                    }
+                    onMouseLeave={() => setTooltip(null)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${block.commanderyName}，${block.province}`}
+                  >
+                    <path className="commandery-hit-area" d={block.d} />
+                    <path
+                      className="commandery-boundary"
+                      d={sharedCommanderyBoundaryPath}
+                      clipPath={`url(#commandery-highlight-${block.city})`}
+                    />
+                    {showCommanderyLabels && (
+                      <text
+                        className="commandery-label"
+                        x={block.labelX}
+                        y={block.labelY}
+                      >
+                        {block.commanderyName}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          )}
+          {(mapLayer === "city" || mapLayer === "influence") && (
+            <g
+              className={`city-territories ${mapLayer === "influence" ? "city-influence-layer" : "city-node-layer"}`}
+            >
+              <path
+                className="city-commandery-boundaries"
+                d={sharedCommanderyBoundaryPath}
+                aria-hidden="true"
+              />
+              <g
+                className="historical-town-reference"
+                aria-label="历史城镇地理参照"
+              >
+                {historicalTownBlocks.map((town) => (
+                  <g
+                    key={town.city}
+                    transform={`translate(${town.cx} ${town.cy})`}
+                    aria-hidden="true"
+                  >
+                    <circle className="historical-town-reference-dot" r="2.8" />
+                    <text
+                      className="historical-town-reference-label"
+                      x="5"
+                      y="-4"
+                    >
+                      {town.townName}
+                    </text>
+                  </g>
                 ))}
-              </ul>
-            ) : (
-              <p className="empty-note">该州暂无驻军</p>
-            )}
-          </div>
+              </g>
+              {cityBlocks.map((block) => {
+                const city = block.city;
+                const armies = cityArmies(city.id, city.commandery_id);
+                return (
+                  <g
+                    key={city.id}
+                    className={`city-node territory-city-node ${city.is_commandery_capital ? "capital-town" : ""} ${block.hasHistoricalAnchor ? "" : "unanchored-city"} ${city.id === selectedCity ? "selected" : ""}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedCity(city.id);
+                      setSelectedProvince(null);
+                      setSelectedCommandery(null);
+                      openNodeInfo(city.commandery_id, "city", city.id);
+                    }}
+                    onMouseMove={(event) =>
+                      setTooltip({
+                        x: event.clientX,
+                        y: event.clientY,
+                        text: `${city.name} · ${city.strategic_role} · ${armies.length}支军队`,
+                      })
+                    }
+                    onMouseLeave={() => setTooltip(null)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${city.name}，${city.strategic_role}`}
+                  >
+                    <path
+                      className={`city-territory ${city.siege_status === "围城中" ? "under-siege" : ""}`}
+                      d={block.d}
+                      fill={
+                        city.siege_status === "围城中"
+                          ? "url(#siege-hatch)"
+                          : POWER_COLORS[city.controller] || "#655c4b"
+                      }
+                    />
+                    <path
+                      className="city-territory-boundary"
+                      d={block.boundaryD}
+                    />
+                    <path
+                      className="city-highlight-boundary"
+                      d={cityBoundaryNetworkPath}
+                      clipPath={`url(#${cityClipId(city.id)})`}
+                    />
+                    <circle
+                      className="city-node-hit-area"
+                      cx={block.cx}
+                      cy={block.cy}
+                      r="18"
+                    />
+                    <g
+                      className="city-model"
+                      transform={`translate(${block.cx} ${block.cy})`}
+                    >
+                      <image
+                        className="city-sprite"
+                        href={`/assets/ui/cities/${city.strategic_role.includes("关隘") ? "fort" : city.strategic_role.includes("港") ? "port" : city.is_commandery_capital ? "capital" : "town"}.png`}
+                        x="-18"
+                        y="-25"
+                        width="36"
+                        height="29"
+                        preserveAspectRatio="xMidYMax meet"
+                      />
+                      {city.is_commandery_capital && (
+                        <rect
+                          className="city-sprite-plaque-cover"
+                          x="-5.3"
+                          y="-6.8"
+                          width="10.6"
+                          height="2.9"
+                          rx=".5"
+                        />
+                      )}
+                      <path
+                        className="city-banner"
+                        d="M 10 -12 L 10 -24 L 20 -20 L 10 -17 Z"
+                        fill={POWER_COLORS[city.controller] || "#655c4b"}
+                      />
+                    </g>
+                    {city.is_commandery_capital && (
+                      <text
+                        className="capital-star"
+                        x={block.cx}
+                        y={block.cy - 20}
+                      >
+                        ★
+                      </text>
+                    )}
+                    {armies.length > 0 && (
+                      <g
+                        className="army-marker city-army-marker"
+                        transform={`translate(${block.cx + 13} ${block.cy - 21})`}
+                      >
+                        <rect width="16" height="12" rx="1" />
+                        <text x="8" y="9" fontSize="8">
+                          {armies.length}
+                        </text>
+                      </g>
+                    )}
+                    {showCityLabels &&
+                      (mapLayer === "city" || city.is_commandery_capital) && (
+                        <text
+                          className="city-label"
+                          x={block.labelX}
+                          y={block.labelY + 16}
+                        >
+                          {city.name}
+                        </text>
+                      )}
+                  </g>
+                );
+              })}
+            </g>
+          )}
+        </g>
+      </svg>
+      {tooltip && (
+        <div
+          className="map-province-tooltip"
+          style={{ left: tooltip.x, top: tooltip.y }}
+        >
+          {tooltip.text}
         </div>
+      )}
+      <div className="map-layer-toggle" aria-label="地图图层切换">
+        <button
+          type="button"
+          className={mapLayer === "province" ? "active" : ""}
+          onClick={() => switchLayer("province")}
+        >
+          <MapIcon />州
+        </button>
+        <button
+          type="button"
+          className={mapLayer === "commandery" ? "active" : ""}
+          onClick={() => switchLayer("commandery")}
+        >
+          <Scroll />郡
+        </button>
+        <button
+          type="button"
+          className={mapLayer === "city" ? "active" : ""}
+          onClick={() => switchLayer("city")}
+        >
+          <Building />
+          城池
+        </button>
+        <button
+          type="button"
+          className={mapLayer === "influence" ? "active" : ""}
+          onClick={() => switchLayer("influence")}
+        >
+          <Flag />
+          势力
+        </button>
       </div>
-    )}
-
-    {/* 郡域详情面板 */}
-    {selectedCommanderyBlock && (
-      <div className="commandery-detail-panel">
-        <div className="detail-panel-header">
-          <h3><Scroll size={16} /> {selectedCommanderyBlock.commanderyName}</h3>
-          <button className="detail-close" onClick={() => setSelectedCommandery(null)}><X /></button>
-        </div>
-        <div className="detail-panel-content">
-          <div className="detail-section">
-            <span className="detail-label">所属州</span>
-            <strong>{selectedCommanderyNode?.province || selectedCommanderyBlock.province}</strong>
-          </div>
-          <div className="detail-section">
-            <span className="detail-label">治所/标注点</span>
-            <strong>{selectedCommanderyBlock.city}</strong>
-          </div>
-          {selectedCommanderyNode ? <>
-            <div className="detail-section">
-              <span className="detail-label">游戏节点</span>
-              <strong>{selectedCommanderyNode.name}</strong>
-            </div>
-            <div className="detail-section">
-              <span className="detail-label">控制势力</span>
-              <strong>{powerLabel(selectedCommanderyNode.controller)}</strong>
-            </div>
-            <div className="detail-section">
-              <span className="detail-label">驻军 ({getCityArmies(selectedCommanderyBlock.city).length})</span>
-              {getCityArmies(selectedCommanderyBlock.city).length > 0 ? (
-                <ul className="army-list">
-                  {getCityArmies(selectedCommanderyBlock.city).map((army) => (
-                    <li key={army.id}>
-                      <span className="army-name">{army.name}</span>
-                      <small>{army.commander} · {army.manpower.toLocaleString()} 人</small>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="empty-note">该节点暂无驻军</p>
-              )}
-            </div>
-            {regionManagement(selectedCommanderyNode)}
-          </> : <div className="detail-section">
-            <span className="detail-label">状态</span>
-            <strong>待校郡域</strong>
-            <p className="empty-note">该边界来自现有标注项目，已按郡级名称校正显示；严格郡界仍需后续按史料重绘。</p>
-          </div>}
-        </div>
+      <div className="map-legend">
+        <span>
+          <i className="ordinary" />
+          {mapLayer === "province"
+            ? "州界"
+            : mapLayer === "commandery"
+              ? "郡界"
+              : mapLayer === "influence"
+                ? "城池势力范围"
+                : "城池辖区"}
+        </span>
+        <span>
+          <i className="city-range" />
+          围城朱砂斜纹
+        </span>
       </div>
-    )}
-
-    {/* 城池详情面板 */}
-    {selectedCityBlock && (
-      <div className="city-detail-panel">
-        <div className="detail-panel-header">
-          <h3><Building size={16} /> {selectedCityBlock.townName}</h3>
-          <button className="detail-close" onClick={() => setSelectedCity(null)}><X /></button>
-        </div>
-        <div className="detail-panel-content">
-          <div className="detail-section">
-            <span className="detail-label">所属郡级单位</span>
-            <strong>{selectedCityBlock.commanderyName}</strong>
-          </div>
-          {selectedCityNode ? <>
-            {selectedCityNode.name !== selectedCityBlock.label && <div className="detail-section">
-              <span className="detail-label">游戏节点</span>
-              <strong>{selectedCityNode.name}</strong>
-            </div>}
-            <div className="detail-section">
-              <span className="detail-label">控制势力</span>
-              <strong>{powerLabel(selectedCityNode.controller)}</strong>
-            </div>
-            <div className="detail-section">
-              <span className="detail-label">人口</span>
-              <strong>{selectedCityNode.population.toLocaleString()}</strong>
-            </div>
-            <div className="detail-section">
-              <span className="detail-label">驻军 ({getCityArmies(selectedCityBlock.city).length})</span>
-              {getCityArmies(selectedCityBlock.city).length > 0 ? (
-                <ul className="army-list">
-                  {getCityArmies(selectedCityBlock.city).map((army) => (
-                    <li key={army.id}>
-                      <span className="army-name">{army.name}</span>
-                      <small>{army.commander} · {army.manpower.toLocaleString()} 人</small>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="empty-note">该城暂无驻军</p>
-              )}
-            </div>
-            {regionManagement(selectedCityNode)}
-          </> : <div className="detail-section">
-            <span className="detail-label">状态</span>
-            <strong>历史城镇</strong>
-            <p className="empty-note">该城镇作为郡治或代表县邑显示，尚未接入人口、驻军与军令节点。</p>
-          </div>}
-        </div>
-      </div>
-    )}
-
-    {/* 右键快捷菜单 */}
-    {contextMenu && (
-      <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
-        {contextMenu.type === "province" ? (
-          <>
-            <button onClick={() => { setSelectedProvince(contextMenu.province!); setSelectedCity(null); setContextMenu(null); }}>
-              <Scroll size={14} /> 查看州详情
-            </button>
-            <button onClick={() => {
-              const armies = getProvinceArmies(contextMenu.province!);
-              if (armies.length > 0) {
-                const firstArmy = armies[0];
-                onSelect(state.map.nodes.find((n) => n.id === firstArmy.station_node)?.id || "");
-              }
-              setContextMenu(null);
-            }}>
-              <Sword size={14} /> 查看州内军队
-            </button>
-          </>
-        ) : contextMenu.type === "commandery" ? (
-          <>
-            <button onClick={() => { setSelectedCommandery(contextMenu.commandery!); setSelectedProvince(null); setSelectedCity(null); setContextMenu(null); }}>
-              <Scroll size={14} /> 查看郡域详情
-            </button>
-            <button onClick={() => {
-              const block = commanderyBlocks.find((item) => item.city === contextMenu.commandery);
-              if (block?.node) onSelect(block.node.id);
-              setContextMenu(null);
-            }}>
-              <Users size={14} /> 管理接入节点
-            </button>
-          </>
-        ) : (
-          <>
-            <button onClick={() => { setSelectedCity(contextMenu.city!); setSelectedProvince(null); setContextMenu(null); }}>
-              <Building size={14} /> 查看城池详情
-            </button>
-            <button onClick={() => {
-              const armies = getCityArmies(contextMenu.city!);
-              if (armies.length > 0) {
-                const firstArmy = armies[0];
-                onSelect(state.map.nodes.find((n) => n.id === firstArmy.station_node)?.id || "");
-              }
-              setContextMenu(null);
-            }}>
-              <Sword size={14} /> 查看城内军队
-            </button>
-            <button onClick={() => {
-              const block = cityBlocks.find((item) => item.city === contextMenu.city || item.node?.name === contextMenu.city);
-              if (block?.node) onSelect(block.node.id);
-              setContextMenu(null);
-            }}>
-              <Users size={14} /> 管理城池
-            </button>
-          </>
-        )}
-      </div>
-    )}
-  </section>;
+      {infoTarget && (
+        <MapInfoDrawer
+          state={state}
+          scope={infoTarget.scope}
+          entityId={infoTarget.entityId}
+          onClose={() => setInfoTarget(null)}
+        />
+      )}
+    </section>
+  );
 }

@@ -2,7 +2,7 @@
 
 打包发布模式（PyInstaller --onefile）：
   - bundled_path("content/foo.json") → sys._MEIPASS/content/foo.json（只读，临时解压目录）
-  - user_data_dir() → ~/.ming_sim/（跨进程持久，user 可写）
+  - user_data_dir() → ~/.sanguo_sim/（跨进程持久，user 可写）
 
 源码开发模式：
   - bundled_path("content/foo.json") → <repo>/content/foo.json
@@ -20,8 +20,6 @@ from pathlib import Path
 
 
 SANGUO_SCENARIO_ID = "sanguo_liubei_208"
-_SANGUO_MIGRATION_MARKER = ".sanguo_liubei_208_migrated"
-_LEGACY_POWER_IDS = {"ming", "houjin", "mongol", "korea", "japan", "rebels"}
 
 
 def sqlite_scenario_id(path: Path | str) -> str:
@@ -44,6 +42,45 @@ def sqlite_scenario_id(path: Path | str) -> str:
             conn.close()
     except sqlite3.Error:
         return ""
+
+
+def is_city_topology_database(path: Path | str) -> bool:
+    """检查 SQLite 存档是否使用 72 城池网络拓扑 (city:* 节点)。
+
+    判定规则：kv_store 中 strategic_node_model='city_only'，
+    或 strategic_nodes 表中所有 ID 均以 'city:' 开头。
+    """
+    target = Path(path)
+    if not target.is_file():
+        return False
+    try:
+        conn = sqlite3.connect(f"file:{target}?mode=ro", uri=True)
+        try:
+            # 快速路径：检查 kv_store 标记
+            if conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kv_store'"
+            ).fetchone() is not None:
+                row = conn.execute(
+                    "SELECT value FROM kv_store WHERE key='strategic_node_model'"
+                ).fetchone()
+                if row and str(row[0]).strip() == "city_only":
+                    return True
+            # 备用路径：检查 strategic_nodes 是否全为 city:* 前缀
+            if conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='strategic_nodes'"
+            ).fetchone() is None:
+                return False
+            count = conn.execute("SELECT COUNT(*) FROM strategic_nodes").fetchone()[0]
+            if count == 0:
+                return False
+            city_count = conn.execute(
+                "SELECT COUNT(*) FROM strategic_nodes WHERE id LIKE 'city:%'"
+            ).fetchone()[0]
+            return city_count == count
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return False
 
 
 def is_frozen() -> bool:
@@ -74,13 +111,13 @@ def bundled_path(*parts: str) -> str:
 
 def user_data_dir() -> Path:
     """用户可写数据目录。
-    frozen：~/.ming_sim/（首次自动建）。
+    frozen：~/.sanguo_sim/（首次自动建）。
     源码：<repo>/data/（沿用旧布局，便于开发期切换存档）。"""
     override = os.environ.get("MING_SIM_USER_DATA_DIR", "").strip()
     if override:
         d = Path(override).expanduser()
     elif is_frozen():
-        d = Path.home() / ".ming_sim"
+        d = Path.home() / ".sanguo_sim"
     else:
         d = Path(__file__).resolve().parent.parent / "data"
     d.mkdir(parents=True, exist_ok=True)
@@ -92,60 +129,3 @@ def user_data_path(*parts: str) -> str:
     p = user_data_dir().joinpath(*parts)
     p.parent.mkdir(parents=True, exist_ok=True)
     return str(p)
-
-
-def _is_recognizable_legacy_ming_db(path: Path) -> bool:
-    """只识别没有场景标记、且含旧明末势力 id 的 SQLite 数据库。"""
-    if not path.is_file():
-        return False
-    try:
-        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-        try:
-            tables = {
-                str(row[0])
-                for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            }
-            if "kv_store" in tables:
-                row = conn.execute(
-                    "SELECT value FROM kv_store WHERE key='scenario_id'"
-                ).fetchone()
-                if row and str(row[0]).strip():
-                    return False
-            if "powers" in tables:
-                power_ids = {str(row[0]) for row in conn.execute("SELECT id FROM powers")}
-                if power_ids & _LEGACY_POWER_IDS:
-                    return True
-            if "characters" in tables:
-                return bool(conn.execute(
-                    "SELECT 1 FROM characters WHERE power_id='ming' LIMIT 1"
-                ).fetchone())
-            return False
-        finally:
-            conn.close()
-    except sqlite3.Error:
-        return False
-
-
-def migrate_legacy_ming_data(data_root: Path | str | None = None) -> list[str]:
-    """首次启动时删除可明确识别的旧明末主库和存档，其他文件不动。"""
-    root = Path(data_root) if data_root is not None else user_data_dir()
-    root.mkdir(parents=True, exist_ok=True)
-    marker = root / _SANGUO_MIGRATION_MARKER
-    if marker.exists():
-        return []
-    candidates = [root / "ming_sim.db"]
-    saves = root / "saves"
-    if saves.is_dir():
-        candidates.extend(sorted(saves.glob("*.db")))
-    removed: list[str] = []
-    for candidate in candidates:
-        if not _is_recognizable_legacy_ming_db(candidate):
-            continue
-        for suffix in ("", "-wal", "-shm"):
-            try:
-                Path(f"{candidate}{suffix}").unlink()
-            except FileNotFoundError:
-                pass
-        removed.append(str(candidate))
-    marker.touch(exist_ok=True)
-    return removed

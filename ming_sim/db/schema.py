@@ -91,7 +91,7 @@ class _SchemaMixin:
                 status TEXT NOT NULL DEFAULT 'active',
                 status_reason TEXT NOT NULL DEFAULT '',
                 status_changed_turn INTEGER NOT NULL DEFAULT 0,
-                power_id TEXT NOT NULL DEFAULT 'ming',
+                power_id TEXT NOT NULL DEFAULT 'liu_bei',
                 location TEXT NOT NULL DEFAULT '',
                 origin TEXT NOT NULL DEFAULT 'preset',
                 archived INTEGER NOT NULL DEFAULT 0
@@ -153,15 +153,68 @@ class _SchemaMixin:
                 year INTEGER NOT NULL,
                 period INTEGER NOT NULL,
                 power_id TEXT NOT NULL,
+                action_slot INTEGER NOT NULL DEFAULT 1,
                 action_type TEXT NOT NULL,
                 action_json TEXT NOT NULL DEFAULT '{}',
                 score REAL NOT NULL DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'validated',
                 result TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(turn, power_id),
+                UNIQUE(turn, power_id, action_slot),
                 FOREIGN KEY(power_id) REFERENCES powers(id)
             );
+
+            CREATE TABLE IF NOT EXISTS world_simulation_contexts (
+                turn INTEGER PRIMARY KEY,
+                year INTEGER NOT NULL,
+                period INTEGER NOT NULL,
+                seed TEXT NOT NULL,
+                season TEXT NOT NULL,
+                weather_json TEXT NOT NULL DEFAULT '{}',
+                regional_conditions_json TEXT NOT NULL DEFAULT '{}',
+                public_mood_json TEXT NOT NULL DEFAULT '{}',
+                power_budgets_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS minister_memorials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                minister_name TEXT NOT NULL,
+                memorial_kind TEXT NOT NULL,
+                title TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                subject_ref TEXT NOT NULL DEFAULT '',
+                risk_note TEXT NOT NULL DEFAULT '',
+                evidence_json TEXT NOT NULL DEFAULT '[]',
+                suggested_action_json TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, minister_name, title)
+            );
+            CREATE INDEX IF NOT EXISTS idx_memorials_turn ON minister_memorials(turn, status);
+
+            CREATE TABLE IF NOT EXISTS external_intelligence_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                power_id TEXT NOT NULL,
+                visibility TEXT NOT NULL,
+                title TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                evidence_json TEXT NOT NULL DEFAULT '[]',
+                usable_as_fact INTEGER NOT NULL DEFAULT 0,
+                source_type TEXT NOT NULL DEFAULT 'system',
+                source_ref TEXT NOT NULL DEFAULT '',
+                reliability INTEGER NOT NULL DEFAULT 50,
+                verification_status TEXT NOT NULL DEFAULT 'unverified',
+                valid_until_turn INTEGER NOT NULL DEFAULT 0,
+                true_subject_ref TEXT NOT NULL DEFAULT '',
+                parent_report_id INTEGER NOT NULL DEFAULT 0,
+                resolution_turn INTEGER NOT NULL DEFAULT 0,
+                resolution_summary TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_external_intel_turn ON external_intelligence_reports(turn, visibility);
 
             CREATE TABLE IF NOT EXISTS power_name_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -193,11 +246,65 @@ class _SchemaMixin:
                 gentry_resistance INTEGER NOT NULL,
                 military_pressure INTEGER NOT NULL,
                 status TEXT NOT NULL,
-                controlled_by TEXT NOT NULL DEFAULT 'ming',
+                controlled_by TEXT NOT NULL DEFAULT 'liu_bei',
                 fiscal TEXT NOT NULL DEFAULT '{}',
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(controlled_by) REFERENCES powers(id)
             );
+
+            CREATE INDEX IF NOT EXISTS idx_regions_controlled_by ON regions(controlled_by);
+
+            /* 208 年行政读模型：regions 保持郡级事实；州与城池独立存档。 */
+            CREATE TABLE IF NOT EXISTS administrative_provinces (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                capital_city_id TEXT NOT NULL DEFAULT '',
+                transport INTEGER NOT NULL DEFAULT 50,
+                mobilization INTEGER NOT NULL DEFAULT 50,
+                public_support INTEGER NOT NULL DEFAULT 50,
+                military_pressure INTEGER NOT NULL DEFAULT 50,
+                security_coordination INTEGER NOT NULL DEFAULT 50,
+                status TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS administrative_cities (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                commandery_id TEXT NOT NULL,
+                province_id TEXT NOT NULL,
+                territory_id TEXT NOT NULL DEFAULT '',
+                is_commandery_capital INTEGER NOT NULL DEFAULT 0,
+                strategic_role TEXT NOT NULL DEFAULT '郡治城',
+                controlled_by TEXT NOT NULL,
+                order_score INTEGER NOT NULL DEFAULT 50,
+                grain_stock INTEGER NOT NULL DEFAULT 0,
+                market_capacity INTEGER NOT NULL DEFAULT 50,
+                fortification INTEGER NOT NULL DEFAULT 50,
+                garrison_capacity INTEGER NOT NULL DEFAULT 1,
+                siege_status TEXT NOT NULL DEFAULT '未围',
+                status TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(commandery_id) REFERENCES regions(id),
+                FOREIGN KEY(province_id) REFERENCES administrative_provinces(id),
+                FOREIGN KEY(controlled_by) REFERENCES powers(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_admin_city_province ON administrative_cities(province_id);
+            CREATE INDEX IF NOT EXISTS idx_admin_city_commandery ON administrative_cities(commandery_id);
+            CREATE INDEX IF NOT EXISTS idx_admin_city_controlled_by ON administrative_cities(controlled_by);
+
+            CREATE TABLE IF NOT EXISTS administrative_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                scope TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                field TEXT NOT NULL,
+                old_value TEXT NOT NULL,
+                new_value TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_administrative_logs_turn ON administrative_logs(turn, scope, entity_id);
 
             CREATE TABLE IF NOT EXISTS region_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -248,7 +355,7 @@ class _SchemaMixin:
                 supply_last_settled_turn INTEGER NOT NULL DEFAULT 0,
                 specialties TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL,
-                owner_power TEXT NOT NULL DEFAULT 'ming',
+                owner_power TEXT NOT NULL DEFAULT 'liu_bei',
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(owner_power) REFERENCES powers(id)
             );
@@ -564,6 +671,21 @@ class _SchemaMixin:
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS suggestions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                period INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                converted_to_intent_id INTEGER,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_suggestions_status
+                ON suggestions(status);
+
             CREATE TABLE IF NOT EXISTS ongoing_plans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 origin_turn INTEGER NOT NULL,
@@ -628,6 +750,77 @@ class _SchemaMixin:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS political_faction_states (
+                faction_key TEXT PRIMARY KEY,
+                label TEXT NOT NULL,
+                agenda TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'locked',
+                activated_turn INTEGER NOT NULL DEFAULT 0,
+                support INTEGER NOT NULL DEFAULT 50,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS character_loyalty_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                character_name TEXT NOT NULL,
+                delta INTEGER NOT NULL,
+                before_value INTEGER NOT NULL,
+                after_value INTEGER NOT NULL,
+                reason TEXT NOT NULL DEFAULT '',
+                source_kind TEXT NOT NULL DEFAULT '',
+                source_id TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(character_name) REFERENCES characters(name)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_character_loyalty_logs_character_turn
+            ON character_loyalty_logs(character_name, turn DESC);
+
+            CREATE TABLE IF NOT EXISTS political_claims (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                period INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                declared_stage TEXT NOT NULL,
+                legitimacy TEXT NOT NULL,
+                unmet_conditions TEXT NOT NULL DEFAULT '[]',
+                consequences TEXT NOT NULL DEFAULT '{}',
+                external_pressure INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'active',
+                resolved_turn INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_political_claims_status_turn
+            ON political_claims(status, turn DESC);
+
+            CREATE TABLE IF NOT EXISTS reaction_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL, batch_id INTEGER NOT NULL,
+                subject_type TEXT NOT NULL, subject_id TEXT NOT NULL,
+                reaction_level TEXT NOT NULL, reaction_kind TEXT NOT NULL,
+                actor TEXT NOT NULL DEFAULT '', target TEXT NOT NULL DEFAULT '',
+                seed TEXT NOT NULL, rule_facts_snapshot TEXT NOT NULL DEFAULT '{}',
+                ai_proposal TEXT NOT NULL DEFAULT '{}', validation_result TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'resolved', outcome_summary TEXT NOT NULL DEFAULT '',
+                applied_effects TEXT NOT NULL DEFAULT '[]',
+                suggestion_id INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, batch_id, subject_type, subject_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS directive_batch_checkpoints (
+                batch_id INTEGER PRIMARY KEY,
+                phase TEXT NOT NULL DEFAULT '',
+                draft_id INTEGER NOT NULL DEFAULT 0,
+                options_json TEXT NOT NULL DEFAULT '[]',
+                choice TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(batch_id) REFERENCES directive_batches(id)
+            );
+
             CREATE TABLE IF NOT EXISTS skill_grants (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 character_name TEXT NOT NULL,
@@ -673,6 +866,75 @@ class _SchemaMixin:
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- P0: 方略草案（不可改变世界）
+            CREATE TABLE IF NOT EXISTS directive_drafts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                period INTEGER NOT NULL,
+
+                -- 草案来源
+                source_type TEXT NOT NULL,  -- 'council_chat', 'secret_chat', 'map_detail', 'manual', 'suggestion'
+                source_id INTEGER,          -- 关联的 court_chat_messages.id / chat_messages.id / etc.
+
+                -- 结构化行动字段
+                directive_type TEXT NOT NULL,  -- 'internal', 'military', 'diplomatic', 'other', 'secret'
+                title TEXT NOT NULL,
+                assignee TEXT,                 -- 执行者（character name）
+                target TEXT,                   -- 目标（region name / power name / etc.）
+                duration_months INTEGER DEFAULT 1,
+                priority INTEGER DEFAULT 50,   -- 0-100
+
+                -- 资源与约束
+                resources_json TEXT DEFAULT '{}',           -- {"military_supply": 100, "grain": 50}
+                constraints_json TEXT DEFAULT '[]',         -- ["不得滥杀百姓", "须留后备"]
+                risks_json TEXT DEFAULT '[]',               -- ["补给线过长", "敌军增援"]
+
+                -- 文书说明
+                narrative_text TEXT DEFAULT '',           -- 玩家意图与叙事表达
+                compiled_text TEXT DEFAULT '',            -- AI 润色后的文书
+
+                -- 状态
+                status TEXT NOT NULL DEFAULT 'draft',  -- 'draft', 'validated', 'invalid', 'issued', 'rejected'
+                validation_result_json TEXT DEFAULT '{}',   -- 校验结果
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- P0: 颁令批次（不可变快照）
+            CREATE TABLE IF NOT EXISTS directive_batches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                period INTEGER NOT NULL,
+
+                -- 批次信息
+                batch_title TEXT NOT NULL,
+                decree_text TEXT DEFAULT '',              -- 邸报正文
+                total_drafts INTEGER NOT NULL DEFAULT 0,
+
+                -- 状态
+                status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'issued', 'executing', 'completed', 'failed'
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                issued_at TEXT,
+                completed_at TEXT
+            );
+
+            -- P0: 批次与草案的关联
+            CREATE TABLE IF NOT EXISTS directive_batch_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                batch_id INTEGER NOT NULL,
+                draft_id INTEGER NOT NULL,
+                execution_order INTEGER NOT NULL,  -- 执行顺序
+
+                -- 执行结果
+                execution_status TEXT DEFAULT 'pending',  -- 'pending', 'success', 'partial', 'failed'
+                execution_result_json TEXT DEFAULT '{}',
+
+                FOREIGN KEY (batch_id) REFERENCES directive_batches(id) ON DELETE CASCADE,
+                FOREIGN KEY (draft_id) REFERENCES directive_drafts(id) ON DELETE CASCADE
+            );
+
             CREATE INDEX IF NOT EXISTS idx_economy_ledger_turn
             ON economy_ledger(turn, account);
 
@@ -704,6 +966,21 @@ class _SchemaMixin:
             CREATE INDEX IF NOT EXISTS idx_structured_directives_turn
             ON turn_structured_directives(turn, status);
 
+            -- P0: 方略草案索引
+            CREATE INDEX IF NOT EXISTS idx_directive_drafts_turn
+            ON directive_drafts(turn, status);
+
+            CREATE INDEX IF NOT EXISTS idx_directive_drafts_type
+            ON directive_drafts(directive_type, status);
+
+            -- P0: 颁令批次索引
+            CREATE INDEX IF NOT EXISTS idx_directive_batches_turn
+            ON directive_batches(turn, status);
+
+            -- P0: 批次项目索引
+            CREATE INDEX IF NOT EXISTS idx_directive_batch_items_batch
+            ON directive_batch_items(batch_id, execution_order);
+
             CREATE INDEX IF NOT EXISTS idx_region_logs_turn
             ON region_logs(turn, region_id);
 
@@ -715,6 +992,9 @@ class _SchemaMixin:
 
             CREATE INDEX IF NOT EXISTS idx_power_logs_turn
             ON power_logs(turn, power_id);
+
+            CREATE INDEX IF NOT EXISTS idx_power_logs_power_turn
+            ON power_logs(power_id, turn DESC);
 
             CREATE TABLE IF NOT EXISTS issues (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -854,6 +1134,34 @@ class _SchemaMixin:
             CREATE INDEX IF NOT EXISTS idx_event_memory_sources_memory
             ON event_memory_sources(memory_id);
 
+            CREATE TABLE IF NOT EXISTS random_event_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                trigger_conditions TEXT NOT NULL DEFAULT '{}',
+                options TEXT NOT NULL DEFAULT '[]',
+                effects TEXT NOT NULL DEFAULT '{}',
+                base_probability REAL NOT NULL DEFAULT 0.1
+            );
+
+            CREATE TABLE IF NOT EXISTS random_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                template_id INTEGER,
+                turn INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                options TEXT NOT NULL DEFAULT '[]',
+                player_choice TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'active',
+                result TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                resolved_at TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_random_events_status
+            ON random_events(status, turn);
+
             CREATE TABLE IF NOT EXISTS kv_store (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL DEFAULT '',
@@ -862,8 +1170,11 @@ class _SchemaMixin:
 
             CREATE TABLE IF NOT EXISTS strategic_nodes (
                 id TEXT PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
                 province TEXT NOT NULL,
+                commandery_id TEXT NOT NULL DEFAULT '',
+                x REAL NOT NULL DEFAULT 0,
+                y REAL NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -918,6 +1229,27 @@ class _SchemaMixin:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS campaigns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                objective TEXT NOT NULL DEFAULT '',
+                theater_node TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'active',
+                commander TEXT NOT NULL DEFAULT '',
+                participant_armies TEXT NOT NULL DEFAULT '[]',
+                started_turn INTEGER NOT NULL,
+                planned_duration INTEGER NOT NULL DEFAULT 3,
+                actual_turns INTEGER NOT NULL DEFAULT 0,
+                battle_count INTEGER NOT NULL DEFAULT 0,
+                casualties INTEGER NOT NULL DEFAULT 0,
+                result TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_campaigns_status
+            ON campaigns(status);
+
             CREATE TABLE IF NOT EXISTS diplomacy_treaties (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 treaty_key TEXT NOT NULL DEFAULT '',
@@ -928,6 +1260,18 @@ class _SchemaMixin:
                 start_turn INTEGER NOT NULL,
                 end_turn INTEGER,
                 status TEXT NOT NULL DEFAULT 'proposed',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS monarch_alliances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                initiator TEXT NOT NULL,
+                participants TEXT NOT NULL DEFAULT '[]',
+                terms TEXT NOT NULL DEFAULT '{}',
+                ceremony_turn INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'proposed',
+                result TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -1093,11 +1437,125 @@ class _SchemaMixin:
             CREATE INDEX IF NOT EXISTS idx_diplomacy_logs_turn
             ON diplomacy_logs(turn, power_a, power_b);
 
+            CREATE INDEX IF NOT EXISTS idx_diplomacy_logs_power_a_power_b
+            ON diplomacy_logs(power_a, power_b, turn DESC);
+
             CREATE INDEX IF NOT EXISTS idx_character_attribute_logs_turn
             ON character_attribute_logs(turn, character_name);
 
             CREATE INDEX IF NOT EXISTS idx_pending_adjudications_turn
             ON pending_adjudications(turn, status, kind);
+
+            CREATE TABLE IF NOT EXISTS world_random_draws (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                domain TEXT NOT NULL,
+                subject_id TEXT NOT NULL,
+                derived_seed TEXT NOT NULL,
+                draw_kind TEXT NOT NULL,
+                low_value INTEGER,
+                high_value INTEGER,
+                roll_value INTEGER,
+                choice_key TEXT NOT NULL DEFAULT '',
+                candidates_snapshot_json TEXT NOT NULL DEFAULT '[]',
+                metadata_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, domain, subject_id, draw_kind)
+            );
+
+            CREATE TABLE IF NOT EXISTS regional_world_states (
+                region_id TEXT NOT NULL,
+                turn INTEGER NOT NULL,
+                season TEXT NOT NULL,
+                weather_kind TEXT NOT NULL,
+                weather_severity INTEGER NOT NULL DEFAULT 0,
+                road_condition INTEGER NOT NULL DEFAULT 0,
+                grain_transport_pressure INTEGER NOT NULL DEFAULT 0,
+                harvest_outlook INTEGER NOT NULL DEFAULT 0,
+                epidemic_pressure INTEGER NOT NULL DEFAULT 0,
+                disaster_risk INTEGER NOT NULL DEFAULT 0,
+                public_mood_delta INTEGER NOT NULL DEFAULT 0,
+                state_json TEXT NOT NULL DEFAULT '{}',
+                source_draw_refs_json TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(region_id, turn),
+                FOREIGN KEY(region_id) REFERENCES regions(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_regional_world_states_region_turn
+            ON regional_world_states(region_id, turn DESC);
+
+            CREATE TABLE IF NOT EXISTS regional_incidents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                region_id TEXT NOT NULL,
+                incident_type TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                title TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                visibility TEXT NOT NULL,
+                risk_snapshot_json TEXT NOT NULL,
+                draw_refs_json TEXT NOT NULL,
+                local_effects_json TEXT NOT NULL DEFAULT '[]',
+                policy_options_json TEXT NOT NULL DEFAULT '[]',
+                status TEXT NOT NULL DEFAULT 'resolved_local',
+                effects_applied_at INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, region_id, incident_type)
+            );
+
+            CREATE TABLE IF NOT EXISTS power_internal_dynamics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                power_id TEXT NOT NULL,
+                dynamic_type TEXT NOT NULL,
+                severity INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                state_snapshot_json TEXT NOT NULL DEFAULT '{}',
+                draw_refs_json TEXT NOT NULL DEFAULT '[]',
+                rule_effects_json TEXT NOT NULL DEFAULT '[]',
+                effects_applied_at INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'resolved_local',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, power_id, dynamic_type)
+            );
+
+            -- 第五期：战果/违约→地缘反应（跨势力态势连锁）
+            CREATE TABLE IF NOT EXISTS geopolitical_reactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                source_kind TEXT NOT NULL,
+                source_ref TEXT NOT NULL,
+                actor_power_id TEXT NOT NULL,
+                target_power_id TEXT NOT NULL,
+                reaction_type TEXT NOT NULL,
+                severity INTEGER NOT NULL,
+                visibility TEXT NOT NULL DEFAULT 'hidden',
+                evidence_json TEXT NOT NULL DEFAULT '[]',
+                draw_refs_json TEXT NOT NULL DEFAULT '[]',
+                soft_effects_json TEXT NOT NULL DEFAULT '{}',
+                action_hint_json TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'resolved',
+                effects_applied_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, source_ref, actor_power_id, target_power_id, reaction_type)
+            );
+
+            CREATE TABLE IF NOT EXISTS delayed_geopolitical_reactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trigger_turn INTEGER NOT NULL,
+                fire_turn INTEGER NOT NULL,
+                actor_power_id TEXT NOT NULL,
+                source_ref TEXT NOT NULL,
+                reaction_type TEXT NOT NULL,
+                target_power_id TEXT NOT NULL,
+                severity INTEGER NOT NULL,
+                condition_json TEXT NOT NULL DEFAULT '{}',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(trigger_turn, source_ref, actor_power_id)
+            );
             """
         )
         for column, definition in {
@@ -1109,7 +1567,7 @@ class _SchemaMixin:
             "aliases": "TEXT NOT NULL DEFAULT ''",
         }.items():
             self.ensure_column("powers", column, definition)
-        self.ensure_column("armies", "owner_power", "TEXT NOT NULL DEFAULT 'ming'")
+        self.ensure_column("armies", "owner_power", "TEXT NOT NULL DEFAULT 'liu_bei'")
         self.ensure_column("armies", "station_node", "TEXT NOT NULL DEFAULT ''")
         self.ensure_column("armies", "supply_turns", "INTEGER NOT NULL DEFAULT 0")
         self.ensure_column("armies", "troop_composition", "TEXT NOT NULL DEFAULT '{}'")
@@ -1123,11 +1581,25 @@ class _SchemaMixin:
         self.ensure_column("armies", "supply_combat_multiplier", "REAL NOT NULL DEFAULT 1.0")
         self.ensure_column("armies", "supply_last_settled_turn", "INTEGER NOT NULL DEFAULT 0")
         self.ensure_column("armies", "specialties", "TEXT NOT NULL DEFAULT '[]'")
-        self.ensure_column("regions", "controlled_by", "TEXT NOT NULL DEFAULT 'ming'")
-        self.ensure_column("characters", "power_id", "TEXT NOT NULL DEFAULT 'ming'")
+        self.ensure_column("regions", "controlled_by", "TEXT NOT NULL DEFAULT 'liu_bei'")
+        self.ensure_column("characters", "power_id", "TEXT NOT NULL DEFAULT 'liu_bei'")
         self.ensure_column("characters", "location", "TEXT NOT NULL DEFAULT ''")
         self.ensure_column("characters", "origin", "TEXT NOT NULL DEFAULT 'preset'")
         self.ensure_column("characters", "archived", "INTEGER NOT NULL DEFAULT 0")
+        self.ensure_column("reaction_events", "applied_effects", "TEXT NOT NULL DEFAULT '[]'")
+        # 第二阶段区域系统迁移：效果已应用标记 + 候选快照
+        self.ensure_column("regional_incidents", "effects_applied_at", "INTEGER NOT NULL DEFAULT 0")
+        self.ensure_column("world_random_draws", "candidates_snapshot_json", "TEXT NOT NULL DEFAULT '[]'")
+        # 第二期情报网络迁移：来源、可信度、核验、有效期
+        self.ensure_column("external_intelligence_reports", "source_type", "TEXT NOT NULL DEFAULT 'system'")
+        self.ensure_column("external_intelligence_reports", "source_ref", "TEXT NOT NULL DEFAULT ''")
+        self.ensure_column("external_intelligence_reports", "reliability", "INTEGER NOT NULL DEFAULT 50")
+        self.ensure_column("external_intelligence_reports", "verification_status", "TEXT NOT NULL DEFAULT 'unverified'")
+        self.ensure_column("external_intelligence_reports", "valid_until_turn", "INTEGER NOT NULL DEFAULT 0")
+        self.ensure_column("external_intelligence_reports", "true_subject_ref", "TEXT NOT NULL DEFAULT ''")
+        self.ensure_column("external_intelligence_reports", "parent_report_id", "INTEGER NOT NULL DEFAULT 0")
+        self.ensure_column("external_intelligence_reports", "resolution_turn", "INTEGER NOT NULL DEFAULT 0")
+        self.ensure_column("external_intelligence_reports", "resolution_summary", "TEXT NOT NULL DEFAULT ''")
         self.conn.execute(
             """
             UPDATE characters
@@ -1277,17 +1749,110 @@ class _SchemaMixin:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # 结局依据只由规则层写入；旧存档保留既有总评并以空数组/route 兼容读取。
+        self.ensure_column("ending_summary", "route", "TEXT NOT NULL DEFAULT ''")
+        self.ensure_column("ending_summary", "evidence", "TEXT NOT NULL DEFAULT '[]'")
         self._drop_regions_grain_security_column()
+        self._migrate_administrative_cities_multicity()
         self._migrate_region_grain_fiscal_fields()
         self._migrate_region_liao_xiang_li()
         # 军队软删除标记：撤销（manpower 归 0）的番号置 active=0，盘面/payload/前端读取层过滤掉，
         # 行仍留库可被「收复/重建」事件复活。旧档默认 active=1（满编军不受影响）。
         self.ensure_column("armies", "active", "INTEGER NOT NULL DEFAULT 1")
+        # power_ai_actions 加 action_slot，支持预算 2 的势力每月 2 项行动。
+        self._migrate_power_ai_actions_action_slot()
         # army_arms 升「军→兵种→装备」三级（主键加 troop_type）。老档主键是 (army_id,weapon_id)，
         # ensure_column 改不了主键，须重建表：旧持械行 troop_type 置 ''（视为未分兵种，玩家持械不丢）。
         self._migrate_army_arms_troop_type()
+        # strategic_nodes 增加坐标与郡属字段（city-network-v1 拓扑）
+        self.ensure_column("strategic_nodes", "commandery_id", "TEXT NOT NULL DEFAULT ''")
+        self.ensure_column("strategic_nodes", "x", "REAL NOT NULL DEFAULT 0")
+        self.ensure_column("strategic_nodes", "y", "REAL NOT NULL DEFAULT 0")
         self.conn.commit()
         self.init_fiscal_config()
+
+    def _migrate_administrative_cities_multicity(self) -> None:
+        """将旧版“一郡一治所”表升级为一郡多城，保留所有既有城事实。
+
+        SQLite 不能原地删除 UNIQUE(commandery_id)，因此仅在旧表尚未具备
+        ``territory_id`` 时重建。旧城一律标为郡治，并保留 id、城权与库存。
+        新增城随后由 ``seed_administrative_units`` 以内容目录确定性补齐。
+        """
+        cols = {str(row["name"]) for row in self.conn.execute("PRAGMA table_info(administrative_cities)").fetchall()}
+        if not cols or "territory_id" in cols:
+            return
+        self.conn.executescript(
+            """
+            ALTER TABLE administrative_cities RENAME TO administrative_cities_legacy;
+            CREATE TABLE administrative_cities (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                commandery_id TEXT NOT NULL,
+                province_id TEXT NOT NULL,
+                territory_id TEXT NOT NULL DEFAULT '',
+                is_commandery_capital INTEGER NOT NULL DEFAULT 0,
+                strategic_role TEXT NOT NULL DEFAULT '郡治城',
+                controlled_by TEXT NOT NULL,
+                order_score INTEGER NOT NULL DEFAULT 50,
+                grain_stock INTEGER NOT NULL DEFAULT 0,
+                market_capacity INTEGER NOT NULL DEFAULT 50,
+                fortification INTEGER NOT NULL DEFAULT 50,
+                garrison_capacity INTEGER NOT NULL DEFAULT 1,
+                siege_status TEXT NOT NULL DEFAULT '未围',
+                status TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(commandery_id) REFERENCES regions(id),
+                FOREIGN KEY(province_id) REFERENCES administrative_provinces(id),
+                FOREIGN KEY(controlled_by) REFERENCES powers(id)
+            );
+            INSERT INTO administrative_cities
+            (id,name,commandery_id,province_id,territory_id,is_commandery_capital,
+             strategic_role,controlled_by,order_score,grain_stock,market_capacity,
+             fortification,garrison_capacity,siege_status,status,updated_at)
+            SELECT id,name,commandery_id,province_id,id,1,
+                   strategic_role,controlled_by,order_score,grain_stock,market_capacity,
+                   fortification,garrison_capacity,siege_status,status,updated_at
+            FROM administrative_cities_legacy;
+            DROP TABLE administrative_cities_legacy;
+            CREATE INDEX IF NOT EXISTS idx_admin_city_province ON administrative_cities(province_id);
+            CREATE INDEX IF NOT EXISTS idx_admin_city_commandery ON administrative_cities(commandery_id);
+            CREATE INDEX IF NOT EXISTS idx_admin_city_controlled_by ON administrative_cities(controlled_by);
+            """
+        )
+
+    def _migrate_power_ai_actions_action_slot(self) -> None:
+        """power_ai_actions 加 action_slot，唯一约束从 (turn, power_id) 改为 (turn, power_id, action_slot)。
+        老档唯一约束不含 action_slot，ensure_column 改不了 UNIQUE，须重建表搬数据。
+        已有行 action_slot=1。已含 action_slot 列则跳过。"""
+        cols = {row["name"] for row in self.conn.execute("PRAGMA table_info(power_ai_actions)").fetchall()}
+        if not cols:
+            return
+        if "action_slot" in cols:
+            return
+        self.conn.executescript(
+            """
+            ALTER TABLE power_ai_actions RENAME TO power_ai_actions_old;
+            CREATE TABLE power_ai_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                period INTEGER NOT NULL,
+                power_id TEXT NOT NULL,
+                action_slot INTEGER NOT NULL DEFAULT 1,
+                action_type TEXT NOT NULL,
+                action_json TEXT NOT NULL DEFAULT '{}',
+                score REAL NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'validated',
+                result TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(turn, power_id, action_slot),
+                FOREIGN KEY(power_id) REFERENCES powers(id)
+            );
+            INSERT INTO power_ai_actions (turn, year, period, power_id, action_type, action_json, score, status, result, created_at)
+                SELECT turn, year, period, power_id, action_type, action_json, score, status, result, created_at FROM power_ai_actions_old;
+            DROP TABLE power_ai_actions_old;
+            """
+        )
 
     def _migrate_army_arms_troop_type(self) -> None:
         """army_arms 升三级（军→兵种→装备）：主键从 (army_id,weapon_id) 改成
@@ -1414,7 +1979,7 @@ class _SchemaMixin:
                     gentry_resistance INTEGER NOT NULL,
                     military_pressure INTEGER NOT NULL,
                     status TEXT NOT NULL,
-                    controlled_by TEXT NOT NULL DEFAULT 'ming',
+                    controlled_by TEXT NOT NULL DEFAULT 'liu_bei',
                     fiscal TEXT NOT NULL DEFAULT '{}',
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(controlled_by) REFERENCES powers(id)

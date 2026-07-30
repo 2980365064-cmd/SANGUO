@@ -11,11 +11,13 @@ from ming_sim.character_effects import evaluate_character_modifier, evaluate_tra
 from ming_sim.adjudication import (
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
 )
 from ming_sim.national_focus import national_focus_modifier
-from ming_sim.sanguo_rules import province_block_between
+from ming_sim.sanguo_rules import find_strategic_route, require_city_node
+from ming_sim.world_simulation import battle_environment
 
 
 TACTIC_RULES = {
@@ -91,11 +93,11 @@ def _character(db, name: str):
 
 def _route_kind(db, source: str, target: str) -> str:
     if source == target:
-        return "州块"
-    try:
-        return province_block_between(db, source, target).kind
-    except ValueError as error:
-        raise ValueError(str(error)) from error
+        return "同地"
+    edge = find_strategic_route(db, source, target)
+    if edge is None:
+        raise ValueError(f"{source} 与 {target} 之间无直连路线。")
+    return edge.kind
 
 
 def _load_armies(db, army_ids: Sequence[str]) -> List[object]:
@@ -335,6 +337,37 @@ def build_battle_adjudication_pack(
     turn = int(getattr(state, "turn", 0))
     calculation = _battle_calculation(db, attacker_ids, defender_ids, node_id, audit=True, turn=turn)
     hard_probability = float(calculation["hard_probability"])
+    environment = battle_environment(db, state, str(calculation["terrain"]["kind"]), node_id=node_id)
+    
+    # 获取区域状态数据（用于事实一致性检查）
+    # regional_world_states 以郡 ID 为主键，需从城池获取所属郡
+    regional_state = {}
+    commandery_id = ""
+    city_row = db.conn.execute(
+        "SELECT commandery_id FROM administrative_cities WHERE id=?", (node_id,)
+    ).fetchone()
+    if city_row:
+        commandery_id = str(city_row["commandery_id"])
+    lookup_id = commandery_id or node_id
+    regional_row = db.conn.execute(
+        "SELECT * FROM regional_world_states WHERE region_id=?", (lookup_id,)
+    ).fetchone()
+    if regional_row:
+        regional_state = dict(regional_row)
+    
+    # 获取防守方军队的原始 supply 值（用于事实一致性检查）
+    defender_supply = {}
+    for defender_id in defender_ids:
+        row = db.conn.execute(
+            "SELECT id, supply, supply_combat_multiplier FROM armies WHERE id=?",
+            (defender_id,)
+        ).fetchone()
+        if row:
+            defender_supply[str(defender_id)] = {
+                "supply": int(row["supply"] or 0),
+                "supply_combat_multiplier": float(row["supply_combat_multiplier"] or 1.0),
+            }
+    
     battle_input_payload = {
         "attacker_ids": attacker_ids,
         "defender_ids": defender_ids,
@@ -349,9 +382,12 @@ def build_battle_adjudication_pack(
             "terrain": calculation["terrain"],
             "hard_scores": calculation["hard_scores"],
             "army_breakdown": calculation["army_breakdown"],
+            "environment": environment,
+            "regional_state": regional_state,  # 新增：区域状态数据
         },
         rules={
             "weights": {"hard_rules": 0.6, "ai_tactic": 0.4},
+            "environment_bounds": {"probability_delta": [-8, 8]},
             "random_rule": "1-100 <= final_probability 时攻方获胜",
             "commander_fate_gate": "仅在战果差距达到规则阈值时允许被俘/重伤/撤退；不允许战役直接写死亡。",
             "territory_rule": "野战/突袭不得直接改变郡县归属；夺城必须走围城或专门规则。",
@@ -359,8 +395,8 @@ def build_battle_adjudication_pack(
         allowed_outcomes=_allowed_outcomes(hard_probability),
         forbidden_outcomes=list(BATTLE_FORBIDDEN_OUTCOMES),
         ai_options=_available_tactic_options(db, calculation),
-        audit=calculation,
-        source_tables=["armies", "characters", "strategic_nodes", "strategic_routes", "national_focus_effects"],
+        audit={**calculation, "environment": environment},
+        source_tables=["armies", "characters", "administrative_cities", "strategic_routes", "national_focus_effects"],
     )
     pack.update({
         "battle_input": battle_input_payload,
@@ -417,22 +453,195 @@ def _validate_ai_choice(db, calculation: Dict[str, object], ai_choice: Dict[str,
     }
 
 
+def _validate_free_tactic(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由战术提案是否在边界内。
+    
+    自由战术路径：玩家用自然语言描述战术意图，AI 基于裁决包事实评估可行性，
+    输出有界修正。与基准战术路径（TACTIC_RULES 白名单）互补。
+    
+    安全边界：
+    - delta 范围：[-5, +15]
+    - 无特性匹配时 delta 上限 +10，有特性匹配时上限 +15
+    - actor 必须是参战统帅
+    - feasibility=impossible 退回正面交锋
+    - 禁止文本检查（reasoning 和 narrative 都不能写死亡/领土/增兵等）
+    - 事实一致性检查（AI 声称的条件必须在盘面中存在）
+    """
+    # 提取字段（带默认值）
+    tactic_name = str(proposal.get("tactic_name") or "custom").strip()
+    actor = str(proposal.get("actor") or "").strip()
+    delta = int(proposal.get("delta", 0))
+    feasibility = str(proposal.get("feasibility", "medium")).strip()
+    reasoning = proposal.get("reasoning") or []
+    narrative = str(proposal.get("narrative") or "")
+    
+    # 1. actor 必须是参战统帅
+    calculation = pack.get("audit")
+    if not isinstance(calculation, dict):
+        raise ValueError("裁决包缺少战斗审计数据。")
+    attacker_commanders = {
+        str(item["commander"])
+        for item in calculation["army_breakdown"]["attackers"]  # type: ignore[index]
+    }
+    if actor not in attacker_commanders:
+        raise ValueError("执行者必须是已参战的攻方统帅")
+    
+    # 2. feasibility=impossible 退回正面交锋
+    if feasibility == "impossible":
+        return {
+            "tactic": "正面交锋",
+            "actor": actor,
+            "delta": 0,
+            "narrative": "方案不可行，退回正面交锋。",
+        }
+    
+    # 3. 禁止文本检查（reasoning 和 narrative 都不能包含禁止文本）
+    reasoning_text = " ".join(str(r) for r in reasoning) if isinstance(reasoning, list) else str(reasoning)
+    combined_text = f"{reasoning_text}\n{narrative}"
+    for marker, message in BATTLE_FORBIDDEN_TEXT.items():
+        if marker in combined_text:
+            raise ValueError(message)
+    
+    # 4. delta 边界检查
+    DELTA_MIN = -5
+    DELTA_MAX = 15
+    DELTA_MAX_WITHOUT_TRAIT = 10
+    
+    if delta < DELTA_MIN:
+        delta = DELTA_MIN
+    if delta > DELTA_MAX:
+        delta = DELTA_MAX
+    
+    # 5. 检查是否有特性匹配（用于 delta 上限）
+    has_trait_match = False
+    character = None
+    # 从 pack 中获取人物数据
+    facts = pack.get("facts", {})
+    army_breakdown = facts.get("army_breakdown", {})
+    attackers = army_breakdown.get("attackers", [])
+    for attacker in attackers:
+        if str(attacker.get("commander", "")) == actor:
+            # 检查是否有相关特性
+            trait_modifiers = attacker.get("trait_modifiers", [])
+            if trait_modifiers:
+                has_trait_match = True
+            break
+    
+    # 无特性匹配时上限 +10
+    if not has_trait_match and delta > DELTA_MAX_WITHOUT_TRAIT:
+        delta = DELTA_MAX_WITHOUT_TRAIT
+    
+    # 6. 事实一致性检查（AI 声称的条件必须在盘面中存在）
+    facts_text = json.dumps(facts, ensure_ascii=False)
+    claim_keywords = {
+        "瘟疫": ("epidemic_pressure", 60),
+        "疫病": ("epidemic_pressure", 60),
+        "粮草不济": ("supply", None),
+        "粮草不足": ("supply", None),
+        "断粮": ("supply", None),
+        "士气低落": ("morale", None),
+        "防备松懈": ("discipline", None),
+        "暴雨": ("weather", None),
+        "大雨": ("weather", None),
+    }
+    for keyword, (fact_key, threshold) in claim_keywords.items():
+        if keyword in reasoning_text:
+            # 检查盘面事实是否支持该声称
+            if not _fact_supports_claim(facts, fact_key, threshold, keyword):
+                raise ValueError(f"AI 声称'{keyword}'，但裁决包事实不支持")
+    
+    # 7. 通过，返回校验结果
+    return {
+        "tactic": tactic_name,
+        "actor": actor,
+        "delta": delta,
+        "narrative": narrative,
+        "feasibility": feasibility,
+        "reasoning": reasoning if isinstance(reasoning, list) else [reasoning],
+    }
+
+
+def _fact_supports_claim(facts: Dict[str, object], fact_key: str, threshold: int | None, keyword: str) -> bool:
+    """检查盘面事实是否支持 AI 的声称。
+    
+    例如：AI 声称"瘟疫"，但 epidemic_pressure 只有 10，则不支持。
+    """
+    # 检查区域状态（regional_world_states）
+    regional_state = facts.get("regional_state", {})
+    environment = facts.get("environment", {})
+    
+    # 检查 epidemic_pressure
+    if fact_key == "epidemic_pressure":
+        epidemic_pressure = int(regional_state.get("epidemic_pressure", 0))
+        min_threshold = threshold if threshold is not None else 60
+        return epidemic_pressure >= min_threshold
+    
+    # 检查天气
+    if fact_key == "weather":
+        probability_delta = environment.get("probability_delta", 0)
+        # 如果声称"暴雨/大雨"，检查 weather narrative 中是否有相关词
+        narrative = str(environment.get("narrative", ""))
+        if "暴雨" in narrative or "大雨" in narrative:
+            return True
+        # 或者检查 probability_delta
+        if probability_delta > 0:
+            return True
+        return False
+    
+    # 检查军队状态（supply, morale, discipline）
+    if fact_key == "supply":
+        # 检查防守方军队的 supply
+        army_breakdown = facts.get("army_breakdown", {})
+        defenders = army_breakdown.get("defenders", [])
+        for defender in defenders:
+            supply = int(defender.get("supply_multiplier", 1.0) * 100)
+            if supply < 50:  # 补给不足 50% 认为"粮草不济"
+                return True
+        return False
+    
+    if fact_key == "morale":
+        # 检查防守方军队的 morale
+        army_breakdown = facts.get("army_breakdown", {})
+        defenders = army_breakdown.get("defenders", [])
+        for defender in defenders:
+            morale = int(defender.get("morale", 50))
+            if morale < 40:  # 士气低于 40 认为"士气低落"
+                return True
+        return False
+    
+    if fact_key == "discipline":
+        # 检查防守方军队的 discipline
+        army_breakdown = facts.get("army_breakdown", {})
+        defenders = army_breakdown.get("defenders", [])
+        for defender in defenders:
+            discipline = int(defender.get("discipline", 50))
+            if discipline < 40:  # 纪律低于 40 认为"防备松懈"
+                return True
+        return False
+    
+    # 默认返回 True（不阻止）
+    return True
+
+
 def validate_battle_plan(
     db,
     battle_input: Dict[str, object],
     ai_choice: Dict[str, object],
+    state: object | None = None,
 ) -> Dict[str, object]:
-    calculation = _battle_calculation(
-        db,
-        [str(item) for item in battle_input.get("attacker_ids", [])],
-        [str(item) for item in battle_input.get("defender_ids", [])],
-        str(battle_input.get("node_id") or ""),
-    )
-    return _validate_ai_choice(db, calculation, ai_choice)
+    """校验战斗计划。统一走自由战术路径（白名单已废弃）。"""
+    pack = build_battle_adjudication_pack(db, state, battle_input)
+    return validate_battle_ai_choice(db, pack, ai_choice)
 
 
 def validate_battle_ai_choice(db, pack: Dict[str, object], ai_choice: Dict[str, object]) -> Dict[str, object]:
-    """校验 AI/参谋输出是否仍在裁决包边界内。"""
+    """校验 AI/参谋输出是否仍在裁决包边界内。
+
+    统一走自由战术路径（_validate_free_tactic）。白名单路径已废弃。
+    """
+    # 禁止字段检查（如 reinforcements, spawn_army 等）
+    check_forbidden_fields(ai_choice)
+
     narrative = str(ai_choice.get("narrative") or "")
     risk_note = str(ai_choice.get("risk_note") or "")
     recommended_followup = str(ai_choice.get("recommended_followup") or "")
@@ -440,13 +649,18 @@ def validate_battle_ai_choice(db, pack: Dict[str, object], ai_choice: Dict[str, 
     for marker, message in BATTLE_FORBIDDEN_TEXT.items():
         if marker in combined:
             raise ValueError(message)
-    calculation = pack.get("audit")
-    if not isinstance(calculation, dict):
-        raise ValueError("裁决包缺少战斗审计数据。")
-    tactic = _validate_ai_choice(db, calculation, ai_choice)
-    tactic["risk_note"] = risk_note
-    tactic["recommended_followup"] = recommended_followup
-    return tactic
+
+    # 统一走自由战术路径
+    # 兼容：如果 AI 使用 tactic 字段而非 tactic_name，自动映射
+    choice = dict(ai_choice)
+    if "tactic" in choice and "tactic_name" not in choice:
+        choice["tactic_name"] = choice["tactic"]
+
+    result = _validate_free_tactic(pack, choice)
+
+    result["risk_note"] = risk_note
+    result["recommended_followup"] = recommended_followup
+    return result
 
 
 def run_battle_ai_choice(
@@ -460,6 +674,7 @@ def run_battle_ai_choice(
     """战斗 AI 参谋出口。真实 LLM 只产候选，战法仍走同一验证器。"""
     candidate = dict(ai_choice or {})
     if not candidate and llm_config is not None:
+        battle_input = pack.get("battle_input") or {}
         result = run_adjudication(
             db,
             state,
@@ -467,7 +682,7 @@ def run_battle_ai_choice(
             str(pack.get("subject_id") or ""),
             llm_config=llm_config,
             agno_db=agno_db,
-            pack=pack,
+            battle_input=battle_input,
         )
         if result["status"] == "validated":
             tactic = dict((result.get("validated") or {}).get("tactic") or {})
@@ -604,9 +819,23 @@ def resolve_battle(
         db, attacker_ids, defender_ids, node_id, audit=True, turn=turn
     )
     hard_probability = float(calculation["hard_probability"])
+    environment = battle_environment(db, state, str(calculation["terrain"]["kind"]), node_id=node_id)
+    environment_delta = int(environment["probability_delta"])
     tactic_component = max(30, min(70, 50 + int(tactic["delta"]) * 2))
-    final_probability = round(hard_probability * 0.6 + tactic_component * 0.4, 2)
-    roll = int(random.randint(1, 100))
+    final_probability = round(max(5, min(95, hard_probability * 0.6 + tactic_component * 0.4 + environment_delta)), 2)
+    # 稳定 battle_subject_id：node + sorted attacker/defender ids
+    battle_subject_id = f"{node_id}:{sorted(attacker_ids)}:{sorted(defender_ids)}"
+    from ming_sim.world_random import draw_int
+    roll = draw_int(
+        db, state=state, domain="battle", subject_id=battle_subject_id,
+        low=1, high=100, draw_kind="resolution",
+        metadata={
+            "final_probability": final_probability,
+            "hard_probability": hard_probability,
+            "environment_delta": environment_delta,
+            "tactic_component": tactic_component,
+        },
+    )
     attacker_won = roll <= final_probability
     winner = "attacker" if attacker_won else "defender"
     attackers = _load_armies(db, attacker_ids)
@@ -628,6 +857,8 @@ def resolve_battle(
         "winner": winner,
         "weights": {"hard_rules": 0.6, "ai_tactic": 0.4},
         "hard_probability": hard_probability,
+        "environment_probability_delta": environment_delta,
+        "environment": environment,
         "ai_tactic_component": tactic_component,
         "final_probability": final_probability,
         "random_roll": roll,
@@ -643,6 +874,7 @@ def resolve_battle(
             "army_changes": changes,
             "attribute_log_context": "battle_command",
             "random_rule": "1-100 <= final_probability 时攻方获胜",
+            "environment": environment,
         },
     }
     cursor = db.conn.execute(

@@ -5,55 +5,67 @@ import pytest
 import ming_sim.sanguo_rules as sanguo_rules
 
 from ming_sim.context import character_context
+from ming_sim.content import load_administrative_units
 from ming_sim.models import Character
 from ming_sim.sanguo_rules import (
     ArmyOrderError,
+    CityStrategicCatalog,
+    CityStrategicEdge,
+    CityStrategicNode,
     apply_route_entry,
     calculate_siege_progress,
+    find_strategic_route,
     issue_army_order,
-    load_strategic_routes,
+    load_city_strategic_catalog,
+    require_city_node,
 )
 
 
-def test_strategic_route_catalog_matches_approved_map():
-    catalog = load_strategic_routes()
-    assert len(catalog.nodes) == 49
-    assert len(catalog.edges) == 79
-    assert {edge.kind for edge in catalog.edges} == {"普通路", "江河", "山道", "关隘"}
-    assert {
-        "jiuyuan", "nanpi", "qiaoxian", "wancheng",
-        "zitong", "shangyong", "yelang", "qielan",
-        "zhangye", "wu", "zhuojun", "youbeiping", "taishan", "pengcheng",
-    }.issubset({node.id for node in catalog.nodes})
+def test_city_strategic_catalog_matches_approved_map():
+    admin = load_administrative_units()
+    catalog = load_city_strategic_catalog(admin)
+    assert len(catalog.nodes) == 72
+    assert len(catalog.edges) == 177
+    assert all(n.city_id.startswith("city:") for n in catalog.nodes)
+    assert catalog.topology_version == "city-network-v1"
+    # 所有边端点都在节点集合中
+    for edge in catalog.edges:
+        assert edge.source in catalog.city_ids
+        assert edge.target in catalog.city_ids
 
 
-def test_route_catalog_rejects_duplicate_node_names(monkeypatch):
-    raw = {
-        "nodes": [
-            {"id": "a", "name": "同名", "province": "甲州"},
-            {"id": "b", "name": "同名", "province": "乙州"},
-        ],
-        "edges": [],
-    }
-    monkeypatch.setattr(sanguo_rules, "load_json_asset", lambda _name: raw)
-    with pytest.raises(SystemExit, match="节点名称重复"):
-        load_strategic_routes()
+def test_city_catalog_rejects_node_not_in_cities():
+    admin = load_administrative_units()
+    # 添加一个不在行政城池中的节点
+    strategic = dict(admin["strategic"])
+    strategic["nodes"] = list(strategic["nodes"]) + [
+        {"city_id": "city:fake_node", "x": 0, "y": 0},
+    ]
+    admin_bad = dict(admin)
+    admin_bad["strategic"] = strategic
+    with pytest.raises(SystemExit, match="不在行政城池名册中"):
+        load_city_strategic_catalog(admin_bad)
 
 
-def test_route_catalog_rejects_duplicate_undirected_edges(monkeypatch):
-    raw = {
-        "nodes": [
-            {"id": "a", "name": "甲", "province": "甲州"},
-            {"id": "b", "name": "乙", "province": "乙州"},
-        ],
-        "edges": [
-            {"source": "a", "target": "b", "kind": "普通路"},
-            {"source": "b", "target": "a", "kind": "普通路"},
-        ],
-    }
-    monkeypatch.setattr(sanguo_rules, "load_json_asset", lambda _name: raw)
+def test_city_catalog_rejects_duplicate_undirected_edges():
+    admin = load_administrative_units()
+    strategic = dict(admin["strategic"])
+    edges = list(strategic["edges"])
+    # 复制第一条边制造重复
+    edges.append(dict(edges[0]))
+    strategic["edges"] = edges
+    admin_bad = dict(admin)
+    admin_bad["strategic"] = strategic
     with pytest.raises(SystemExit, match="路线重复"):
-        load_strategic_routes()
+        load_city_strategic_catalog(admin_bad)
+
+
+def test_require_city_node_validates_prefix():
+    assert require_city_node("city:jiangxia") == "city:jiangxia"
+    with pytest.raises(ArmyOrderError, match="必须是城池节点"):
+        require_city_node("jiangxia")
+    with pytest.raises(ArmyOrderError, match="必须是城池节点"):
+        require_city_node("")
 
 
 def test_dangerous_route_requires_supply_and_applies_three_turn_penalty():

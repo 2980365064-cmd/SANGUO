@@ -17,6 +17,8 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.21",
+    "@radix-ui/react-tooltip": "^1.2.14",
     "steamworks.js": "^0.4.0"
   },
   "devDependencies": {

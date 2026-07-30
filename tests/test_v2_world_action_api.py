@@ -38,7 +38,7 @@ def _game():
     return instance
 
 
-def test_action_intent_confirm_ongoing_plan_and_month_agenda_api(monkeypatch):
+def test_legacy_action_intent_endpoints_are_rejected_and_read_models_remain_available(monkeypatch):
     game = _game()
     monkeypatch.setattr(web_app, "web_game", game)
     client = TestClient(app)
@@ -47,25 +47,18 @@ def test_action_intent_confirm_ongoing_plan_and_month_agenda_api(monkeypatch):
         "/api/action_intents",
         json={"text": "让张飞率军平定江夏叛军，三个月内完成，不得滥杀百姓。", "source": "自由命令"},
     )
-    assert created.status_code == 200
-    intent = created.json()["intent"]
-    assert intent["draft"]["action_type"] == "长期方略"
-
-    confirmed = client.post(f"/api/action_intents/{intent['id']}/confirm")
-    assert confirmed.status_code == 200
-    plan_id = confirmed.json()["plan"]["id"]
-
-    game.db.update_ongoing_plan(plan_id, status="blocked", last_result="粮道受扰，需主公裁断。")
+    assert created.status_code == 410
+    assert "方略草案" in created.json()["detail"]
     agenda = client.get("/api/month_agenda")
     assert agenda.status_code == 200
-    assert any(item["ref_id"] == plan_id for item in agenda.json()["items"])
+    assert "items" in agenda.json()
 
     plans = client.get("/api/ongoing_plans")
     assert plans.status_code == 200
-    assert plans.json()["plans"][0]["status"] == "blocked"
+    assert "plans" in plans.json()
 
 
-def test_envoy_and_reputation_interfaces(monkeypatch):
+def test_legacy_envoy_write_is_rejected_and_reputation_is_read_only(monkeypatch):
     game = _game()
     monkeypatch.setattr(web_app, "web_game", game)
     client = TestClient(app)
@@ -79,12 +72,12 @@ def test_envoy_and_reputation_interfaces(monkeypatch):
             "boundaries": "不得割让江夏，不得背盟。",
         },
     )
-    assert envoy.status_code == 200
-    assert envoy.json()["mission"]["status"] == "active"
+    assert envoy.status_code == 410
+    assert "外交方略草案" in envoy.json()["detail"]
 
     missions = client.get("/api/envoys")
     assert missions.status_code == 200
-    assert missions.json()["missions"][0]["envoy"] == "诸葛亮"
+    assert missions.json()["missions"] == []
 
     game.db.add_reputation_log(game.state, source_kind="envoy", source_id="1", metric="仁义", delta=2, summary="守约遣使，孙刘互信稍增。")
     reputation = client.get("/api/reputation")

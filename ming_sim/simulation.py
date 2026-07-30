@@ -145,7 +145,6 @@ TOP_LEVEL_ALIASES = {
     "密令进度": "secret_order_updates",
     "密令副作用": "secret_order_updates",  # 兼容旧 prompt / 旧日志
     "密令结案": "secret_order_closes",
-    "崇祯结局": "emperor_fate",
 }
 # 反译（内部英文 key → 中文顶层标签）。多个中文别名映同一英文 key 时（如
 # 密令进度/密令副作用 都 → secret_order_updates），dict 反转会取“最后写入”的别名，
@@ -623,7 +622,6 @@ EMPTY_EXTRACTION: Dict[str, object] = {
     "character_power_changes": [],
     "secret_order_updates": [],
     "secret_order_closes": [],
-    "emperor_fate": None,  # 崇祯结局：abdicate(退位/禅让)/suicide(自尽/殉国)/null(无)
 }
 
 MODULE_FIELDS: Dict[str, set[str]] = {

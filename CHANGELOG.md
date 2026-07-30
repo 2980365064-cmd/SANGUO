@@ -14,6 +14,7 @@
 - 立绘工具脚本：`gen_portraits.py`（调生图接口出图）、`compress_portraits.py`（缩 512 压体积）、`portrait_status.py`（进度表）；附后宫预设图池与寝宫背景图。
 
 ### 变更
+- **清除明末残留内容**：删除引擎中所有明末硬编码（崇祯结局/纪年/大明 faction ID/MingSalvage 品牌），`power_id='ming'` 全部替换为 `'liu_bei'`；删除 `migrate_legacy_ming_data()` 迁移逻辑及旧明末数据库；删除明末专用脚本（`play_as_emperor.py`/`dalinghe_defection_probe.py` 等 6 个）；删除旧 `MingSalvage*.spec` 构建文件。`ming_sim` 包名保留作内部引擎名。
 - **推演 agent（season_simulator）改 skill+tool 模式**：不再把全量盘面静态塞入 payload；挂 10 个只读工具（`view_state`/`check_treasury`/`list_regions`/`inspect_region`/`list_armies`/`inspect_army`/`list_issues`/`inspect_issue`/`list_external_powers` + `submit_report`），按需查盘面，写完邸报调 `submit_report` 提交正文；`submit_report` docstring 承载完整奏章写作规范（结构/笔法/局势/末章/禁忌），`season_simulator.md` 从 141 行精简至 54 行。
 - **结算 agent（score_extractor）改 skill+tool 模式**：payload 去掉 regions/armies/buildings/ministers 五张全表，只保留 narrative + issues摘要 + id列表 + fiscal_config；挂 7 个工具（`get_region`/`get_army`/`get_external_power`/`get_active_ministers`/`get_issue_detail`/`get_faction_class_state` + `submit_extraction`），按章节按需查当前值算 delta；`submit_extraction` docstring 承载完整 JSON schema、16 字段约束、档位标准与骨架示例，`score_extractor.md` 从 266 行精简至 50 行；去掉 `force_json_output`，改由 tool docstring 约束格式。
 

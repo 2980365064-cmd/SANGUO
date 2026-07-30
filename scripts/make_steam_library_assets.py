@@ -73,13 +73,13 @@ def make_logo(lang: str, size: tuple[int, int] = (1280, 720)) -> Image.Image:
 
     if lang == "schinese":
         path = XINGKAI
-        lines = [("明末", int(h * 0.36)), ("力挽狂澜", int(h * 0.22))]
+        lines = [("三国", int(h * 0.36)), ("乱世雄起", int(h * 0.22))]
         max_w = int(w * 0.82)
         gap = int(h * 0.035)
         strokes = [12, 8]
     else:
         path = PALATINO
-        lines = [("Ming Dynasty", int(h * 0.24)), ("Last Stand", int(h * 0.18))]
+        lines = [("Three Kingdoms", int(h * 0.24)), ("Rise of Heroes", int(h * 0.18))]
         max_w = int(w * 0.86)
         gap = int(h * 0.03)
         strokes = [9, 7]

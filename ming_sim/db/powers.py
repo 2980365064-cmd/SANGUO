@@ -31,14 +31,14 @@ from ming_sim.db._helpers import (
 
 class _PowersMixin:
     def power_rows(self, exclude_self: bool = False) -> List[sqlite3.Row]:
-        where = "WHERE id != 'ming'" if exclude_self else ""
+        where = "WHERE id != 'liu_bei'" if exclude_self else ""
         return self.conn.execute(
             f"""
             SELECT *
             FROM powers
             {where}
             ORDER BY CASE id
-                WHEN 'ming' THEN 0
+                WHEN 'liu_bei' THEN 0
                 WHEN 'houjin' THEN 1
                 WHEN 'mongol' THEN 2
                 WHEN 'korea' THEN 3
@@ -90,8 +90,8 @@ class _PowersMixin:
         allowed_fields = {"leverage", "military_strength", "supply"}
         changes: List[Dict[str, object]] = []
         for power_id, raw_changes in updates.items():
-            if power_id == "ming":
-                print("[WARN] power_updates 不再处理大明自身 → 跳过")
+            if power_id == "liu_bei":
+                print("[WARN] power_updates 不再处理己方势力 → 跳过")
                 continue
             row = self.conn.execute("SELECT * FROM powers WHERE id = ?", (power_id,)).fetchone()
             if row is None:

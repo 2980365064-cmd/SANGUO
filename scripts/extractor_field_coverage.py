@@ -250,13 +250,6 @@ def run_case(case: dict, args: argparse.Namespace) -> dict:
                 extracted = {}
 
         got = _nonempty_top_fields(extracted)
-        # 崇祯结局特判：非 null 才算命中
-        fate = extracted.get("崇祯结局") if isinstance(extracted, dict) else None
-        result["emperor_fate"] = fate
-        if fate in (None, "", "null"):
-            got.discard("崇祯结局")
-        else:
-            got.add("崇祯结局")
 
         expect = set(case.get("expect_fields", []))
         # expect 里可能含子字段名（如 士绅阻力/军事压力）——非顶层，忽略出顶层比对
@@ -289,14 +282,6 @@ def run_case(case: dict, args: argparse.Namespace) -> dict:
                 result["status"] = "PASS" if not got else "FAIL"
         else:
             result["status"] = "PASS" if not result["missing"] else "FAIL"
-
-        # 崇祯结局值校验
-        if "expect_emperor_fate" in case:
-            want = case["expect_emperor_fate"]
-            ok = (fate == want) or (want is None and fate in (None, "", "null"))
-            if not ok:
-                result["status"] = "FAIL"
-                result["error"] = f"emperor_fate={fate!r} 期望 {want!r}"
 
         # 深度值校验：顶层命中后核字段内部值（口径/数值/账户…）是否抽对。
         # 字段名对但值错（如『月额设为30』错成『增减-90』）会被这里抓出降 FAIL。

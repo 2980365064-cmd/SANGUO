@@ -8,13 +8,32 @@ from collections import deque
 from typing import Dict, List, Optional, Set
 
 from ming_sim.adjudication import (
+    COMMON_FORBIDDEN_TEXT,
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
     validate_ai_proposal,
 )
 from ming_sim.national_focus import national_focus_modifier
+
+
+# ---------------------------------------------------------------------------
+# 自由补给路径边界常量
+# ---------------------------------------------------------------------------
+
+FREE_SUPPLY_BOUNDS = {
+    "supply_delta": (-30, 30),
+    "morale_delta": (-15, 10),
+    "fatigue_delta": (-10, 15),
+}
+
+SUPPLY_FORBIDDEN_TEXT = {
+    **COMMON_FORBIDDEN_TEXT,
+    "凭空补给": "不得凭空生成补给",
+    "天降粮草": "不得凭空生成补给",
+}
 
 
 def _monthly_grain_cost(manpower: int) -> int:
@@ -54,13 +73,21 @@ def _friendly_nodes(db, owner_power: str) -> Set[str]:
     return {
         str(row["id"])
         for row in db.conn.execute(
-            "SELECT id FROM regions WHERE controlled_by=?", (owner_power,)
+            "SELECT id FROM administrative_cities WHERE controlled_by=?", (owner_power,)
         ).fetchall()
     }
 
 
+def _city_grain_stock(db, city_id: str) -> int:
+    """查询城池的粮秣库存。"""
+    row = db.conn.execute(
+        "SELECT grain_stock FROM administrative_cities WHERE id=?", (city_id,)
+    ).fetchone()
+    return max(0, int(row["grain_stock"] or 0)) if row else 0
+
+
 def reachable_friendly_granary(db, army_id: str) -> Optional[str]:
-    """返回路线可达且足够供应本军一个月的最近友方郡仓。"""
+    """返回路线可达且足够供应本军一个月的最近友方城池粮仓。"""
     army = db.conn.execute(
         "SELECT station_node, owner_power, manpower FROM armies WHERE id=? AND active=1",
         (army_id,),
@@ -88,7 +115,7 @@ def reachable_friendly_granary(db, army_id: str) -> Optional[str]:
     visited = {start}
     while queue:
         node = queue.popleft()
-        if (node in friendly or node in guest_nodes) and db.region_grain_stock(node) >= needed:
+        if (node in friendly or node in guest_nodes) and _city_grain_stock(db, node) >= needed:
             active_siege = db.conn.execute(
                 "SELECT 1 FROM sieges WHERE target_node=? AND status='active' LIMIT 1", (node,)
             ).fetchone()
@@ -99,7 +126,7 @@ def reachable_friendly_granary(db, army_id: str) -> Optional[str]:
                 continue
             if kind == "关隘":
                 controller = db.conn.execute(
-                    "SELECT controlled_by FROM regions WHERE id=?", (neighbor,)
+                    "SELECT controlled_by FROM administrative_cities WHERE id=?", (neighbor,)
                 ).fetchone()
                 if controller is None or str(controller["controlled_by"]) != owner:
                     continue
@@ -130,13 +157,13 @@ def build_supply_adjudication_pack(
     source_region = None
     if source_node:
         row = db.conn.execute(
-            "SELECT id, name, fiscal, controlled_by FROM regions WHERE id=?", (source_node,)
+            "SELECT id, name, controlled_by, grain_stock FROM administrative_cities WHERE id=?", (source_node,)
         ).fetchone()
         source_region = {
             "id": str(row["id"]),
             "name": str(row["name"]),
             "controlled_by": str(row["controlled_by"]),
-            "grain_stock": db.region_grain_stock(source_node),
+            "grain_stock": max(0, int(row["grain_stock"] or 0)),
         } if row else None
     supply = int(army["supply"] or 0)
     starvation = int(army["starvation_turns"] or 0)
@@ -160,7 +187,7 @@ def build_supply_adjudication_pack(
             "monthly_grain_cost": grain_cost,
             "carried_supply_cost": carried_cost,
             "starvation_rule": "断粮1月降士气；2月增疲劳；3月逃散并降低战力倍率。",
-            "authority_rule": "补给只可消耗可达友方郡仓或本军携粮。",
+            "authority_rule": "补给只可消耗可达友方城池粮仓或本军携粮。",
         },
         allowed_outcomes=allowed,
         forbidden_outcomes=["ignore_supply", "free_supply", "free_reinforcements"],
@@ -171,17 +198,95 @@ def build_supply_adjudication_pack(
             "starvation_before": starvation,
             "granary_node": source_node or "",
         },
-        source_tables=["armies", "regions", "strategic_routes", "diplomacy_treaties", "national_focus_effects"],
+        source_tables=["armies", "administrative_cities", "strategic_routes", "diplomacy_treaties", "national_focus_effects"],
     )
 
 
+def _validate_free_supply(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由补给提案是否在边界内。
+
+    AI 通过查询工具获取补给相关数据后，输出自由评估。
+    校验器确保 delta 在安全范围内，且 AI 的声称与盘面事实一致。
+    """
+    # 1. feasibility=impossible → 安全默认（维持现状）
+    feasibility = str(proposal.get("feasibility", "medium"))
+    if feasibility == "impossible":
+        return {
+            "supply_action": "维持现状",
+            "supply_delta": 0,
+            "morale_delta": 0,
+            "fatigue_delta": 0,
+            "feasibility": "impossible",
+            "reasoning": proposal.get("reasoning", []),
+            "narrative": str(proposal.get("narrative", "补给方案不可行，维持现状。")),
+            "risk_note": str(proposal.get("risk_note", "")),
+        }
+
+    # 1b. 禁止字段检查
+    check_forbidden_fields(proposal)
+
+    # 2. 提取并裁剪 deltas
+    supply_delta = int(proposal.get("supply_delta", 0))
+    morale_delta = int(proposal.get("morale_delta", 0))
+    fatigue_delta = int(proposal.get("fatigue_delta", 0))
+
+    supply_delta = max(FREE_SUPPLY_BOUNDS["supply_delta"][0], min(FREE_SUPPLY_BOUNDS["supply_delta"][1], supply_delta))
+    morale_delta = max(FREE_SUPPLY_BOUNDS["morale_delta"][0], min(FREE_SUPPLY_BOUNDS["morale_delta"][1], morale_delta))
+    fatigue_delta = max(FREE_SUPPLY_BOUNDS["fatigue_delta"][0], min(FREE_SUPPLY_BOUNDS["fatigue_delta"][1], fatigue_delta))
+
+    # 3. 禁止文本检查
+    reasoning_text = " ".join(str(r) for r in proposal.get("reasoning", []))
+    narrative = str(proposal.get("narrative", ""))
+    combined = f"{reasoning_text}\n{narrative}"
+    for marker, message in SUPPLY_FORBIDDEN_TEXT.items():
+        if marker in combined:
+            raise ValueError(message)
+
+    # 4. 事实一致性检查
+    facts = pack.get("facts", {})
+    army = facts.get("army", {})
+    reachable_granary = facts.get("reachable_granary")
+
+    # 声称"粮仓可达"但实际无粮仓 → 拒绝
+    if "粮仓" in reasoning_text and "可达" in reasoning_text and not reachable_granary:
+        raise ValueError("AI 声称'粮仓可达'，但盘面事实不支持（无可达粮仓）。")
+
+    # 声称"携粮充足"但实际 supply < carried_cost → 拒绝
+    if "携粮充足" in reasoning_text or "粮草充裕" in reasoning_text:
+        supply_before = int(army.get("supply", 0))
+        carried_cost = int(facts.get("carried_supply_cost", 20))
+        if supply_before < carried_cost:
+            raise ValueError("AI 声称'携粮充足'，但盘面事实不支持（携粮不足月度消耗）。")
+
+    # 声称"断粮"但实际 supply > 0 且有粮仓 → 拒绝
+    if "断粮" in reasoning_text or "饥饿" in reasoning_text:
+        supply_before = int(army.get("supply", 0))
+        starvation_before = int(army.get("starvation_turns", 0))
+        if supply_before > 0 and reachable_granary:
+            raise ValueError("AI 声称'断粮'，但盘面事实不支持（有携粮且粮仓可达）。")
+
+    # 5. supply_delta 上限受实际条件约束
+    # 无粮仓且无携粮时，supply_delta 不得为正
+    if not reachable_granary and int(army.get("supply", 0)) <= 0 and supply_delta > 0:
+        supply_delta = 0
+
+    return {
+        "supply_action": str(proposal.get("supply_action", "自由补给评估")),
+        "outcome": str(proposal.get("outcome") or proposal.get("supply_action", "")),
+        "supply_delta": supply_delta,
+        "morale_delta": morale_delta,
+        "fatigue_delta": fatigue_delta,
+        "feasibility": feasibility,
+        "reasoning": proposal.get("reasoning", []),
+        "narrative": narrative,
+        "risk_note": str(proposal.get("risk_note", "")),
+    }
+
+
 def run_supply_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """补给 AI 裁判：统一走自由路径。"""
     try:
-        return validate_ai_proposal(
-            pack,
-            proposal,
-            allowed_change_kinds=["army_supply", "army_morale", "army_fatigue", "army_manpower", "region_grain"],
-        )
+        return _validate_free_supply(pack, proposal)
     except ValueError as error:
         pending = record_pending_adjudication(db, state, pack, str(error), proposal)
         return {"status": "pending_review", "pending_adjudication": pending}
@@ -241,8 +346,13 @@ def settle_army_supply(db, state: object, army_id: str) -> Dict[str, object]:
             math.ceil(20 * (1 + national_focus_modifier(db, "supply_cost_pct") / 100)),
         )
     if source_node:
+        # 从城池 ID 获取所属郡 ID，用于调整郡级粮秣
+        city_row = db.conn.execute(
+            "SELECT commandery_id FROM administrative_cities WHERE id=?", (source_node,)
+        ).fetchone()
+        commandery_id = str(city_row["commandery_id"]) if city_row else source_node
         db.adjust_region_grain_stock(
-            state, source_node, -grain_cost, f"供应{army['name']}本月军粮"
+            state, commandery_id, -grain_cost, f"供应{army['name']}本月军粮"
         )
         source = "granary"
         new_supply = old_supply
@@ -331,7 +441,12 @@ def _execute_supply_order(db, state: object, army_id: str, amount: int) -> Dict[
     if requested <= 0:
         raise ValueError("该军携粮已满。")
     units = _army_grain_cost(db, army)
-    available = db.region_grain_stock(source_node)
+    # 从城池 ID 获取所属郡 ID，用于调整郡级粮秣
+    city_row = db.conn.execute(
+        "SELECT commandery_id FROM administrative_cities WHERE id=?", (source_node,)
+    ).fetchone()
+    commandery_id = str(city_row["commandery_id"]) if city_row else source_node
+    available = db.region_grain_stock(commandery_id)
     max_points = (available * 20) // units
     added = min(requested, max_points)
     if added <= 0:
@@ -339,7 +454,7 @@ def _execute_supply_order(db, state: object, army_id: str, amount: int) -> Dict[
     grain_cost = math.ceil(units * added / 20)
     old_supply = int(army["supply"] or 0)
     new_supply = old_supply + added
-    db.adjust_region_grain_stock(state, source_node, -grain_cost, f"向{army['name']}装运军粮")
+    db.adjust_region_grain_stock(state, commandery_id, -grain_cost, f"向{army['name']}装运军粮")
     db.conn.execute(
         "UPDATE armies SET supply=?, supply_turns=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
         (new_supply, new_supply // 20, army_id),

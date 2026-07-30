@@ -163,8 +163,8 @@ def test_diplomacy_model_feedback_is_logged_without_activating_treaty(board, mon
     state = _state()
     attach_adjudication_runtime(state, object(), None)
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        assert pack["kind"] == "diplomacy"
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        assert kind == "diplomacy"
         return {
             "outcome": "counter_offer",
             "reason": "孙权愿共抗曹，但要先明荆州归属。",
@@ -172,7 +172,7 @@ def test_diplomacy_model_feedback_is_logged_without_activating_treaty(board, mon
             "changes": [],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     proposal = propose_treaty(
         board,
         "liu_bei",
@@ -207,10 +207,10 @@ def test_diplomacy_model_illegal_activation_goes_pending_review(board, monkeypat
     state = _state()
     attach_adjudication_runtime(state, object(), None)
 
-    def bad_judge(_llm_config, _agno_db, pack, *, tag):
+    def bad_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
         return {"outcome": "accept_terms", "narrative": "条约生效并割让江夏。", "changes": []}
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", bad_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", bad_judge)
     proposal = propose_treaty(
         board,
         "liu_bei",

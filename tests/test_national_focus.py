@@ -190,8 +190,8 @@ def test_region_investment_model_adds_audit_note_without_free_resources(board, m
     attach_adjudication_runtime(state, object(), None)
     start_region_investment(board, state, "jiangxia", "道路粮道")
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        assert pack["kind"] == "region_investment"
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        assert kind == "region_investment"
         return {
             "outcome": "advance_investment",
             "reason": "士民愿服役，粮道本月推进顺畅。",
@@ -199,7 +199,7 @@ def test_region_investment_model_adds_audit_note_without_free_resources(board, m
             "changes": [],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     result = advance_region_investment(board, state, "jiangxia")
 
     assert result["progress"] == 25
@@ -217,10 +217,10 @@ def test_region_investment_model_cannot_bypass_resource_cost(board, monkeypatch)
     attach_adjudication_runtime(state, object(), None)
     start_region_investment(board, state, "jiangxia", "道路粮道")
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
         raise AssertionError("军资不足时不应调用模型绕过硬规则")
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     with pytest.raises(ValueError, match="军资不足"):
         advance_region_investment(board, state, "jiangxia")
 
@@ -230,8 +230,8 @@ def test_region_investment_model_cannot_bypass_resource_cost(board, monkeypatch)
 def test_personnel_adjudication_is_suggestion_only_without_office_mutation(board, monkeypatch):
     state = _state()
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        assert pack["kind"] == "personnel"
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        assert kind == "personnel"
         return {
             "outcome": "appoint_candidate",
             "reason": "诸葛亮才略适配军师将军。",
@@ -239,7 +239,7 @@ def test_personnel_adjudication_is_suggestion_only_without_office_mutation(board
             "changes": [{"kind": "office_assignment", "office_key": "chief_strategist", "character_name": "诸葛亮"}],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     result = run_adjudication(
         board,
         state,

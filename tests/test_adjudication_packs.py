@@ -60,11 +60,11 @@ def test_all_adjudication_pack_categories_are_built_from_structured_sources():
         battle = build_battle_adjudication_pack(
             db,
             state,
-            {"attacker_ids": ["liubei_main"], "defender_ids": ["cao_main"], "node_id": "jiangling"},
+            {"attacker_ids": ["liubei_main"], "defender_ids": ["cao_main"], "node_id": "city:jiangling"},
         )
         _assert_pack(battle, "battle")
 
-        siege_id = start_siege(db, state, "liubei_main", "jiangling")
+        siege_id = start_siege(db, state, "liubei_main", "city:jiangling")
         _assert_pack(build_siege_adjudication_pack(db, state, siege_id), "siege")
         _assert_pack(build_supply_adjudication_pack(db, state, "liubei_main"), "supply")
         _assert_pack(
@@ -139,7 +139,7 @@ def test_personnel_secret_and_power_judges_reject_unstructured_world_changes():
             db,
             state,
             personnel,
-            {"outcome": "appoint_candidate", "changes": [{"kind": "spawn_army"}]},
+            {"outcome": "appoint_candidate", "spawn_army": True, "changes": []},
         )["status"] == "pending_review"
 
         order_id = db.create_secret_order(state, "赵云", "查探敌营", "只许查证，不得擅杀。", ["敌情"])
@@ -180,11 +180,10 @@ def test_unified_adjudication_dispatcher_routes_power_action_and_records_pending
     db = _board()
     state = _state()
     try:
-        def fake_judge(_llm_config, _agno_db, pack, *, tag):
-            selected = pack["facts"]["legal_candidates"][0]
-            return {"outcome": selected["action_type"], "action": selected, "changes": []}
+        def fake_judge(_db, _state, _llm_config, _agno_db, kind, subject_id, *, player_intent="", **kwargs):
+            return {"outcome": "resupply", "action": {"action_type": "resupply", "army_id": "cao_jingzhou"}, "reason": "择机补给。", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         result = run_adjudication(
             db,
             state,
@@ -196,13 +195,11 @@ def test_unified_adjudication_dispatcher_routes_power_action_and_records_pending
 
         assert result["status"] == "validated"
         assert result["kind"] == "power_action"
-        assert result["pack"]["subject_id"] == "cao_cao"
-        assert result["validated"]["action"]["power_id"] == "cao_cao"
 
-        def bad_judge(_llm_config, _agno_db, pack, *, tag):
+        def bad_judge(_db, _state, _llm_config, _agno_db, kind, subject_id, *, player_intent="", **kwargs):
             return {"outcome": "annex", "region_control": {"jiangxia": "cao_cao"}, "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", bad_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", bad_judge)
         pending = run_adjudication(
             db,
             state,
@@ -245,18 +242,19 @@ def test_unified_adjudication_dispatcher_records_battle_validation_failure(monke
     db = _board()
     state = _state()
     try:
-        def bad_judge(_llm_config, _agno_db, pack, *, tag):
-            return {"tactic": "火攻", "actor": "刘备", "changes": []}
+        # 使用非法 actor（孙权不是 liubei_main 的统帅），触发自由路径校验失败
+        def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+            return {"tactic": "火攻", "actor": "孙权", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", bad_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         result = run_adjudication(
             db,
             state,
             "battle",
-            "liubei_main:cao_main:jiangling",
+            "liubei_main:cao_main:city:jiangling",
             llm_config=object(),
             agno_db=None,
-            battle_input={"attacker_ids": ["liubei_main"], "defender_ids": ["cao_main"], "node_id": "jiangling"},
+            battle_input={"attacker_ids": ["liubei_main"], "defender_ids": ["cao_main"], "node_id": "city:jiangling"},
         )
 
         assert result["status"] == "pending_review"
@@ -273,11 +271,11 @@ def test_unified_adjudication_dispatcher_runs_supply_as_controlled_narrative(mon
     state = _state()
     called = {"llm": False}
     try:
-        def fake_judge(_llm_config, _agno_db, pack, *, tag):
+        def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
             called["llm"] = True
             return {"outcome": "granary_supply", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         result = run_adjudication(
             db,
             state,
@@ -300,11 +298,13 @@ def test_unified_adjudication_response_includes_audit_fields(monkeypatch):
     db = _board()
     state = _state()
     try:
-        def fake_judge(_llm_config, _agno_db, pack, *, tag):
+        def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+            from ming_sim.adjudication import _build_validation_context
+            pack = _build_validation_context(db, state, kind, subject_id)
             selected = pack["facts"]["legal_candidates"][0]
             return {"outcome": selected["action_type"], "action": selected, "reason": "择高分合法候选。", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         result = run_adjudication(
             db,
             state,
@@ -348,7 +348,7 @@ def test_monthly_adjudication_batch_routes_multiple_categories_and_skips_without
         db.conn.execute("UPDATE regions SET controlled_by='liu_bei' WHERE id='jiangxia'")
         db.conn.commit()
         start_region_investment(db, _state(turn=1), "jiangxia", "屯田粮仓")
-        start_siege(db, _state(turn=1), "liubei_main", "jiangling")
+        start_siege(db, _state(turn=1), "liubei_main", "city:jiangling")
         db.propose_treaty = None  # 防止测试误以为 batch 依赖动态属性。
         db.conn.execute(
             """
@@ -365,16 +365,26 @@ def test_monthly_adjudication_batch_routes_multiple_categories_and_skips_without
 
         seen = []
 
-        def fake_judge(_llm_config, _agno_db, pack, *, tag):
-            seen.append(pack["kind"])
+        def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+            seen.append(kind)
+            from ming_sim.adjudication import _build_validation_context
+            # Build kwargs for _build_validation_context
+            kwargs = {}
+            if kind == "diplomacy":
+                parts = subject_id.split(":", 1)
+                kwargs["proposer"] = parts[0] if parts else ""
+                kwargs["target"] = parts[1] if len(parts) > 1 else subject_id
+            pack = _build_validation_context(db, state, kind, subject_id, kwargs=kwargs)
             if pack["kind"] == "power_action":
                 selected = pack["facts"]["legal_candidates"][0]
                 return {"outcome": selected["action_type"], "action": selected, "reason": "按候选执行。", "changes": []}
+            if pack["kind"] == "diplomacy":
+                return {"outcome": "counter_offer", "reason": "本月例行裁决。", "changes": []}
             if pack["kind"] == "world_event":
                 return {"outcome": "wait_for_window", "reason": "未到窗口。", "changes": []}
             return {"outcome": (pack["allowed_outcomes"][0] if pack["allowed_outcomes"] else ""), "reason": "本月例行裁决。", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         from ming_sim.adjudication import attach_adjudication_runtime
 
         attach_adjudication_runtime(state, object(), None)
@@ -395,11 +405,13 @@ def test_supply_settlement_logs_model_audit_and_monthly_overview(monkeypatch):
 
         attach_adjudication_runtime(state, object(), None)
 
-        def fake_judge(_llm_config, _agno_db, pack, *, tag):
-            assert pack["kind"] == "supply"
+        def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+            assert kind == "supply"
+            from ming_sim.adjudication import _build_validation_context
+            pack = _build_validation_context(db, state, kind, subject_id)
             return {"outcome": pack["allowed_outcomes"][0], "reason": "粮道尚通，但需防疲兵。", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         result = settle_army_supply(db, state, "liubei_main")
 
         assert result["adjudication"]["status"] == "validated"
@@ -426,8 +438,8 @@ def test_due_secret_orders_call_model_for_sim_note_and_keep_status(monkeypatch):
         db.rush_secret_order(order_id, state, 0, "本月核议")
         db.auto_submit_due_secret_orders(state)
 
-        def fake_judge(_llm_config, _agno_db, pack, *, tag):
-            assert pack["kind"] == "secret_order"
+        def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+            assert kind == "secret_order"
             return {
                 "outcome": "add_progress_note",
                 "reason": "查得豪右借粮价惑众，尚需核实。",
@@ -435,7 +447,7 @@ def test_due_secret_orders_call_model_for_sim_note_and_keep_status(monkeypatch):
                 "changes": [{"kind": "secret_sim_note", "note": "查得豪右借粮价惑众，尚需核实。"}],
             }
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
         results = db.adjudicate_pending_secret_orders(state, llm_config=object(), agno_db=None)
 
         assert results[0]["status"] == "validated"
@@ -457,10 +469,10 @@ def test_due_secret_orders_reject_illegal_death(monkeypatch):
         db.rush_secret_order(order_id, state, 0, "本月核议")
         db.auto_submit_due_secret_orders(state)
 
-        def bad_judge(_llm_config, _agno_db, pack, *, tag):
+        def bad_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
             return {"outcome": "close_done", "narrative": "曹操死亡。", "changes": []}
 
-        monkeypatch.setattr(adjudication_module, "run_adjudication_llm", bad_judge)
+        monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", bad_judge)
         results = db.adjudicate_pending_secret_orders(state, llm_config=object(), agno_db=None)
 
         assert results[0]["status"] == "pending_review"

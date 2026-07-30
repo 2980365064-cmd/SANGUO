@@ -69,7 +69,7 @@ def _relation_missing(board, first, second):
 def test_validator_rejects_fabricated_routes_armies_and_direct_world_mutation(board):
     with pytest.raises(ValueError, match="不属于"):
         validate_power_action(board, _state(), {
-            "power_id": "cao_cao", "action_type": "move", "army_id": "liubei_main", "target_node": "xiangyang"
+            "power_id": "cao_cao", "action_type": "move", "army_id": "liubei_main", "target_node": "city:xiangyang"
         })
     with pytest.raises(ValueError, match="非法字段"):
         validate_power_action(board, _state(), {
@@ -96,9 +96,10 @@ def test_monthly_ai_queues_only_structured_orders_and_is_idempotent(board):
 
 
 def test_monthly_ai_can_use_llm_judge_to_choose_legal_candidate(board, monkeypatch):
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        candidates = pack["facts"]["legal_candidates"]
-        selected = candidates[-1]
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        assert kind == "power_action"
+        actions = available_power_actions(db, state, subject_id)
+        selected = actions[-1] if actions else {"action_type": "fortify", "power_id": subject_id, "reasons": []}
         return {
             "outcome": selected["action_type"],
             "action": selected,
@@ -106,7 +107,7 @@ def test_monthly_ai_can_use_llm_judge_to_choose_legal_candidate(board, monkeypat
             "changes": [],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
 
     results = resolve_power_ai_turn(board, _state(), llm_config=object())
 

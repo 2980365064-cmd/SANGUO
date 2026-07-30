@@ -20,6 +20,7 @@ import threading
 import time
 import uuid
 from dataclasses import replace
+from datetime import datetime
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -32,8 +33,8 @@ from ming_sim.constants import ROOT_DIR
 from ming_sim.paths import (
     SANGUO_SCENARIO_ID,
     bundled_path,
-    migrate_legacy_ming_data,
     sqlite_scenario_id,
+    is_city_topology_database,
     user_data_dir,
     user_data_path,
 )
@@ -51,7 +52,7 @@ from ming_sim.llm_config import (
 )
 from agno.agent import Agent
 
-from ming_sim.agents import _dump_llm_messages, build_simulator_context
+from ming_sim.agents import _dump_llm_messages, build_simulator_context, create_decree_writer_agent
 from ming_sim.llm_model import create_agno_db, create_chat_model, extract_agent_text, verify_llm_available
 from ming_sim.llm_contract import fail_if_llm_error
 from ming_sim.issues import _format_issue_ongoing
@@ -288,8 +289,6 @@ _LEGACY_GATE_AGG_LABELS = {
 }
 
 _LEGACY_GATE_VALUE_LABELS = {
-    "ming": "刘备",
-    "houjin": "曹操",
     "liu_bei": "刘备",
     "cao_cao": "曹操",
     "bandits": "流寇",
@@ -500,11 +499,13 @@ def _build_llm_config_from_runtime() -> LLMConfig:
 
 class ChatRequest(BaseModel):
     message: str
+    mode: str = "open"  # "open" or "secret"
 
 
 class CourtChatRequest(BaseModel):
     message: str
     ministers: List[str] = Field(default_factory=list)
+    turn_index: Optional[int] = None
 
 
 class CourtChatSummaryMessage(BaseModel):
@@ -532,6 +533,11 @@ class SecretOrderRequest(BaseModel):
     content: str
     tags: List[str] = []
     deadline_months: int = 0
+
+
+class SuggestionRequest(BaseModel):
+    text: str
+    source: str = ""
 
 
 class ArmyOrderRequest(BaseModel):
@@ -590,19 +596,20 @@ class ScenarioGenerateRequest(BaseModel):
 
 # 手绘战略图坐标采用归一化百分比，避免把历史地理误当现代经纬度。
 _SANGUO_NODE_POSITIONS: Dict[str, tuple[float, float]] = {
-    "liaodong": (82, 12), "youbeiping": (75, 21.8), "ji": (65, 18), "zhuojun": (65.1, 28.2), "bohai": (70, 22),
+    "liaodong": (82, 12), "liaoxi": (77.8, 18.6), "youbeiping": (75, 21.8), "yuyang": (70.5, 21.8), "ji": (65, 18), "zhuojun": (65.1, 28.2),
     "changshan": (66, 24), "ye": (65, 32), "nanpi": (66.3, 32.8), "linzi": (73, 28),
-    "beihai": (78, 30), "jiuyuan": (48.6, 31.3), "taiyuan": (61, 28), "shangdang": (63, 34),
-    "dongjun": (68, 37), "taishan": (64.8, 47.2), "chenliu": (63, 45), "pengcheng": (68.8, 47.7), "xiapi": (72, 40),
+    "beihai": (78, 30), "jiuyuan": (48.6, 31.3), "yunzhong": (51.4, 35.6), "xihe": (47.8, 39.4), "yanmen": (59.5, 27.5), "taiyuan": (61, 28), "shangdang": (63, 34), "jiuquan": (22.8, 22.5), "dunhuang": (16.2, 22.5),
+    "dongjun": (68, 37), "chenliu": (63, 45), "pengcheng": (68.8, 47.7), "xiapi": (72, 40),
     "guangling": (74.2, 54.6), "xuchang": (60, 48), "qiaoxian": (65.5, 49.1), "runan": (64, 52),
     "luoyang": (61, 42), "tongguan": (58, 42), "changan": (54, 42),
     "zhangye": (26, 23.9), "wuwei": (40, 30), "tianshui": (42.4, 37.5), "longxi": (44, 43),
     "wancheng": (55.8, 56.1), "xiangyang": (60, 55), "jiangxia": (66, 57), "jiangling": (60, 65),
-    "jingnan": (54.2, 78.7), "hefei": (70, 54), "jianye": (72, 58),
-    "chaisang": (67, 63), "wu": (75, 67.1), "kuaiji": (73.5, 75.2), "hanzhong": (52, 50),
+    "jingnan": (58.1, 78.3), "wuling": (52.6, 77.6), "guiyang": (59.8, 80.5), "jiujiang": (70, 54),
+    "danyang": (72, 58), "yuzhang": (67, 63), "wu": (75, 67.1), "kuaiji": (73.5, 75.2), "hanzhong": (52, 50),
     "zitong": (38.3, 55.9), "chengdu": (48, 55), "jiangzhou": (52, 65),
     "shangyong": (50.6, 56.8), "yongan": (55, 60), "yelang": (38.2, 80.4), "qielan": (42.1, 73.1),
-    "nanhai": (62, 82), "jiaozhi": (55, 88),
+    "nanhai": (62, 82), "cangwu": (55.1, 83.3), "yulin": (48.4, 83.7),
+    "hepu": (51.6, 88.7), "jiaozhi": (42.7, 86.1), "jiuzhen": (39.7, 91.4), "rinan": (36.8, 95.1),
 }
 
 _GOVERNMENT_SCENES = {
@@ -629,9 +636,8 @@ class WebGame:
     def __init__(self, fresh: bool = False) -> None:
         """实例化 = 真正进入游戏。无 API key 直接抛 LLMUnavailable。
         fresh=True：先清空主 DB（新游戏）再建 session。"""
-        migrate_legacy_ming_data(user_data_dir())
         db_path = os.environ.get("MING_SIM_DB", "")
-        # 默认存到用户数据目录（frozen=~/.ming_sim/ming_sim.db；源码=<repo>/data/ming_sim.db）。
+        # 默认存到用户数据目录（frozen=~/.sanguo_sim/sanguo.db；源码=<repo>/data/ming_sim.db）。
         if not db_path:
             db_path = user_data_path("ming_sim.db")
         elif not os.path.isabs(db_path):
@@ -720,6 +726,11 @@ class WebGame:
             raise HTTPException(status_code=404, detail="存档不存在。")
         if sqlite_scenario_id(source) != SANGUO_SCENARIO_ID:
             raise HTTPException(status_code=409, detail="该存档不属于刘备 208 场景，已拒绝加载。")
+        if not is_city_topology_database(source):
+            raise HTTPException(
+                status_code=409,
+                detail="该存档使用旧版战略拓扑（非 72 城池网络），已不兼容。请开始新游戏。",
+            )
         # 先关闭当前 session 的 DB 连接，避免 Windows/某些平台上的 file lock。
         try:
             self.session.close()
@@ -934,7 +945,7 @@ class WebGame:
         meta_row = self.db.conn.execute(
             "SELECT power_id, origin, archived FROM characters WHERE name=?", (character.name,)
         ).fetchone()
-        power_id = (meta_row["power_id"] if meta_row else None) or getattr(character, "power_id", "ming") or "ming"
+        power_id = (meta_row["power_id"] if meta_row else None) or getattr(character, "power_id", "liu_bei") or "liu_bei"
         origin = (meta_row["origin"] if meta_row else None) or "preset"
         archived = bool(int((meta_row["archived"] if meta_row else 0) or 0))
         visible_profile = visible_character_profile(
@@ -976,7 +987,7 @@ class WebGame:
         row = self.db.conn.execute(
             "SELECT power_id FROM characters WHERE name=?", (character.name,)
         ).fetchone()
-        return (row["power_id"] if row else None) or getattr(character, "power_id", "ming") or "ming"
+        return (row["power_id"] if row else None) or getattr(character, "power_id", "liu_bei") or "liu_bei"
 
     def directive_payload(self, row) -> Dict[str, Any]:
         skill_id = str(row["skill_id"] or "")
@@ -1019,7 +1030,7 @@ class WebGame:
             integrity=int(row["integrity"] or 50),
             courage=int(row["courage"] or 50),
             style=str(row["style"] or ""),
-            power_id=str(row["power_id"] or "ming"),
+            power_id=str(row["power_id"] or "liu_bei"),
             diplomacy=int(row["diplomacy"] or 50),
             martial=int(row["martial"] or 50),
             stewardship=int(row["stewardship"] or 50),
@@ -1111,7 +1122,7 @@ class WebGame:
             stationed = [a for a in armies if self._army_belongs_to_region(a, region)]
             buildings = self.db.building_payload(str(region["id"]))
             risk = int(region["unrest"]) + int(region["military_pressure"]) + (100 - int(region["public_support"]))
-            node_kind = "region" if str(region.get("controlled_by") or "ming") == "ming" else "external"
+            node_kind = "region" if str(region.get("controlled_by") or "liu_bei") == "liu_bei" else "external"
             nodes.append({"id": region["id"], "kind": node_kind, "x": x, "y": y, "region": region, "armies": stationed, "buildings": buildings, "risk": risk})
         for node_id, (x, y) in theater_positions.items():
             stationed = [a for a in armies if self._army_belongs_to_theater(a, node_id)]
@@ -1277,7 +1288,7 @@ class WebGame:
                     item["amount"] = sum(
                         abs(self.db.apply_legacy_pct(-int(row["maintenance_per_turn"]), net_pct))
                         for row in self.db.conn.execute(
-                            "SELECT maintenance_per_turn FROM armies WHERE owner_power='ming' AND maintenance_per_turn>0"
+                            "SELECT maintenance_per_turn FROM armies WHERE owner_power='liu_bei' AND maintenance_per_turn>0"
                         ).fetchall()
                     )
                 elif item["name"] == "建筑维护":
@@ -1324,7 +1335,7 @@ class WebGame:
                     str(r["id"]): abs(self.db.apply_legacy_pct(-int(r["maintenance_per_turn"]), net_pct))
                     for r in self.db.conn.execute(
                         "SELECT id, maintenance_per_turn FROM armies "
-                        "WHERE owner_power='ming' AND maintenance_per_turn>0"
+                        "WHERE owner_power='liu_bei' AND maintenance_per_turn>0"
                     ).fetchall()
                 }
                 ordered_ids = [k for k in ARMY_SALARY_PRIORITY if k in army_map]
@@ -1384,6 +1395,8 @@ class WebGame:
             "status": self.state.ending_status,
             "label": ENDING_LABELS.get(self.state.ending_status, "结局"),
             "summary": row.get("summary", ""),
+            "route": row.get("route") or self.state.ending_status,
+            "evidence": row.get("evidence", []),
             "timeline": row.get("timeline", []),
         }
 
@@ -1424,6 +1437,13 @@ class WebGame:
             replace(character, power_id=power_id),
             get_character_intel_level(self.db, character.name),
         )
+        loyalty_row = self.db.conn.execute(
+            "SELECT loyalty FROM characters WHERE name=?", (character.name,)
+        ).fetchone()
+        recent_loyalty = self.db.conn.execute(
+            "SELECT delta, reason, turn FROM character_loyalty_logs WHERE character_name=? ORDER BY id DESC LIMIT 3",
+            (character.name,),
+        ).fetchall()
         return {
             "name": character.name,
             "office": character.office,
@@ -1442,6 +1462,8 @@ class WebGame:
             "personality": self._translated_visible_group(visible["personality"], _PERSONALITY_LABELS),
             "intel_level": int(visible["intel_level"]),
             "favorite": character.name in self.favorites,
+            "loyalty_status": int(loyalty_row["loyalty"] or 50) if loyalty_row else 50,
+            "loyalty_recent": [dict(item) for item in recent_loyalty],
         }
 
     def sanguo_map_payload(self) -> Dict[str, Any]:
@@ -1450,7 +1472,10 @@ class WebGame:
             """
             SELECT n.id, n.name, n.province, r.controlled_by, r.public_support,
                    r.unrest, r.military_pressure, r.status, r.population
-            FROM strategic_nodes n LEFT JOIN regions r ON r.id=n.id ORDER BY n.id
+            FROM strategic_nodes n
+            LEFT JOIN administrative_cities ac ON ac.id = n.id
+            LEFT JOIN regions r ON r.id = ac.commandery_id
+            ORDER BY n.id
             """
         ).fetchall()
         stationed: Dict[str, List[str]] = {}
@@ -1460,9 +1485,13 @@ class WebGame:
             stationed.setdefault(str(army["station_node"]), []).append(str(army["id"]))
         for row in rows:
             node_id = str(row["id"])
-            x, y = _SANGUO_NODE_POSITIONS.get(node_id, (50.0, 50.0))
+            commandery_id = node_id.removeprefix("city:")
+            x, y = _SANGUO_NODE_POSITIONS.get(commandery_id, (50.0, 50.0))
             nodes.append({
                 "id": node_id,
+                "commandery_id": commandery_id,
+                "city_id": node_id,
+                "province_id": str(row["province"]),
                 "name": str(row["name"]),
                 "province": str(row["province"]),
                 "x": x,
@@ -1475,8 +1504,48 @@ class WebGame:
                 "status": str(row["status"] or ""),
                 "stationed_army_ids": stationed.get(node_id, []),
             })
-        # 前端地图已改为“州块”交互机制；路线表仍保留在数据库中用于旧存档兼容。
-        return {"nodes": nodes, "routes": []}
+        city_rows = self.db.conn.execute(
+            """
+            SELECT c.*, r.name AS commandery_name, r.population, r.public_support, r.unrest, r.military_pressure
+            FROM administrative_cities c JOIN regions r ON r.id=c.commandery_id
+            ORDER BY c.commandery_id, c.is_commandery_capital DESC, c.id
+            """
+        ).fetchall()
+        city_offsets: Dict[str, int] = {}
+        cities = []
+        for row in city_rows:
+            commandery_id = str(row["commandery_id"])
+            index = city_offsets.get(commandery_id, 0)
+            city_offsets[commandery_id] = index + 1
+            base_x, base_y = _SANGUO_NODE_POSITIONS.get(commandery_id, (50.0, 50.0))
+            # 仅作旧战略节点的临时锚点；前端辖区稿会以静态手绘路径决定最终范围。
+            offset_x, offset_y = ((0.0, 0.0), (1.1, -0.8), (-1.1, 0.9), (0.9, 1.2))[min(index, 3)]
+            city_id = str(row["id"])
+            cities.append({
+                "id": city_id, "name": str(row["name"]), "commandery_id": commandery_id,
+                "province_id": str(row["province_id"]), "province": str(row["province_id"]),
+                "x": base_x + offset_x, "y": base_y + offset_y,
+                "controller": str(row["controlled_by"]), "strategic_role": str(row["strategic_role"]),
+                "is_commandery_capital": bool(row["is_commandery_capital"]),
+                "fortification": int(row["fortification"] or 0), "grain_stock": int(row["grain_stock"] or 0),
+                "siege_status": str(row["siege_status"]), "population": int(row["population"] or 0),
+                "public_support": int(row["public_support"] or 0), "unrest": int(row["unrest"] or 0),
+                "military_pressure": int(row["military_pressure"] or 0), "status": str(row["status"] or ""),
+                "stationed_army_ids": stationed.get(city_id, []) + stationed.get(commandery_id, []),
+            })
+        # 72 城池网络：发送实际路线供前端绘制直连边
+        routes = [
+            {
+                "source": str(row["source"]),
+                "target": str(row["target"]),
+                "kind": str(row["kind"]),
+                "note": str(row["note"] or ""),
+            }
+            for row in self.db.conn.execute(
+                "SELECT source, target, kind, note FROM strategic_routes ORDER BY source, target"
+            ).fetchall()
+        ]
+        return {"nodes": nodes, "cities": cities, "routes": routes}
 
     def sanguo_army_payloads(self) -> List[Dict[str, Any]]:
         current_orders = {
@@ -1552,10 +1621,8 @@ class WebGame:
         }
 
     def submit_army_order(self, army_id: str, order_type: str, payload: Dict[str, Any]) -> int:
-        """所有军令都在服务端根据真实驻地、路线、守军和回合状态复核。"""
-        if not isinstance(payload, dict):
-            raise ValueError("军令参数必须为对象。")
-        return self.db.issue_army_order(self.state, str(army_id), str(order_type), payload)
+        """旧入口保留仅为明确报错，不能绕过军事方略批次。"""
+        raise RuntimeError("即时军队命令已弃用；请通过军事方略批次执行。")
 
     def preview_battle(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(plan, dict):
@@ -1611,6 +1678,16 @@ class WebGame:
             "stationed_armies": stationed,
         }
 
+    def administrative_detail_payload(self, scope: str, entity_id: str) -> Dict[str, Any]:
+        """州、郡、城三层只读档案事实；所有写入仍须经军令批次。"""
+        normalized = str(scope or "").strip().lower()
+        if normalized not in {"province", "commandery", "city"}:
+            raise ValueError("行政层级必须为 province、commandery 或 city")
+        detail = self.db.administrative_detail(normalized, str(entity_id))
+        if normalized == "commandery":
+            detail["can_invest"] = str(detail.get("controlled_by") or "") == "liu_bei"
+        return detail
+
     def government_office_payload(self) -> List[Dict[str, Any]]:
         return [
             office_effect(self.db, office_key)
@@ -1623,7 +1700,7 @@ class WebGame:
         character_name: str,
         target_id: str = "",
     ) -> Dict[str, Any]:
-        return appoint_office(self.db, self.state, str(office_key), str(character_name), str(target_id))
+        raise RuntimeError("即时任命已弃用；请通过任免方略批次执行。")
 
     def state_payload(self) -> Dict[str, Any]:
         stage = str(self.state.stage or "流亡军")
@@ -1653,11 +1730,118 @@ class WebGame:
                 "SELECT * FROM region_investments ORDER BY region_id"
             ).fetchall()
         ]
+        from ming_sim.long_term import long_term_summary
+        from ming_sim.identity import identity_summary
+        memorials = [dict(row) for row in self.db.conn.execute(
+            "SELECT * FROM minister_memorials WHERE turn=? AND status='open' ORDER BY id", (int(self.state.turn),)
+        ).fetchall()]
+        # 情报 DTO：通过 select_player_visible_world_dynamics 选择 3–5 条，过滤隐藏字段
+        from ming_sim.world_simulation import select_player_visible_world_dynamics
+        _raw_intel = select_player_visible_world_dynamics(self.db, self.state)
+        intelligence = []
+        for _r in _raw_intel:
+            _evidence = []
+            try:
+                _evidence = json.loads(str(_r.get("evidence_json") or "[]"))
+            except (json.JSONDecodeError, TypeError):
+                _evidence = []
+            intelligence.append({
+                "id": int(_r["id"]),
+                "power_id": str(_r["power_id"]),
+                "visibility": str(_r["visibility"]),
+                "title": str(_r["title"]),
+                "summary": str(_r["summary"]),
+                "source_type": str(_r.get("source_type") or "system"),
+                "reliability": int(_r.get("reliability") or 50),
+                "verification_status": str(_r.get("verification_status") or "unverified"),
+                "valid_until_turn": int(_r.get("valid_until_turn") or 0),
+                "resolution_summary": str(_r.get("resolution_summary") or ""),
+                "evidence_refs": _evidence,
+                "usable_as_fact": int(_r.get("usable_as_fact") or 0),
+            })
+
+        # === 第二阶段：区域局势数据 ===
+        from ming_sim.world_simulation import _season
+        turn = int(self.state.turn)
+        period = int(self.state.period)
+        season = _season(period)
+
+        # 天气摘要（取己方控制地区的众数天气）
+        weather_summary = "阴晴"
+        weather_rows = self.db.conn.execute(
+            "SELECT weather_kind, COUNT(*) as cnt FROM regional_world_states "
+            "WHERE turn=? GROUP BY weather_kind ORDER BY cnt DESC LIMIT 1",
+            (turn,),
+        ).fetchone()
+        if weather_rows:
+            weather_summary = str(weather_rows["weather_kind"])
+
+        # 区域状态：己方地区完整展示，他方按情报层级
+        regions_payload: list[dict] = []
+        for rs in self.db.conn.execute(
+            "SELECT rws.*, r.name, r.controlled_by FROM regional_world_states rws "
+            "JOIN regions r ON rws.region_id = r.id WHERE rws.turn=? ORDER BY rws.region_id",
+            (turn,),
+        ).fetchall():
+            controlled_by = str(rs["controlled_by"])
+            visibility = "own" if controlled_by == "liu_bei" else "assessment"
+            # 己方完整数值，他方仅展示趋势（数值为 null）
+            regions_payload.append({
+                "region_id": str(rs["region_id"]),
+                "name": str(rs["name"]),
+                "visibility": visibility,
+                "road_condition": int(rs["road_condition"]) if visibility == "own" else None,
+                "grain_transport_pressure": int(rs["grain_transport_pressure"]) if visibility == "own" else None,
+                "harvest_outlook": int(rs["harvest_outlook"]) if visibility == "own" else None,
+                "epidemic_pressure": int(rs["epidemic_pressure"]) if visibility == "own" else None,
+                "public_mood_delta": int(rs["public_mood_delta"]) if visibility == "own" else None,
+                "incident_ids": [],  # 下面填充
+            })
+
+        # 区域事件
+        incidents_payload: list[dict] = []
+        for inc in self.db.conn.execute(
+            "SELECT * FROM regional_incidents WHERE turn=? ORDER BY id", (turn,)
+        ).fetchall():
+            region_vis = "own"
+            for rp in regions_payload:
+                if rp["region_id"] == str(inc["region_id"]):
+                    rp["incident_ids"].append(int(inc["id"]))
+                    if rp["visibility"] != "own":
+                        region_vis = rp["visibility"]
+                    break
+            local_effects = self._decode_json(inc["local_effects_json"], [])
+            incidents_payload.append({
+                "id": int(inc["id"]),
+                "region_id": str(inc["region_id"]),
+                "title": str(inc["title"]),
+                "tier": str(inc["tier"]),
+                "visibility": region_vis,
+                "summary": str(inc["summary"]),
+                "status": str(inc["status"]),
+                "local_effects": local_effects if region_vis == "own" else [],
+                "policy_pending": str(inc["tier"]) == "dramatic",
+            })
+
+        world_payload = {
+            "campaign": {
+                "season": season,
+                "weather_summary": weather_summary,
+                "turn": turn,
+            },
+            "regions": regions_payload,
+            "incidents": incidents_payload,
+            "memorials": memorials,
+            "intelligence": intelligence,
+        }
+
         return {
             "scenario_id": "sanguo_liubei_208",
             "turn": {"year": self.state.year, "period": self.state.period,
                      "turn": self.state.turn, "phase": self.state.turn_phase},
             "government": {"stage": stage, "title": title, "scene": scene},
+            "long_term": long_term_summary(self.db, self.state),
+            "identity": identity_summary(self.db, self.state),
             "metrics": {name: int(self.state.metrics.get(name, 50)) for name in metric_names},
             "previous_summary": self.previous_summary,
             "map": self.sanguo_map_payload(),
@@ -1686,6 +1870,7 @@ class WebGame:
             ),
             "last_decree": self.last_decree,
             "last_report": self.last_report,
+            "world": world_payload,
         }
 
     # ── 聊天 ──────────────────────────────────────────────────────────────
@@ -2120,7 +2305,7 @@ class WebGame:
                 continue
             selected.append(c)
             seen.add(c.name)
-        return selected
+        return selected[:10]
 
     def court_chat_stream(self, message: str, ministers: List[str]) -> Iterator[Dict[str, Any]]:
         text = message.strip()
@@ -2594,12 +2779,17 @@ def _scan_campaigns() -> List[Dict[str, Any]]:
     return out
 
 
-def _has_main_db() -> bool:
-    """主 DB 文件是否存在 → 决定「继续」按钮可不可点。"""
+def _main_db_path() -> str:
+    """主 DB 文件路径。"""
     db_path = os.environ.get("MING_SIM_DB", "") or user_data_path("ming_sim.db")
     if not os.path.isabs(db_path):
         db_path = str(user_data_dir() / db_path)
-    return os.path.isfile(db_path)
+    return db_path
+
+
+def _has_main_db() -> bool:
+    """主 DB 文件是否存在 → 决定「继续」按钮可不可点。"""
+    return os.path.isfile(_main_db_path())
 
 
 # ---- 自定义剧本（scenarios）----
@@ -3038,6 +3228,11 @@ async def api_menu_continue() -> Dict[str, Any]:
     global web_game
     if not _has_main_db():
         raise HTTPException(status_code=404, detail="无上次进度可继续，请先新游戏或加载存档。")
+    if not is_city_topology_database(_main_db_path()):
+        raise HTTPException(
+            status_code=409,
+            detail="上次进度使用旧版战略拓扑（非 72 城池网络），已不兼容。请开始新游戏。",
+        )
     try:
         web_game = WebGame(fresh=False)
     except LLMUnavailable as exc:
@@ -3285,6 +3480,8 @@ class GameSettingsRequest(BaseModel):
     simulator_top_p: float = 0.5
     extractor_temperature: float = 0.1
     extractor_top_p: float = 0.1
+    # 只影响微小/中等天下反应频率，不改硬规则或重大待决阈值。
+    world_reaction_intensity: str = "standard"
 
 
 class ActionIntentRequest(BaseModel):
@@ -3331,6 +3528,7 @@ async def api_menu_save_game_settings(request: GameSettingsRequest) -> Dict[str,
         request.simulator_top_p,
         request.extractor_temperature,
         request.extractor_top_p,
+        request.world_reaction_intensity,
     )
     return {"ok": True, "game_settings": saved}
 
@@ -3352,12 +3550,10 @@ async def api_state() -> Dict[str, Any]:
 
 @app.post("/api/armies/{army_id}/orders")
 async def api_issue_army_order(army_id: str, request: ArmyOrderRequest) -> Dict[str, Any]:
-    game = get_game()
-    try:
-        order_id = game.submit_army_order(army_id, request.order_type, request.payload)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    return {"order_id": order_id, "state": game.state_payload()}
+    raise HTTPException(
+        status_code=410,
+        detail="即时军队命令已弃用。请创建军事方略草案，经颁令批次推演后执行。",
+    )
 
 
 @app.post("/api/battles/preview")
@@ -3370,22 +3566,18 @@ async def api_preview_battle(request: BattlePreviewRequest) -> Dict[str, Any]:
 
 @app.post("/api/national-focus/start")
 async def api_start_national_focus(request: FocusStartRequest) -> Dict[str, Any]:
-    game = get_game()
-    try:
-        result = start_focus(game.db, game.state, request.focus_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    return {"result": result, "state": game.state_payload()}
+    raise HTTPException(
+        status_code=410,
+        detail="即时国策已弃用。请将政策意图写入内政方略草案。",
+    )
 
 
 @app.post("/api/regions/{region_id}/investment")
 async def api_start_region_investment(region_id: str, request: RegionInvestmentRequest) -> Dict[str, Any]:
-    game = get_game()
-    try:
-        result = start_region_investment(game.db, game.state, region_id, request.category)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    return {"result": result, "state": game.state_payload()}
+    raise HTTPException(
+        status_code=410,
+        detail="即时经营已弃用。请创建内政方略草案，经颁令批次推演后执行。",
+    )
 
 
 @app.get("/api/regions/{region_id}/detail")
@@ -3396,23 +3588,26 @@ async def api_region_detail(region_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail=str(error)) from None
 
 
+@app.get("/api/administrative/{scope}/{entity_id}/detail")
+async def api_administrative_detail(scope: str, entity_id: str) -> Dict[str, Any]:
+    try:
+        return get_game().administrative_detail_payload(scope, entity_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from None
+
+
 @app.get("/api/government/offices")
 async def api_government_offices() -> Dict[str, Any]:
     return {"offices": get_game().government_office_payload()}
 
 
-@app.post("/api/government/offices/{office_key}/appoint")
+@app.post("/api/government/offices/{office_key}/appoint", deprecated=True)
 async def api_appoint_government_office(office_key: str, request: OfficeAppointmentRequest) -> Dict[str, Any]:
-    game = get_game()
-    try:
-        office = game.appoint_government_office(
-            office_key,
-            request.character_name,
-            request.target_id,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    return {"office": office, "offices": game.government_office_payload(), "state": game.state_payload()}
+    """兼容路由保留明确弃用提示，禁止再绕过方略批次写入官职。"""
+    raise HTTPException(
+        status_code=410,
+        detail="直接任命已弃用。请创建任免方略草案，经颁令后在推演中执行。",
+    )
 
 
 @app.get("/api/secret_orders")
@@ -3439,27 +3634,61 @@ async def api_action_intents(status: str = "") -> Dict[str, Any]:
 
 @app.post("/api/action_intents")
 async def api_create_action_intent(request: ActionIntentRequest) -> Dict[str, Any]:
-    game = get_game()
-    try:
-        intent = game.db.create_action_intent(game.state, source=request.source, text=request.text)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    return {"intent": intent}
+    raise HTTPException(
+        status_code=410,
+        detail="旧自由命令已弃用。请创建方略草案，保留目标、承办人与风险字段。",
+    )
 
 
 @app.post("/api/action_intents/{intent_id}/confirm")
 async def api_confirm_action_intent(intent_id: int) -> Dict[str, Any]:
+    raise HTTPException(
+        status_code=410,
+        detail="旧行动意图确认已弃用。请通过方略草案与颁令批次执行。",
+    )
+
+
+# ---------- 建议库 ----------
+
+@app.get("/api/suggestions")
+async def api_list_suggestions(status: str = "", limit: int = 50) -> Dict[str, Any]:
+    return {"suggestions": get_game().db.list_suggestions(status=status or None, limit=limit)}
+
+
+@app.post("/api/suggestions")
+async def api_create_suggestion(request: SuggestionRequest) -> Dict[str, Any]:
     game = get_game()
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="建议文本不能为空")
     try:
-        result = game.db.confirm_action_intent(game.state, intent_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    payload: Dict[str, Any] = {"result": result}
-    if result.get("kind") == "ongoing_plan":
-        payload["plan"] = result["plan"]
-    else:
-        payload["intent"] = result.get("intent")
-    return payload
+        sid = game.db.create_suggestion(
+            turn=game.state.turn,
+            year=game.state.year,
+            period=game.state.period,
+            text=text,
+            source=request.source,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    suggestion = game.db.get_suggestion(sid)
+    return {"suggestion": suggestion}
+
+
+@app.delete("/api/suggestions/{suggestion_id}")
+async def api_delete_suggestion(suggestion_id: int) -> Dict[str, Any]:
+    ok = get_game().db.delete_suggestion(suggestion_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"未找到建议 #{suggestion_id}")
+    return {"deleted": True, "id": suggestion_id}
+
+
+@app.post("/api/suggestions/{suggestion_id}/convert")
+async def api_convert_suggestion(suggestion_id: int) -> Dict[str, Any]:
+    raise HTTPException(
+        status_code=410,
+        detail="旧建议转行动意图已弃用。请从建议内容创建方略草案。",
+    )
 
 
 @app.get("/api/ongoing_plans")
@@ -3498,20 +3727,119 @@ async def api_monthly_report() -> Dict[str, Any]:
     return build_monthly_report(game.db, game.state)
 
 
+@app.get("/api/strategy-events")
+async def api_strategy_events() -> Dict[str, Any]:
+    """返回当前回合的方略事件列表（供方略窗口展示）。"""
+    game = get_game()
+    events: list[Dict[str, Any]] = []
+
+    # 1. 从月报中提取重要事件
+    try:
+        report = build_monthly_report(game.db, game.state)
+        severity_map = {
+            "pending": "urgent",
+            "adjudication": "urgent",
+            "military": "important",
+            "secret": "important",
+            "diplomacy": "opportunity",
+            "internal": "suggestion",
+            "personnel": "suggestion",
+            "world": "opportunity",
+            "reputation": "suggestion",
+        }
+        action_type_map = {
+            "military": "detail",
+            "internal": "detail",
+            "diplomacy": "detail",
+            "personnel": "detail",
+            "secret": "secret_chat",
+            "pending": "court_chat",
+            "adjudication": "court_chat",
+            "world": "detail",
+            "reputation": "detail",
+        }
+        for section in report.get("sections", []):
+            section_id = section.get("id", "")
+            for item in section.get("items", []):
+                action = item.get("action", {}) or {}
+                entry = action.get("entry", "")
+                events.append({
+                    "id": item.get("id", f"{section_id}-{len(events)}"),
+                    "title": item.get("title", ""),
+                    "summary": item.get("summary", ""),
+                    "severity": severity_map.get(section_id, "suggestion"),
+                    "category": section_id,
+                    "section_title": section.get("title", ""),
+                    "action_label": action.get("label", "查看详情"),
+                    "action_type": action_type_map.get(section_id, "detail"),
+                    "action_entry": entry,
+                })
+    except Exception:
+        pass
+
+    # 2. 待裁决策点（urgent）
+    for decision in game.session.pending_decisions():
+        events.append({
+            "id": f"decision:{decision.get('idx', len(events))}",
+            "title": decision.get("label", "必须亲裁"),
+            "summary": decision.get("prompt", ""),
+            "severity": "urgent",
+            "category": "decision",
+            "section_title": "待裁决策",
+            "action_label": "立即裁断",
+            "action_type": "decision",
+            "action_entry": "国策",
+        })
+
+    # 3. 活跃建议（suggestion）
+    try:
+        suggestions = game.db.list_suggestions(game.state, status="pending")
+        for s in suggestions[:5]:
+            events.append({
+                "id": f"suggestion:{s['id']}",
+                "title": "臣下建议",
+                "summary": s.get("text", "")[:100],
+                "severity": "suggestion",
+                "category": "suggestion",
+                "section_title": "建议库",
+                "action_label": "与廷臣商议",
+                "action_type": "court_chat",
+                "action_entry": "",
+            })
+    except Exception:
+        pass
+
+    # 4. 本月议程（opportunity）
+    try:
+        agenda = game.db.month_agenda(game.state)
+        for a in agenda[:5]:
+            events.append({
+                "id": f"agenda:{a.get('id', '')}",
+                "title": a.get("title", "本月议程"),
+                "summary": a.get("description", ""),
+                "severity": "opportunity",
+                "category": "agenda",
+                "section_title": "本月议程",
+                "action_label": "查看详情",
+                "action_type": "detail",
+                "action_entry": "",
+            })
+    except Exception:
+        pass
+
+    # 按 severity 排序: urgent > important > opportunity > suggestion
+    severity_order = {"urgent": 0, "important": 1, "opportunity": 2, "suggestion": 3}
+    events.sort(key=lambda e: severity_order.get(e.get("severity", "suggestion"), 4))
+
+    return {"events": events, "turn": game.state.get("turn", {})}
+
+
 @app.post("/api/envoys")
 async def api_create_envoy(request: EnvoyMissionRequest) -> Dict[str, Any]:
-    game = get_game()
-    try:
-        mission = game.db.create_envoy_mission(
-            game.state,
-            target_power=request.target_power,
-            envoy=request.envoy,
-            goal=request.goal,
-            boundaries=request.boundaries,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from None
-    return {"mission": mission}
+    raise HTTPException(
+        status_code=410,
+        detail="即时派遣使臣已弃用。请创建外交方略草案，经颁令批次推演后启程。",
+    )
 
 
 @app.get("/api/envoys")
@@ -3521,7 +3849,212 @@ async def api_envoys(status: str = "") -> Dict[str, Any]:
 
 @app.get("/api/reputation")
 async def api_reputation() -> Dict[str, Any]:
-    return {"summary": get_game().db.reputation_summary()}
+    from ming_sim.long_term import long_term_summary
+    game = get_game()
+    return {"summary": long_term_summary(game.db, game.state)["reputation"]}
+
+
+@app.get("/api/long-term")
+async def api_long_term() -> Dict[str, Any]:
+    """长期政治状态的只读契约；前端不通过此接口直接改值。"""
+    from ming_sim.long_term import long_term_summary
+    game = get_game()
+    return {"long_term": long_term_summary(game.db, game.state)}
+
+
+# ─── 战役 API ─────────────────────────────────────────────
+
+class CampaignCreateRequest(BaseModel):
+    name: str
+    objective: str = ""
+    theater_node: str = ""
+    commander: str = ""
+    army_ids: List[str] = []
+    planned_duration: int = 3
+
+
+@app.post("/api/campaigns")
+async def api_create_campaign(request: CampaignCreateRequest) -> Dict[str, Any]:
+    """创建跨月战役"""
+    game = get_game()
+    try:
+        campaign = game.db.create_campaign(
+            game.state,
+            name=request.name,
+            objective=request.objective,
+            theater_node=request.theater_node,
+            commander=request.commander,
+            army_ids=request.army_ids,
+            planned_duration=request.planned_duration,
+        )
+        return {"campaign": campaign}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+
+
+@app.get("/api/campaigns")
+async def api_list_campaigns(status: str = "") -> Dict[str, Any]:
+    """列出战役"""
+    return {"campaigns": get_game().db.list_campaigns(status=status)}
+
+
+@app.get("/api/campaigns/{campaign_id}")
+async def api_get_campaign(campaign_id: int) -> Dict[str, Any]:
+    """获取战役详情"""
+    try:
+        return {"campaign": get_game().db.get_campaign(campaign_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from None
+
+
+class CampaignReinforcementRequest(BaseModel):
+    army_ids: List[str]
+
+
+@app.post("/api/campaigns/{campaign_id}/reinforcements")
+async def api_campaign_reinforcements(campaign_id: int, request: CampaignReinforcementRequest) -> Dict[str, Any]:
+    """增援战役"""
+    game = get_game()
+    try:
+        game.db.add_campaign_reinforcements(campaign_id, request.army_ids)
+        return {"campaign": game.db.get_campaign(campaign_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from None
+
+
+@app.post("/api/campaigns/{campaign_id}/retreat")
+async def api_campaign_retreat(campaign_id: int) -> Dict[str, Any]:
+    """撤军"""
+    game = get_game()
+    try:
+        game.db.order_campaign_retreat(campaign_id)
+        return {"campaign": game.db.get_campaign(campaign_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from None
+
+
+# ─── 外交 API ─────────────────────────────────────────────
+
+class TreatyProposeRequest(BaseModel):
+    proposer: str
+    target: str
+    treaty_type: str  # 盟约/和约/通商/降约/会盟
+    terms: Dict[str, Any] = {}
+
+
+@app.post("/api/diplomacy/treaties")
+async def api_propose_treaty(request: TreatyProposeRequest) -> Dict[str, Any]:
+    """提案条约"""
+    from ming_sim.diplomacy import propose_treaty
+    game = get_game()
+    try:
+        treaty = propose_treaty(
+            game.db,
+            proposer=str(request.proposer),
+            target=str(request.target),
+            terms={"type": request.treaty_type, **request.terms},
+            state=game.state,
+        )
+        return {"treaty": treaty}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+
+
+@app.post("/api/diplomacy/treaties/{treaty_id}/accept")
+async def api_accept_treaty(treaty_id: int) -> Dict[str, Any]:
+    """接受条约"""
+    from ming_sim.diplomacy import accept_treaty
+    try:
+        result = accept_treaty(get_game().db, treaty_id)
+        return {"result": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+
+
+@app.post("/api/diplomacy/treaties/{treaty_id}/breach")
+async def api_breach_treaty(treaty_id: int) -> Dict[str, Any]:
+    """违约"""
+    from ming_sim.diplomacy import breach_treaty
+    game = get_game()
+    try:
+        result = breach_treaty(game.db, game.state, treaty_id, actor="liu_bei", action="违约")
+        return {"result": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+
+
+class AllianceRequest(BaseModel):
+    participants: List[str]
+    terms: Dict[str, Any] = {}
+
+
+@app.post("/api/diplomacy/alliances")
+async def api_create_alliance(request: AllianceRequest) -> Dict[str, Any]:
+    """申请会盟"""
+    game = get_game()
+    import json as _json
+    try:
+        cursor = game.db.conn.execute(
+            """
+            INSERT INTO monarch_alliances
+            (initiator, participants, terms, ceremony_turn, status)
+            VALUES (?, ?, ?, ?, 'proposed')
+            """,
+            (
+                "liu_bei",
+                _json.dumps(request.participants, ensure_ascii=False),
+                _json.dumps(request.terms, ensure_ascii=False),
+                int(game.state.turn),
+            ),
+        )
+        game.db.conn.commit()
+        return {"alliance_id": cursor.lastrowid, "status": "proposed"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+
+
+@app.get("/api/diplomacy/alliances")
+async def api_list_alliances() -> Dict[str, Any]:
+    """列出席盟"""
+    games = get_game()
+    rows = games.db.conn.execute(
+        "SELECT * FROM monarch_alliances ORDER BY id DESC"
+    ).fetchall()
+    import json as _json
+    alliances = []
+    for row in rows:
+        item = games.db._row_dict(row)
+        item["participants"] = _json.loads(item.get("participants", "[]"))
+        item["terms"] = _json.loads(item.get("terms", "{}"))
+        alliances.append(item)
+    return {"alliances": alliances}
+
+
+# ─── 随机事件 API ─────────────────────────────────────────
+
+@app.get("/api/random-events")
+async def api_list_random_events() -> Dict[str, Any]:
+    """列出当前活跃随机事件"""
+    game = get_game()
+    rows = game.db.conn.execute(
+        "SELECT * FROM random_events WHERE status='active' ORDER BY id DESC"
+    ).fetchall()
+    import json as _json
+    events = []
+    for row in rows:
+        item = game.db._row_dict(row)
+        item["options"] = _json.loads(item.get("options", "[]"))
+        events.append(item)
+    return {"events": events}
+
+
+@app.post("/api/random-events/{event_id}/resolve")
+async def api_resolve_random_event(event_id: int, choice: str = "") -> Dict[str, Any]:
+    """兼容路由：事件选择必须进入草案，不能从信息页直接结算。"""
+    raise HTTPException(
+        status_code=410,
+        detail="事件不可直接处理。请选择方案后创建方略草案，并在颁令时统一执行。",
+    )
 
 
 class ManualIssueEntity(BaseModel):
@@ -3846,6 +4379,43 @@ async def api_history_turns() -> Dict[str, Any]:
     return {"turns": get_game().db.list_archived_turns()}
 
 
+@app.get("/api/history/events")
+async def api_historical_event_cards() -> Dict[str, Any]:
+    """历史卡审计：窗口、硬前提、替代角色、失效原因、玩家结果与关联批次均来自已存内容/状态。"""
+    game = get_game()
+    cards: list[Dict[str, Any]] = []
+    for event in game.session.content.events:
+        if not event.is_historical:
+            continue
+        row = game.db.conn.execute(
+            "SELECT status, participants, variant_id, reason, changed_turn, resolved_turn FROM historical_event_states WHERE event_id=?",
+            (event.id,),
+        ).fetchone()
+        def decode(raw: object) -> object:
+            try:
+                return json.loads(str(raw or "{}"))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                return {}
+        conditions = dict(event.hard_conditions or {})
+        cards.append({
+            "id": event.id, "title": event.title,
+            "window": f"{event.trigger_year}年{event.trigger_month or 1}月–{event.trigger_end_year or event.trigger_year}年{event.trigger_end_month or 12}月",
+            "status": str(row["status"] if row else "scheduled"),
+            "participants": decode(row["participants"] if row else "{}"),
+            "variant_id": str(row["variant_id"] if row else ""),
+            "reason": str(row["reason"] if row else ""),
+            "changed_turn": int(row["changed_turn"] if row else 0),
+            "resolved_turn": int(row["resolved_turn"] if row and row["resolved_turn"] else 0),
+            "required_powers": conditions.get("required_powers_active", []),
+            "required_regions": conditions.get("required_regions", []),
+            "alternative_roles": {
+                str(role): [str(item.get("primary") or ""), *[str(name) for name in item.get("alternates", [])]]
+                for role, item in dict(event.roles or {}).items() if isinstance(item, dict)
+            },
+        })
+    return {"events": cards}
+
+
 @app.get("/api/history/turn/{turn}")
 async def api_history_turn(turn: int) -> Dict[str, Any]:
     """某回合历史聚合：邸报奏报 + 诏书 + 已颁草案 + extractor 输入/输出。"""
@@ -4017,12 +4587,16 @@ async def api_create_secret_order(character_name: str, request: SecretOrderReque
 @app.post("/api/characters/{character_name}/dialogue")
 async def api_chat(character_name: str, request: ChatRequest) -> Dict[str, Any]:
     _require_chat_capable_character(character_name)
+    if character_name in _secret_chat_active and request.mode != "secret":
+        raise HTTPException(status_code=409, detail=f"{character_name}正在密谈中，普通对话暂不可用。")
     return get_game().chat(character_name, request.message)
 
 
 @app.post("/api/characters/{character_name}/dialogue/stream")
 async def api_chat_stream(character_name: str, request: ChatRequest) -> StreamingResponse:
     _require_chat_capable_character(character_name)
+    if character_name in _secret_chat_active and request.mode != "secret":
+        raise HTTPException(status_code=409, detail=f"{character_name}正在密谈中，普通对话暂不可用。")
     async def generate() -> AsyncIterator[str]:
         for item in get_game().chat_stream(character_name, request.message):
             item_type = str(item.get("type", "message"))
@@ -4037,9 +4611,120 @@ async def api_chat_stream(character_name: str, request: ChatRequest) -> Streamin
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
+# 密谈状态追踪（内存，进程内有效）
+_secret_chat_active: set[str] = set()
+
+
+@app.post("/api/characters/{character_name}/secret_chat/enter")
+async def api_secret_chat_enter(character_name: str) -> Dict[str, Any]:
+    _require_chat_capable_character(character_name)
+    _secret_chat_active.add(character_name)
+    return {"character": character_name, "secret_chat_active": True}
+
+
+@app.post("/api/characters/{character_name}/secret_chat/exit")
+async def api_secret_chat_exit(character_name: str) -> Dict[str, Any]:
+    _secret_chat_active.discard(character_name)
+    return {"character": character_name, "secret_chat_active": False}
+
+
 @app.post("/api/characters/{character_name}/dialogue/undo")
 async def api_chat_undo(character_name: str) -> Dict[str, Any]:
     return get_game().undo_last_chat(character_name)
+
+
+@app.get("/api/characters")
+async def api_list_characters(
+    scope: str = "",
+    province: str = "",
+    role: str = "",
+    sort: str = "",
+    limit: int = 100,
+) -> Dict[str, Any]:
+    game = get_game()
+    characters = [game.sanguo_character_payload(c) for c in game.content.characters.values()]
+    # scope filter
+    if scope == "liu_bei":
+        characters = [c for c in characters if c["power_id"] == "liu_bei" and c["status"] == "active"]
+    elif scope and scope != "all":
+        characters = [c for c in characters if c["power_id"] == scope]
+    # province filter
+    if province:
+        characters = [c for c in characters if c.get("location") == province]
+    # role filter
+    if role == "civil":
+        characters = [c for c in characters if c.get("office_type") in ("文臣", "幕僚", "内政")]
+    elif role == "military":
+        characters = [c for c in characters if c.get("office_type") in ("武将", "将军", "军务")]
+    # sort
+    if sort:
+        def _sort_key(c: Dict[str, Any]) -> int:
+            abilities = c.get("abilities") or {}
+            if isinstance(abilities, dict):
+                values = abilities.get("values") or {}
+                val = values.get(sort)
+                if isinstance(val, (int, float)):
+                    return int(val)
+                if isinstance(val, dict):
+                    return int(val.get("max", 0) or 0)
+            return 0
+        characters.sort(key=_sort_key, reverse=True)
+    return {"characters": characters[:max(1, int(limit))]}
+
+
+@app.get("/api/provinces/{province_name}/summary")
+async def api_province_summary(province_name: str) -> Dict[str, Any]:
+    game = get_game()
+    nodes = game.db.conn.execute(
+        """
+        SELECT n.id, n.name, n.province,
+               r.controlled_by, r.public_support, r.unrest, r.military_pressure, r.status, r.population
+        FROM strategic_nodes n
+        LEFT JOIN regions r ON r.id = n.id
+        WHERE n.province = ?
+        ORDER BY n.id
+        """,
+        (province_name,),
+    ).fetchall()
+    if not nodes:
+        raise HTTPException(status_code=404, detail=f"未找到州：{province_name}")
+    # stationed armies per node
+    armies_by_node: Dict[str, list] = {}
+    for army in game.db.conn.execute(
+        "SELECT id, name, station_node, strength FROM armies WHERE active=1 ORDER BY id"
+    ).fetchall():
+        armies_by_node.setdefault(str(army["station_node"]), []).append({
+            "id": str(army["id"]),
+            "name": str(army["name"] or ""),
+            "strength": int(army["strength"] or 0),
+        })
+    node_list = []
+    for row in nodes:
+        nid = str(row["id"])
+        node_list.append({
+            "id": nid,
+            "name": str(row["name"]),
+            "controlled_by": str(row["controlled_by"] or ""),
+            "public_support": int(row["public_support"] or 0),
+            "unrest": int(row["unrest"] or 0),
+            "population": int(row["population"] or 0),
+            "armies": armies_by_node.get(nid, []),
+        })
+    # governor: character with office in this province
+    governors = game.db.conn.execute(
+        """
+        SELECT name, office, office_type FROM characters
+        WHERE location = ? AND status = 'active' AND office != ''
+        ORDER BY office_type LIMIT 3
+        """,
+        (province_name,),
+    ).fetchall()
+    return {
+        "province": province_name,
+        "nodes": node_list,
+        "governors": [dict(g) for g in governors],
+        "total_nodes": len(node_list),
+    }
 
 
 @app.get("/api/court_chat")
@@ -4175,6 +4860,456 @@ async def api_reject_directive(directive_id: int) -> Dict[str, Any]:
     }
 
 
+# P0: 方略草案请求模型
+class DirectiveDraftRequest(BaseModel):
+    source_type: str = "manual"
+    source_id: Optional[int] = None
+    directive_type: str
+    title: str
+    assignee: str = ""
+    target: str = ""
+    duration_months: int = 1
+    priority: int = 50
+    resources_json: str = "{}"
+    constraints_json: str = "[]"
+    risks_json: str = "[]"
+    narrative_text: str = ""
+    compiled_text: str = ""
+
+
+class DirectiveDraftUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    assignee: Optional[str] = None
+    target: Optional[str] = None
+    duration_months: Optional[int] = None
+    priority: Optional[int] = None
+    resources_json: Optional[str] = None
+    constraints_json: Optional[str] = None
+    risks_json: Optional[str] = None
+    narrative_text: Optional[str] = None
+    compiled_text: Optional[str] = None
+    status: Optional[str] = None
+
+
+class DirectivePolishRequest(BaseModel):
+    """仅润色玩家已有军令文字；不接收或返回任何世界事实字段。"""
+    sections: Dict[str, str]
+
+
+class DirectiveBatchRequest(BaseModel):
+    batch_title: str
+    draft_ids: List[int]
+    decree_text: str = ""
+
+
+# P0: 方略草案 API 端点
+@app.get("/api/directive-drafts")
+async def api_list_directive_drafts(
+    turn: Optional[int] = None,
+    status: Optional[str] = None,
+    directive_type: Optional[str] = None,
+) -> Dict[str, Any]:
+    """列出方略草案"""
+    game = get_game()
+    drafts = game.session.db.list_directive_drafts(
+        turn=turn or game.state.turn,
+        status=status,
+        directive_type=directive_type,
+    )
+    return {"drafts": drafts}
+
+
+@app.post("/api/directive-drafts")
+async def api_create_directive_draft(request: DirectiveDraftRequest) -> Dict[str, Any]:
+    """创建方略草案"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能新建方略。")
+    if not request.title.strip():
+        raise HTTPException(status_code=400, detail="方略标题不能为空")
+
+    draft_id = game.session.db.create_directive_draft(
+        turn=game.state.turn,
+        year=game.state.year,
+        period=game.state.period,
+        source_type=request.source_type,
+        source_id=request.source_id,
+        directive_type=request.directive_type,
+        title=request.title.strip(),
+        assignee=request.assignee,
+        target=request.target,
+        duration_months=request.duration_months,
+        priority=request.priority,
+        resources_json=request.resources_json,
+        constraints_json=request.constraints_json,
+        risks_json=request.risks_json,
+        narrative_text=request.narrative_text,
+        compiled_text=request.compiled_text,
+    )
+
+    draft = game.session.db.get_directive_draft(draft_id)
+    return {"draft": draft}
+
+
+@app.post("/api/directive-drafts/polish")
+async def api_polish_directive_drafts(request: DirectivePolishRequest) -> Dict[str, Any]:
+    """把已有军令改写为三国语境的浅白文，不写入草案或世界。"""
+    game = get_game()
+    allowed = ("internal", "military", "diplomatic", "other")
+    sections = {key: str(request.sections.get(key) or "").strip() for key in allowed}
+    if not any(sections.values()):
+        raise HTTPException(status_code=400, detail="没有可整理的军令正文")
+    prompt = {
+        "task": "将玩家已有的军令文字润色为建安年间刘备军府可读的浅白文。",
+        "hard_rules": [
+            "只能改写输入中的语气、结构和措辞；不得添加未给出的事实、人物、地点、兵力、资源、条约或战果。",
+            "不得下达、执行或暗示已经生效的军令。",
+            "必须逐类返回 JSON object，键仅限 internal、military、diplomatic、other；空输入返回空字符串。",
+            "语言克制、简洁、带三国军府文风，但避免文言堆砌。",
+        ],
+        "sections": sections,
+    }
+    try:
+        agent = create_decree_writer_agent(game.session.llm_config, game.session.agno_db)
+        output = agent.run(json.dumps(prompt, ensure_ascii=False))
+        text = extract_agent_text(output).strip()
+        json_match = re.search(r"\{[\s\S]*\}", text)
+        parsed = json.loads(json_match.group(0) if json_match else text)
+        if not isinstance(parsed, dict):
+            raise ValueError("润色输出不是对象")
+        polished = {key: str(parsed.get(key) or "").strip() for key in allowed}
+    except LLMUnavailable as error:
+        raise HTTPException(status_code=503, detail=f"文书整理暂不可用：{error}") from error
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"文书整理失败：{error}") from error
+    return {"sections": polished}
+
+
+@app.get("/api/directive-drafts/{draft_id}")
+async def api_get_directive_draft(draft_id: int) -> Dict[str, Any]:
+    """获取单个方略草案"""
+    game = get_game()
+    draft = game.session.db.get_directive_draft(draft_id)
+    if draft is None:
+        raise HTTPException(status_code=404, detail="草案不存在")
+    return {"draft": draft}
+
+
+@app.patch("/api/directive-drafts/{draft_id}")
+async def api_update_directive_draft(
+    draft_id: int, request: DirectiveDraftUpdateRequest
+) -> Dict[str, Any]:
+    """更新方略草案"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能修改方略。")
+    updates = {k: v for k, v in request.dict().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="没有要更新的字段")
+
+    success = game.session.db.update_directive_draft(draft_id, **updates)
+    if not success:
+        raise HTTPException(status_code=404, detail="草案不存在")
+
+    draft = game.session.db.get_directive_draft(draft_id)
+    return {"draft": draft}
+
+
+@app.delete("/api/directive-drafts/{draft_id}")
+async def api_delete_directive_draft(draft_id: int) -> Dict[str, Any]:
+    """删除方略草案"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能删除方略。")
+    success = game.session.db.delete_directive_draft(draft_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="草案不存在")
+    return {"deleted": True, "id": draft_id}
+
+
+@app.post("/api/directive-drafts/{draft_id}/validate")
+async def api_validate_directive_draft(draft_id: int) -> Dict[str, Any]:
+    """校验方略草案"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能校验方略。")
+    result = game.session.db.validate_directive_draft(draft_id)
+    return result
+
+
+# P0: 颁令批次 API 端点
+@app.get("/api/directive-batches")
+async def api_list_directive_batches(
+    turn: Optional[int] = None,
+    status: Optional[str] = None,
+) -> Dict[str, Any]:
+    """列出颁令批次"""
+    game = get_game()
+    batches = game.session.db.list_directive_batches(
+        turn=turn or game.state.turn,
+        status=status,
+    )
+    return {"batches": batches}
+
+
+@app.post("/api/directive-batches")
+async def api_create_directive_batch(request: DirectiveBatchRequest) -> Dict[str, Any]:
+    """创建颁令批次"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能创建颁令批次。")
+    if not request.batch_title.strip():
+        raise HTTPException(status_code=400, detail="批次标题不能为空")
+    if not request.draft_ids:
+        raise HTTPException(status_code=400, detail="至少需要一条方略草案")
+
+    # 验证所有草案存在且状态为 draft 或 validated
+    for draft_id in request.draft_ids:
+        draft = game.session.db.get_directive_draft(draft_id)
+        if draft is None:
+            raise HTTPException(status_code=404, detail=f"草案 {draft_id} 不存在")
+        if draft["status"] not in ("draft", "validated"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"草案 {draft_id} 状态为 {draft['status']}，不可颁令"
+            )
+
+    batch_id = game.session.db.create_directive_batch(
+        turn=game.state.turn,
+        year=game.state.year,
+        period=game.state.period,
+        batch_title=request.batch_title.strip(),
+        draft_ids=request.draft_ids,
+        decree_text=request.decree_text,
+    )
+
+    batch = game.session.db.get_directive_batch(batch_id)
+    return {"batch": batch}
+
+
+@app.get("/api/directive-batches/{batch_id}")
+async def api_get_directive_batch(batch_id: int) -> Dict[str, Any]:
+    """获取单个颁令批次"""
+    game = get_game()
+    batch = game.session.db.get_directive_batch(batch_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="批次不存在")
+    return {"batch": batch}
+
+
+@app.post("/api/directive-batches/{batch_id}/issue")
+async def api_issue_directive_batch(batch_id: int) -> Dict[str, Any]:
+    """颁令（将批次状态从 pending 改为 issued）"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能颁令。")
+    batch = game.session.db.get_directive_batch(batch_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="批次不存在")
+    if batch["status"] != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=f"批次状态为 {batch['status']}，不可颁令"
+        )
+
+    # 更新批次状态为 issued
+    game.session.db.update_directive_batch(
+        batch_id,
+        status="issued",
+        issued_at=datetime.now().isoformat(),
+    )
+
+    batch = game.session.db.get_directive_batch(batch_id)
+    return {"batch": batch}
+
+
+@app.post("/api/directive-batches/{batch_id}/execute")
+async def api_execute_directive_batch_sse(batch_id: int):
+    """SSE 流式执行颁令批次"""
+    from ming_sim.phased_execution import PhasedExecutor, ExecutionEvent
+
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能继续推演。")
+    batch = game.session.db.get_directive_batch(batch_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="批次不存在")
+    if batch["status"] != "issued":
+        raise HTTPException(
+            status_code=400,
+            detail=f"批次状态为 {batch['status']}，不可执行"
+        )
+
+    # 更新批次状态为 executing
+    game.session.db.update_directive_batch(batch_id, status="executing")
+
+    async def event_generator():
+        """生成 SSE 事件流"""
+        event_queue = asyncio.Queue()
+
+        def on_event(event: ExecutionEvent):
+            """事件回调 - 将事件放入队列"""
+            asyncio.create_task(event_queue.put(event))
+
+        executor = PhasedExecutor(
+            state=game.session.state,
+            db=game.session.db,
+            batch_id=batch_id,
+            on_event=on_event,
+            llm_config=getattr(game.session, "llm_config", None),
+        )
+
+        # 在后台执行
+        async def run_execution():
+            try:
+                result = executor.execute()
+                # 发送最终结果
+                final_event = ExecutionEvent(
+                    type="batch_complete",
+                    message=f"执行完成：成功 {result.total_executed}，失败 {result.total_failed}",
+                    data={
+                        "batch_id": result.batch_id,
+                        "success": result.success,
+                        "total_executed": result.total_executed,
+                        "total_failed": result.total_failed,
+                    },
+                )
+                await event_queue.put(final_event)
+            except Exception as e:
+                error_event = ExecutionEvent(
+                    type="error",
+                    message=f"执行失败：{str(e)}",
+                )
+                await event_queue.put(error_event)
+
+        # 启动执行任务
+        execution_task = asyncio.create_task(run_execution())
+
+        try:
+            while True:
+                event = await event_queue.get()
+                yield f"data: {json.dumps(event.to_dict(), ensure_ascii=False)}\n\n"
+
+                if event.type == "batch_complete":
+                    break
+        finally:
+            execution_task.cancel()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+class DecisionSubmitRequest(BaseModel):
+    draft_id: int
+    choice: str
+
+
+class ReactionDecisionRequest(BaseModel):
+    choice: str
+
+
+@app.post("/api/directive-batches/{batch_id}/decisions")
+async def api_submit_decision(batch_id: int, request: DecisionSubmitRequest) -> Dict[str, Any]:
+    """提交决策并继续执行"""
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能继续裁断批次。")
+    batch = game.session.db.get_directive_batch(batch_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail="批次不存在")
+
+    try:
+        checkpoint = game.session.db.get_directive_batch_checkpoint(batch_id)
+        if checkpoint is None or int(checkpoint.get("draft_id") or 0) != int(request.draft_id):
+            raise ValueError("该草案当前没有可提交的持久化决策检查点")
+        checkpoint = game.session.db.resolve_directive_batch_checkpoint(batch_id, request.choice)
+        game.session.db.update_directive_batch(batch_id, status="issued")
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from None
+    return {"message": "决策已提交，推演可恢复", "batch_id": batch_id, "choice": request.choice, "checkpoint": checkpoint}
+
+
+@app.post("/api/reactions/{reaction_id}/decision")
+async def api_resolve_major_reaction(reaction_id: int, request: ReactionDecisionRequest) -> Dict[str, Any]:
+    """核定重大天下反应；只解除检查点，不允许由此直接修改世界事实。"""
+    from ming_sim.reactions import resolve_major_reaction
+
+    game = get_game()
+    if game.state.ended:
+        raise HTTPException(status_code=409, detail="此局已结局封卷，不能再裁断天下反应。")
+    try:
+        result = resolve_major_reaction(game.session.db, game.session.state, reaction_id, request.choice)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from None
+    return {"ok": True, "reaction": result}
+
+
+@app.get("/api/reactions")
+async def api_list_reactions(
+    character: str = "", target: str = "", directive_type: str = "", limit: int = 12,
+) -> Dict[str, Any]:
+    """只读天下反应审计，供人物、外交、史册与行动枢纽回看。"""
+    db = get_game().session.db
+    clauses, params = [], []
+    if character:
+        clauses.append("actor=?")
+        params.append(character)
+    if target:
+        clauses.append("target=?")
+        params.append(target)
+    if directive_type:
+        clauses.append("rule_facts_snapshot LIKE ?")
+        params.append(f'%"directive_type": "{directive_type}"%')
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    rows = db.conn.execute(
+        f"SELECT * FROM reaction_events {where} ORDER BY turn DESC, id DESC LIMIT ?",
+        [*params, max(1, min(30, int(limit)))],
+    ).fetchall()
+    def decode(value: object, fallback: object):
+        try:
+            return json.loads(str(value or ""))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return fallback
+    return {"reactions": [{
+        **dict(row),
+        "rule_facts_snapshot": decode(row["rule_facts_snapshot"], {}),
+        "ai_proposal": decode(row["ai_proposal"], {}),
+        "validation_result": decode(row["validation_result"], {}),
+        "applied_effects": decode(row["applied_effects"], []),
+    } for row in rows]}
+
+
+@app.post("/api/turn/next")
+async def api_next_turn() -> Dict[str, Any]:
+    """进入下月（推进回合）"""
+    game = get_game()
+
+    from ming_sim.reactions import has_pending_major_reactions
+    if has_pending_major_reactions(game.session.db):
+        raise HTTPException(status_code=409, detail="尚有重大天下反应待主公裁断，不能进入下月")
+
+    try:
+        # 推进到下一回合
+        game.state.next_period()
+        game.session.db.save_state(game.state)
+
+        return {
+            "message": "已进入下月",
+            "turn": game.state.turn,
+            "year": game.state.year,
+            "period": game.state.period,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from None
+
+
 class WriteDecreeRequest(BaseModel):
     force: bool = False
 
@@ -4210,33 +5345,10 @@ class IssueDecreeRequest(BaseModel):
 
 @app.post("/api/turn/resolve")
 async def api_resolve_turn(body: IssueDecreeRequest = IssueDecreeRequest()) -> Dict[str, Any]:
-    """结算当前月：统一处理政务、军令、外部势力、事件与结局。"""
-    game = get_game()
-    was_ended = bool(game.state.ended)
-    issued_decree = bool(
-        game.session.db.list_directives(game.state, statuses=("draft",))
-        or game.session.db.list_structured_directives(game.state, statuses=("draft",))
+    raise HTTPException(
+        status_code=410,
+        detail="旧月末结算入口已弃用。请使用 /api/directive-batches/{id}/issue 与 /execute。",
     )
-    try:
-        result = game.session.resolve_turn(cheat_directive=body.cheat)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from None
-    decree = game.session.last_decree
-    if result.awaiting:
-        # 决策点暂停：回合未结算，返回决策点让前端弹窗；不刷新、不计 steam。
-        return {"decree": decree, "awaiting_decision": True,
-                "decisions": result.decisions, "state": game.state_payload()}
-    report = result.report
-    game.refresh_turn()
-    events = [
-        steam_events.add_stat(steam_events.STAT_TURNS_PLAYED),
-        steam_events.set_stat(steam_events.STAT_MAX_TURN_REACHED, int(game.state.turn)),
-    ]
-    if issued_decree:
-        events.insert(0, steam_events.add_stat(steam_events.STAT_DECREES_ISSUED))
-    if not was_ended and game.state.ended:
-        events.append(steam_events.add_stat(steam_events.STAT_ENDINGS_REACHED))
-    return steam_events.with_events({"decree": decree, "report": report, "state": game.state_payload()}, events)
 
 
 @app.post("/api/decree/issue/stream")

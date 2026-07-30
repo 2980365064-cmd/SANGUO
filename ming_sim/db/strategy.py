@@ -73,7 +73,7 @@ class _StrategyMixin:
 
     def list_strategic_nodes(self) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT id, name, province FROM strategic_nodes ORDER BY id"
+            "SELECT id, name, province, commandery_id, x, y FROM strategic_nodes ORDER BY id"
         ).fetchall()
         return [self._row_dict(row) for row in rows]
 
@@ -156,3 +156,132 @@ class _StrategyMixin:
             item["result"] = json.loads(str(item.get("result") or "{}"))
             orders.append(item)
         return orders
+
+    # ─── 跨月战役 ─────────────────────────────────────────────
+
+    def create_campaign(
+        self,
+        state: object,
+        *,
+        name: str,
+        objective: str = "",
+        theater_node: str = "",
+        commander: str = "",
+        army_ids: List[str] = None,
+        planned_duration: int = 3,
+    ) -> Dict[str, Any]:
+        """创建跨月战役"""
+        current_turn = int(getattr(state, "turn", 0))
+        import json as _json
+        cursor = self.conn.execute(
+            """
+            INSERT INTO campaigns
+            (name, objective, theater_node, status, commander, participant_armies,
+             started_turn, planned_duration)
+            VALUES (?, ?, ?, 'active', ?, ?, ?, ?)
+            """,
+            (
+                str(name),
+                str(objective),
+                str(theater_node),
+                str(commander),
+                _json.dumps(army_ids or [], ensure_ascii=False),
+                current_turn,
+                int(planned_duration),
+            ),
+        )
+        self.conn.commit()
+        return self.get_campaign(int(cursor.lastrowid))
+
+    def get_campaign(self, campaign_id: int) -> Dict[str, Any]:
+        row = self.conn.execute(
+            "SELECT * FROM campaigns WHERE id=?", (int(campaign_id),)
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"战役不存在：{campaign_id}")
+        item = self._row_dict(row)
+        import json as _json
+        item["participant_armies"] = _json.loads(item.get("participant_armies") or "[]")
+        return item
+
+    def list_campaigns(self, status: str = "") -> List[Dict[str, Any]]:
+        sql = "SELECT * FROM campaigns"
+        params: tuple[object, ...] = ()
+        if status:
+            sql += " WHERE status=?"
+            params = (status,)
+        sql += " ORDER BY id DESC"
+        rows = self.conn.execute(sql, params).fetchall()
+        results = []
+        import json as _json
+        for row in rows:
+            item = self._row_dict(row)
+            item["participant_armies"] = _json.loads(item.get("participant_armies") or "[]")
+            results.append(item)
+        return results
+
+    def update_campaign(self, campaign_id: int, **updates: Any) -> bool:
+        """更新战役字段"""
+        allowed = {"name", "objective", "theater_node", "status", "commander",
+                   "result", "battle_count", "casualties"}
+        fields = {k: v for k, v in updates.items() if k in allowed}
+        if not fields:
+            return False
+        import json as _json
+        sets = []
+        values = []
+        for k, v in fields.items():
+            sets.append(f"{k}=?")
+            values.append(v if not isinstance(v, (list, dict)) else _json.dumps(v, ensure_ascii=False))
+        values.append(int(campaign_id))
+        sets.append("updated_at=CURRENT_TIMESTAMP")
+        self.conn.execute(
+            f"UPDATE campaigns SET {', '.join(sets)} WHERE id=?", values
+        )
+        self.conn.commit()
+        return True
+
+    def advance_campaign(self, state: object, campaign_id: int) -> Dict[str, Any]:
+        """推进战役一回合。返回战役状态摘要。"""
+        campaign = self.get_campaign(campaign_id)
+        if campaign.get("status") != "active":
+            return campaign
+
+        actual = campaign.get("actual_turns", 0) + 1
+        planned = campaign.get("planned_duration", 3)
+        updates = {"actual_turns": actual}
+
+        # 检查是否超过计划时长
+        if actual >= planned:
+            updates["status"] = "completed"
+            updates["result"] = f"战役 {campaign['name']} 完成 {actual} 回合"
+
+        self.update_campaign(campaign_id, **updates)
+        result = self.get_campaign(campaign_id)
+        return result
+
+    def advance_all_campaigns(self, state: object) -> List[Dict[str, Any]]:
+        """月末推进所有 active 战役"""
+        active = self.list_campaigns(status="active")
+        results = []
+        for c in active:
+            r = self.advance_campaign(state, c["id"])
+            results.append(r)
+        return results
+
+    def add_campaign_reinforcements(self, campaign_id: int, army_ids: List[str]) -> bool:
+        """增援：追加军队到战役"""
+        campaign = self.get_campaign(campaign_id)
+        current = campaign.get("participant_armies", [])
+        import json as _json
+        merged = list(set(current) | set(army_ids))
+        self.conn.execute(
+            "UPDATE campaigns SET participant_armies=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (_json.dumps(merged, ensure_ascii=False), int(campaign_id)),
+        )
+        self.conn.commit()
+        return True
+
+    def order_campaign_retreat(self, campaign_id: int) -> bool:
+        """撤军：标记战役为撤退中"""
+        return self.update_campaign(campaign_id, status="retreating", result="下令撤军")

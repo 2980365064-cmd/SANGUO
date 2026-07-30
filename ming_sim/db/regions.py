@@ -30,6 +30,151 @@ from ming_sim.db._helpers import (
 
 
 class _RegionsMixin:
+    def seed_administrative_units(self) -> None:
+        """按建安十三年名册播种行政城池；绝不覆盖既有动态盘面。"""
+        directory = self.content.administrative_units or {}
+        provinces = list(directory.get("provinces", []))
+        city_directory = list(directory.get("cities", []))
+        commandery_labels = dict(directory.get("commandery_labels", {}))
+        for item in provinces:
+            self.conn.execute(
+                """INSERT OR IGNORE INTO administrative_provinces
+                (id, name, capital_city_id, transport, mobilization, public_support, military_pressure, security_coordination, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (str(item["id"]), str(item["name"]), str(item.get("capital_city_id") or ""),
+                 int(item.get("transport", 50)), int(item.get("mobilization", 50)),
+                 int(item.get("public_support", 50)), int(item.get("military_pressure", 50)),
+                 int(item.get("security_coordination", 50)), str(item.get("status") or "")),
+            )
+        by_commandery: Dict[str, List[Dict[str, object]]] = {}
+        for item in city_directory:
+            by_commandery.setdefault(str(item["commandery_id"]), []).append(dict(item))
+        rows = {str(row["id"]): row for row in self.conn.execute("SELECT * FROM regions ORDER BY id").fetchall()}
+        for commandery_id, label in commandery_labels.items():
+            if commandery_id not in rows:
+                raise ValueError(f"郡名册引用了不存在的郡：{commandery_id}")
+            self.conn.execute(
+                "UPDATE regions SET name=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                (str(label["name"]), str(label.get("status") or rows[commandery_id]["status"]), commandery_id),
+            )
+        rows = {str(row["id"]): row for row in self.conn.execute("SELECT * FROM regions ORDER BY id").fetchall()}
+        for commandery_id, entries in by_commandery.items():
+            row = rows.get(commandery_id)
+            if row is None:
+                raise ValueError(f"城池目录引用了不存在的郡：{commandery_id}")
+            fiscal = json.loads(str(row["fiscal"] or "{}"))
+            regional_stock = max(0, int(fiscal.get("grain_stock") or fiscal.get("granary") or 0))
+            existing = self.conn.execute(
+                "SELECT id, grain_stock FROM administrative_cities WHERE commandery_id=? ORDER BY is_commandery_capital DESC, id",
+                (commandery_id,),
+            ).fetchall()
+            total_before = regional_stock + sum(max(0, int(city["grain_stock"] or 0)) for city in existing)
+            for item in entries:
+                city_id = str(item["id"])
+                if self.conn.execute("SELECT 1 FROM administrative_cities WHERE id=?", (city_id,)).fetchone():
+                    self.conn.execute(
+                        "UPDATE administrative_cities SET name=?, commandery_id=?, province_id=?, territory_id=?, is_commandery_capital=?, strategic_role=? WHERE id=?",
+                        (str(item["name"]), commandery_id, str(item["province_id"]), city_id,
+                         1 if bool(item.get("capital")) else 0, str(item["role"]), city_id),
+                    )
+                    continue
+                requested = max(0, round(total_before * float(item.get("stock_share") or 0)))
+                granted = min(regional_stock, requested)
+                regional_stock -= granted
+                population = int(row["population"] or 0)
+                self.conn.execute(
+                    """INSERT INTO administrative_cities
+                    (id,name,commandery_id,province_id,territory_id,is_commandery_capital,strategic_role,
+                     controlled_by,order_score,grain_stock,market_capacity,fortification,garrison_capacity,status)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (city_id, str(item["name"]), commandery_id, str(item["province_id"]), city_id,
+                     1 if bool(item.get("capital")) else 0, str(item["role"]), str(row["controlled_by"]),
+                     max(20, min(90, int(row["public_support"]) - int(row["unrest"]) // 3)), granted,
+                     max(20, min(90, int(fiscal.get("commerce_tax") or fiscal.get("commerce") or 0) * 8 + 24)),
+                     max(20, min(95, int(fiscal.get("fortification") or 50))),
+                     max(1, min(6, 1 + population // 110)), f"{str(item['name'])}为{str(item['role'])}"),
+                )
+            fiscal["grain_stock"] = regional_stock
+            fiscal["granary"] = regional_stock
+            self.conn.execute("UPDATE regions SET fiscal=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (json.dumps(fiscal, ensure_ascii=False), commandery_id))
+        self.recompute_administrative_control()
+        self.conn.commit()
+
+    def recompute_administrative_control(self) -> None:
+        """城权决定郡权，郡权多数决定州权；州权为派生事实，不单独写入。"""
+        commanderies = self.conn.execute("SELECT id, kind, controlled_by FROM regions ORDER BY id").fetchall()
+        for commandery in commanderies:
+            cities = self.conn.execute(
+                "SELECT controlled_by,is_commandery_capital FROM administrative_cities WHERE commandery_id=? ORDER BY is_commandery_capital DESC,id",
+                (commandery["id"],),
+            ).fetchall()
+            if not cities:
+                continue
+            tally: Dict[str, int] = {}
+            for city in cities:
+                power = str(city["controlled_by"])
+                tally[power] = tally.get(power, 0) + 1
+            high = max(tally.values())
+            leaders = sorted(power for power, count in tally.items() if count == high)
+            capital = next((str(city["controlled_by"]) for city in cities if int(city["is_commandery_capital"] or 0)), "")
+            controller = capital if capital in leaders else leaders[0]
+            if controller != str(commandery["controlled_by"]):
+                self.conn.execute("UPDATE regions SET controlled_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (controller, commandery["id"]))
+
+    def settle_administrative_layers(self, state: GameState) -> List[Dict[str, object]]:
+        """无随机的层级月结：城池围城/驻军 → 州域统筹；郡级仍由既有区域结算负责。"""
+        turn = int(getattr(state, "turn", 0))
+        changes: List[Dict[str, object]] = []
+        active_targets = {str(row["target_node"]) for row in self.conn.execute("SELECT target_node FROM sieges WHERE status='active'").fetchall()}
+        # 旧档围城以郡节点为目标；只在兼容读取时映射至该郡治城，不创建第二份围城事实。
+        for target in list(active_targets):
+            capital = self.conn.execute("SELECT id FROM administrative_cities WHERE commandery_id=? AND is_commandery_capital=1", (target,)).fetchone()
+            if capital is not None:
+                active_targets.add(str(capital["id"]))
+        for city in self.conn.execute("SELECT * FROM administrative_cities ORDER BY id").fetchall():
+            status = "围城中" if str(city["id"]) in active_targets else "未围"
+            if status != str(city["siege_status"]):
+                self.conn.execute("UPDATE administrative_cities SET siege_status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (status, city["id"]))
+                self.conn.execute("INSERT INTO administrative_logs (turn,scope,entity_id,field,old_value,new_value,reason) VALUES (?,?,?,?,?,?,?)", (turn,"city",city["id"],"siege_status",str(city["siege_status"]),status,"围城状态随既有围城结算同步"))
+                changes.append({"scope":"city","id":city["id"],"field":"siege_status","value":status})
+        for province in self.conn.execute("SELECT * FROM administrative_provinces ORDER BY id").fetchall():
+            rows = self.conn.execute("SELECT public_support,military_pressure FROM regions WHERE kind=?", (province["id"],)).fetchall()
+            if not rows:
+                continue
+            support = round(sum(int(row["public_support"] or 0) for row in rows) / len(rows))
+            pressure = round(sum(int(row["military_pressure"] or 0) for row in rows) / len(rows))
+            for field, value in (("public_support", support), ("military_pressure", pressure)):
+                old = int(province[field] or 0)
+                if old == value:
+                    continue
+                self.conn.execute(f"UPDATE administrative_provinces SET {field}=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (value, province["id"]))
+                self.conn.execute("INSERT INTO administrative_logs (turn,scope,entity_id,field,old_value,new_value,reason) VALUES (?,?,?,?,?,?,?)", (turn,"province",province["id"],field,str(old),str(value),"辖郡月度事实汇总"))
+                changes.append({"scope":"province","id":province["id"],"field":field,"value":value})
+        self.recompute_administrative_control()
+        self.conn.commit()
+        return changes
+
+    def administrative_detail(self, scope: str, entity_id: str) -> Dict[str, object]:
+        if scope == "city":
+            row = self.conn.execute("SELECT * FROM administrative_cities WHERE id=?", (entity_id,)).fetchone()
+            if row is None: raise ValueError("城池不存在")
+            armies = self.conn.execute("SELECT * FROM armies WHERE station_node IN (?, ?) AND active=1 ORDER BY id", (row["id"], row["commandery_id"])).fetchall()
+            return {"scope": "city", "id": row["id"], "name": row["name"], "commandery_id": row["commandery_id"], "province_id": row["province_id"], "controlled_by": row["controlled_by"], "strategic_role": row["strategic_role"], "order_score": row["order_score"], "grain_stock": row["grain_stock"], "market_capacity": row["market_capacity"], "fortification": row["fortification"], "garrison_capacity": row["garrison_capacity"], "siege_status": row["siege_status"], "status": row["status"], "stationed_armies": [dict(a) for a in armies]}
+        if scope == "province":
+            province = self.conn.execute("SELECT * FROM administrative_provinces WHERE id=?", (entity_id,)).fetchone()
+            if province is None: raise ValueError("州不存在")
+            commanderies = self.conn.execute("SELECT * FROM regions WHERE kind=? ORDER BY name", (entity_id,)).fetchall()
+            cities = self.conn.execute("SELECT * FROM administrative_cities WHERE province_id=? ORDER BY name", (entity_id,)).fetchall()
+            tally: Dict[str, int] = {}
+            for commandery in commanderies: tally[str(commandery["controlled_by"])] = tally.get(str(commandery["controlled_by"]), 0) + 1
+            controller = sorted(tally, key=lambda key: (-tally[key], key))[0] if tally else ""
+            return {"scope":"province", "id":province["id"], "name":province["name"], "controlled_by":controller, "transport":province["transport"], "mobilization":province["mobilization"], "public_support":province["public_support"], "military_pressure":province["military_pressure"], "security_coordination":province["security_coordination"], "status":province["status"], "commandery_count":len(commanderies), "city_count":len(cities), "population":sum(int(r["population"] or 0) for r in commanderies), "tax_per_turn":sum(int(r["tax_per_turn"] or 0) for r in commanderies), "commanderies":[{"id":r["id"],"name":r["name"],"controlled_by":r["controlled_by"]} for r in commanderies]}
+        row = self.conn.execute("SELECT * FROM regions WHERE id=?", (entity_id,)).fetchone()
+        if row is None: raise ValueError("郡不存在")
+        fiscal = json.loads(str(row["fiscal"] or "{}"))
+        cities = self.conn.execute("SELECT id,name,controlled_by,fortification,grain_stock,is_commandery_capital,strategic_role,siege_status FROM administrative_cities WHERE commandery_id=? ORDER BY is_commandery_capital DESC,name", (entity_id,)).fetchall()
+        capital = next((dict(city) for city in cities if int(city["is_commandery_capital"] or 0)), None)
+        return {"scope":"commandery", "id":row["id"], "name":row["name"], "province_id":row["kind"], "controlled_by":row["controlled_by"], "population":row["population"], "public_support":row["public_support"], "unrest":row["unrest"], "military_pressure":row["military_pressure"], "gentry_resistance":row["gentry_resistance"], "tax_per_turn":row["tax_per_turn"], "fiscal":fiscal, "status":row["status"], "city":capital, "cities":[dict(city) for city in cities], "city_count":len(cities)}
     def region_grain_stock(self, region_id: str) -> int:
         row = self.conn.execute("SELECT fiscal FROM regions WHERE id=?", (region_id,)).fetchone()
         if row is None:
@@ -38,7 +183,9 @@ class _RegionsMixin:
             fiscal = json.loads(str(row["fiscal"] or "{}"))
         except (TypeError, ValueError, json.JSONDecodeError):
             fiscal = {}
-        return max(0, int(fiscal.get("grain_stock") or fiscal.get("granary") or 0))
+        regional_stock = max(0, int(fiscal.get("grain_stock") or fiscal.get("granary") or 0))
+        city_stock = sum(max(0, int(city["grain_stock"] or 0)) for city in self.conn.execute("SELECT grain_stock FROM administrative_cities WHERE commandery_id=?", (region_id,)).fetchall())
+        return regional_stock + city_stock
 
     def adjust_region_grain_stock(
         self,
@@ -55,10 +202,34 @@ class _RegionsMixin:
             fiscal = json.loads(str(row["fiscal"] or "{}"))
         except (TypeError, ValueError, json.JSONDecodeError):
             fiscal = {}
-        old_value = max(0, int(fiscal.get("grain_stock") or fiscal.get("granary") or 0))
-        new_value = max(0, old_value + int(delta))
-        fiscal["grain_stock"] = new_value
-        fiscal["granary"] = new_value
+        regional_stock = max(0, int(fiscal.get("grain_stock") or fiscal.get("granary") or 0))
+        cities = self.conn.execute("SELECT id, grain_stock FROM administrative_cities WHERE commandery_id=? ORDER BY is_commandery_capital DESC,id", (region_id,)).fetchall()
+        city_stock = sum(max(0, int(city["grain_stock"] or 0)) for city in cities)
+        old_value = regional_stock + city_stock
+        requested_delta = int(delta)
+        if requested_delta < 0:
+            actual_delta = -min(old_value, abs(requested_delta))
+            remaining = abs(actual_delta)
+            city_delta = 0
+            for city in cities:
+                old_stock = max(0, int(city["grain_stock"] or 0))
+                consumed = min(old_stock, remaining)
+                if consumed:
+                    self.conn.execute("UPDATE administrative_cities SET grain_stock=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (old_stock - consumed, city["id"]))
+                    self.conn.execute("INSERT INTO administrative_logs (turn,scope,entity_id,field,old_value,new_value,reason) VALUES (?,?,?,?,?,?,?)", (int(getattr(state, "turn", 0)), "city", city["id"], "grain_stock", str(old_stock), str(old_stock-consumed), str(reason)))
+                    city_delta -= consumed
+                    remaining -= consumed
+                if not remaining:
+                    break
+            city_stock += city_delta
+            regional_stock = max(0, regional_stock - remaining)
+        else:
+            actual_delta = requested_delta
+            city_delta = 0
+            regional_stock += actual_delta
+        new_value = regional_stock + city_stock
+        fiscal["grain_stock"] = regional_stock
+        fiscal["granary"] = regional_stock
         self.conn.execute(
             "UPDATE regions SET fiscal=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
             (json.dumps(fiscal, ensure_ascii=False), region_id),
@@ -145,7 +316,7 @@ class _RegionsMixin:
             except Exception:
                 fiscal = {}
             held = ""
-            if str(row["controlled_by"]) != "ming":
+            if str(row["controlled_by"]) != "liu_bei":
                 held = f"【已为{self.power_display_name(row['controlled_by'])}所据】"
             parts.append(
                 f"{row['name']}{held}：民心{row['public_support']}、动乱{row['unrest']}、"
@@ -163,8 +334,8 @@ class _RegionsMixin:
         if row is None:
             raise ValueError(f"地区未入库：{raw_name}")
         held = ""
-        if str(row["controlled_by"]) != "ming":
-            held = f"，控制权：已为{self.power_display_name(row['controlled_by'])}所据（非大明辖治）"
+        if str(row["controlled_by"]) != "liu_bei":
+            held = f"，控制权：已为{self.power_display_name(row['controlled_by'])}所据（非己方辖治）"
         try:
             fiscal = json.loads(str(row["fiscal"] or "{}"))
         except Exception:
@@ -355,11 +526,11 @@ class _RegionsMixin:
                     }
                 )
 
-                # ── 收复触发：controlled_by 由非 ming → ming，覆盖 on_restore 预置 ──
+                # ── 收复触发：controlled_by 由非 liu_bei → liu_bei，覆盖 on_restore 预置 ──
                 if (
                     field == "controlled_by"
-                    and str(stored_new) == "ming"
-                    and str(old_value) != "ming"
+                    and str(stored_new) == "liu_bei"
+                    and str(old_value) != "liu_bei"
                 ):
                     extra = self._apply_on_restore(state, region_id, event, edict_id, actor, reason)
                     changes.extend(extra)

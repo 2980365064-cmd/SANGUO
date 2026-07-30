@@ -31,6 +31,7 @@ def test_shared_modal_preserves_secrets_and_exposes_advanced_fields():
 
 def test_menu_and_game_sidebar_share_api_config_modal():
     source = (ROOT / "web/src/main.tsx").read_text(encoding="utf-8")
+    # 新架构中，API 配置在 MenuScreen 中提供
+    # 游戏内 API 配置将迁移到设置页面（Step 5）
     assert 'mode="menu"' in source
-    assert 'className="api-config-sidebar"' in source
-    assert source.count("<ApiConfigModal") == 2
+    assert "<ApiConfigModal" in source

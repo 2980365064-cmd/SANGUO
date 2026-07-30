@@ -130,7 +130,7 @@ def eval_gate_key(key: str, metrics: Dict[str, int], db: "GameDB") -> Optional[i
 
 
 def eval_gate_key_str(key: str, db: "GameDB") -> Optional[str]:
-    """取一个文本型字段值（如 region.<id>.controlled_by → 'ming'/'houjin'）。
+    """取一个文本型字段值（如 region.<id>.controlled_by → 'liu_bei'/'cao_cao'）。
     支持单 id 的 region/army/power 文本字段，以及 character / event 叶子。
     解析失败/数据缺失返回 None。
     """

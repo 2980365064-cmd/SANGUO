@@ -1,6 +1,6 @@
 import type { TimelineItem, Turn } from "./types";
 
-export const GAME_ENTRANCES = ["朝议", "军令", "任事", "外交", "国策", "家族", "史册"] as const;
+export const GAME_ENTRANCES = ["朝议", "军令", "任事", "外交", "国策", "家族", "史册", "府堂议事", "人物"] as const;
 export type GameEntrance = typeof GAME_ENTRANCES[number];
 export const RESOURCE_METRICS = ["军资", "粮秣", "民望", "名分", "军心", "士族支持"] as const;
 export const COMMAND_DOCK_ITEMS = [
@@ -20,7 +20,7 @@ export type FutureMonthSlot = {
 const STAGE_SCENES: Record<string, { label: string; asset: string; position: string }> = {
   流亡军: { label: "夏口军营", asset: "/底图.jpg", position: "center 72%" },
   荆州立足: { label: "荆州治所", asset: "/底图.jpg", position: "center 58%" },
-  益州牧: { label: "成都州牧府", asset: "/底图.jpg", position: "left 68%" },
+  益州治蜀: { label: "成都军府", asset: "/底图.jpg", position: "left 68%" },
   汉中王: { label: "汉中王府", asset: "/底图.jpg", position: "center 42%" },
   称帝后: { label: "蜀汉宫城", asset: "/底图.jpg", position: "right 62%" },
 };

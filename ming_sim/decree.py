@@ -643,6 +643,8 @@ def _generate_ending_summary(
     try:
         db.save_ending_summary(
             state, str(outcome.get("status") or ""), summary_text, timeline,
+            route=str(outcome.get("route") or outcome.get("status") or ""),
+            evidence=list(outcome.get("evidence") or []),
         )
     except Exception as exc:
         tlog(f"[ending-summary] 落库失败：{exc}")

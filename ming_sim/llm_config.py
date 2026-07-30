@@ -23,6 +23,7 @@ GAME_SETTINGS_DEFAULTS = {
     "secret_order_person_limit": 1,  # 单个承办人同时进行中的密令上限。
     "secret_order_total_limit": 5,  # 全朝同时进行中的密令总上限。
     "character_limit": 120,  # 本局朝臣人物建档上限；后宫不计入。调高会增加名册/推演 token 消耗。
+    "world_reaction_intensity": "standard",  # 天下反应频率；不改变硬规则或重大待决阈值。
     "minister_temperature": 0.6,  # 大臣 agent 采样温度。
     "minister_top_p": 0.9,  # 大臣 agent nucleus sampling。
     "simulator_temperature": 0.5,  # 推演 agent 采样温度。
@@ -230,6 +231,8 @@ def load_runtime_game() -> Dict[str, object]:
         out["character_limit"] = max(40, min(300, int(data.get("character_limit", out["character_limit"]))))
     except (TypeError, ValueError):
         pass
+    intensity = str(data.get("world_reaction_intensity", out["world_reaction_intensity"]) or "standard")
+    out["world_reaction_intensity"] = intensity if intensity in {"restrained", "standard", "stormy"} else "standard"
     for key in (
         "minister_temperature",
         "minister_top_p",
@@ -268,6 +271,7 @@ def save_runtime_game(
     simulator_top_p: float = 0.5,
     extractor_temperature: float = 0.1,
     extractor_top_p: float = 0.1,
+    world_reaction_intensity: str = "standard",
 ) -> Dict[str, object]:
     """写 data/runtime_game.json。各项 clamp 到合法区间。返回落盘后的设置。"""
     os.makedirs(os.path.dirname(RUNTIME_GAME_PATH), exist_ok=True)
@@ -280,6 +284,7 @@ def save_runtime_game(
         "secret_order_person_limit": max(1, min(10, int(secret_order_person_limit))),
         "secret_order_total_limit": max(1, min(50, int(secret_order_total_limit))),
         "character_limit": max(40, min(300, int(character_limit))),
+        "world_reaction_intensity": world_reaction_intensity if world_reaction_intensity in {"restrained", "standard", "stormy"} else "standard",
         "minister_temperature": _clamp_float(minister_temperature, 0.6, 0.0, 1.0),
         "minister_top_p": _clamp_float(minister_top_p, 0.9, 0.0, 1.0),
         "simulator_temperature": _clamp_float(simulator_temperature, 0.5, 0.0, 1.0),

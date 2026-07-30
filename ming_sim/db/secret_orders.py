@@ -10,13 +10,30 @@ import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
 from ming_sim.adjudication import (
+    COMMON_FORBIDDEN_TEXT,
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
     validate_ai_proposal,
 )
 from ming_sim.assets import format_money, format_money_delta
+
+
+# ---------------------------------------------------------------------------
+# 自由密令路径边界常量
+# ---------------------------------------------------------------------------
+
+FREE_SECRET_ORDER_BOUNDS = {
+    "progress_delta": (-20, 30),
+}
+
+SECRET_ORDER_FORBIDDEN_TEXT = {
+    **COMMON_FORBIDDEN_TEXT,
+    "策反成功": "密令不得直接写策反成功",
+    "暗杀成功": "密令不得直接写暗杀成功",
+}
 from ming_sim.constants import (
     ARMY_FIELD_ALIASES, ARMY_FIELD_LABELS, ARMY_QUANTITY_FIELDS, ARMY_SCORE_FIELDS, ARMY_TEXT_FIELDS,
     BUILDING_CATEGORIES, BUILDING_FIELD_LABELS, BUILDING_OUTPUT_METRICS,
@@ -98,13 +115,85 @@ def build_secret_order_adjudication_pack(
     )
 
 
+def _validate_free_secret_order(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由密令提案是否在边界内。
+
+    AI 通过查询工具获取密令数据后，输出自由评估。
+    校验器确保 progress_delta 在安全范围内，且 AI 的声称与盘面事实一致。
+    """
+    # 1. feasibility=impossible → 安全默认（继续密令）
+    feasibility = str(proposal.get("feasibility", "medium"))
+    if feasibility == "impossible":
+        return {
+            "secret_action": "继续密令",
+            "progress_delta": 0,
+            "feasibility": "impossible",
+            "reasoning": proposal.get("reasoning", []),
+            "narrative": str(proposal.get("narrative", "密令方案不可行，继续推进。")),
+            "risk_note": str(proposal.get("risk_note", "")),
+            "progress_note": str(proposal.get("progress_note", "")),
+        }
+
+    # 1b. 禁止字段检查
+    check_forbidden_fields(proposal)
+
+    # 2. 提取并裁剪 progress_delta
+    progress_delta = int(proposal.get("progress_delta", 0))
+    progress_delta = max(
+        FREE_SECRET_ORDER_BOUNDS["progress_delta"][0],
+        min(FREE_SECRET_ORDER_BOUNDS["progress_delta"][1], progress_delta),
+    )
+
+    # 3. 禁止文本检查
+    reasoning_text = " ".join(str(r) for r in proposal.get("reasoning", []))
+    narrative = str(proposal.get("narrative", ""))
+    progress_note = str(proposal.get("progress_note", ""))
+    combined = f"{reasoning_text}\n{narrative}\n{progress_note}"
+    for marker, message in SECRET_ORDER_FORBIDDEN_TEXT.items():
+        if marker in combined:
+            raise ValueError(message)
+
+    # 4. 事实一致性检查
+    facts = pack.get("facts", {})
+    order = facts.get("order", {})
+    audit = pack.get("audit", {})
+
+    # 声称"承办人能力出色" → 检查 minister 属性
+    if "能力出色" in reasoning_text or "精明能干" in reasoning_text:
+        minister = facts.get("minister", {})
+        intelligence = int(minister.get("intelligence", 50))
+        if intelligence < 60:
+            raise ValueError("AI 声称'承办人能力出色'，但盘面事实不支持（intelligence<60）。")
+
+    # 声称"密令即将完成" → 检查 due 状态
+    if "即将完成" in reasoning_text or "大功告成" in reasoning_text:
+        due = audit.get("due", False)
+        if not due:
+            raise ValueError("AI 声称'密令即将完成'，但盘面事实不支持（密令未到期）。")
+
+    # 5. 状态转换合法性
+    status_proposal = str(proposal.get("status", ""))
+    if status_proposal in {"close_done", "close_failed", "submit_for_review"}:
+        if not audit.get("due", False):
+            raise ValueError(f"密令未到期，不能提议 {status_proposal}。")
+
+    return {
+        "secret_action": str(proposal.get("secret_action", "自由密令评估")),
+        "outcome": str(proposal.get("outcome") or proposal.get("secret_action", "")),
+        "progress_delta": progress_delta,
+        "feasibility": feasibility,
+        "reasoning": proposal.get("reasoning", []),
+        "narrative": narrative,
+        "risk_note": str(proposal.get("risk_note", "")),
+        "progress_note": progress_note,
+        "status": status_proposal,
+    }
+
+
 def run_secret_order_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """密令 AI 裁判：统一走自由路径。"""
     try:
-        return validate_ai_proposal(
-            pack,
-            proposal,
-            allowed_change_kinds=["secret_progress", "secret_sim_note", "secret_status"],
-        )
+        return _validate_free_secret_order(pack, proposal)
     except ValueError as error:
         pending = record_pending_adjudication(db, state, pack, str(error), proposal)
         return {"status": "pending_review", "pending_adjudication": pending}

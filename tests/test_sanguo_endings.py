@@ -5,7 +5,9 @@ from ming_sim.context import (
     ENDING_ONGOING,
     ENDING_REGIME_COLLAPSED,
     ENDING_REWRITTEN_223,
+    ENDING_THREE_KINGDOMS,
     ENDING_UNIFIED_VICTORY,
+    ENDING_YIZHOU_GUARDIAN,
     ENDING_YIZHOU_CORE_FALLEN,
     victory_status,
 )
@@ -135,8 +137,40 @@ def test_april_223_distinguishes_historical_baidi_from_living_rewrite():
         db.close()
 
 
+def test_223_routes_to_three_kingdoms_or_yizhou_guardian_with_evidence():
+    db = _board()
+    try:
+        state = _state(223, 4, 177)
+        db.conn.execute("UPDATE regions SET controlled_by='liu_bei' WHERE id IN ('chengdu','jiangzhou','yongan','jiangling')")
+        outcome = victory_status(db, state)
+        assert outcome["status"] == ENDING_THREE_KINGDOMS
+        assert outcome["evidence"]
+        db.conn.execute("UPDATE regions SET controlled_by='cao_cao' WHERE id='jiangling'")
+        guarded = victory_status(db, state)
+        assert guarded["status"] == ENDING_YIZHOU_GUARDIAN
+        assert guarded["evidence"]
+    finally:
+        db.close()
+
+
 def test_ending_prompt_is_fully_sanguo_and_demands_six_dimension_review():
     prompt = GameContent.load().ending_summary_prompt
     assert all(name in prompt for name in ("统一", "名分", "民生", "将相", "外交", "军功"))
     for stale in ("崇祯", "京师陷落", "煤山", "明史", "国库/内库"):
         assert stale not in prompt
+
+
+def test_ending_summary_persists_structured_route_and_evidence():
+    db = _board()
+    try:
+        state = _state(223, 4, 177)
+        outcome = victory_status(db, state)
+        db.save_ending_summary(
+            state, str(outcome["status"]), "规则结局摘要", list(outcome["timeline"]),
+            route=str(outcome["route"]), evidence=list(outcome["evidence"]),
+        )
+        stored = db.get_ending_summary()
+        assert stored and stored["route"] == outcome["route"]
+        assert stored["evidence"] == outcome["evidence"]
+    finally:
+        db.close()

@@ -1591,7 +1591,7 @@ def _displace_duplicate_offices(
         return []
     displaced: List[str] = []
     rows = db.conn.execute(
-        "SELECT name, office FROM characters WHERE status='active' AND power_id='ming' AND name!=?",
+        "SELECT name, office FROM characters WHERE status='active' AND power_id='liu_bei' AND name!=?",
         (new_holder,),
     ).fetchall()
     for row in rows:
@@ -2077,13 +2077,8 @@ def apply_score_extraction(
 
 
 def _resolve_victory(db: GameDB, state: GameState, extracted: Dict[str, object]) -> Dict[str, object]:
-    """结局判定：叙事型（崇祯退位/自尽，extractor 抽 emperor_fate）优先于数值型（京畿失守）。
-    20 年到期（timeout）在 decree 结局收口判，不在此。"""
-    fate = extracted.get("emperor_fate")
-    if fate in ("abdicate", "suicide"):
-        if fate == "abdicate":
-            return {"status": "emperor_abdicate", "summary": "崇祯帝退位逊国，大明皇统中绝。"}
-        return {"status": "emperor_suicide", "summary": "崇祯帝自尽殉国，煤山一缢，大明社稷俱亡。"}
+    """结局判定：数值型（京畿失守等）。
+    超时（timeout）在 decree 结局收口判，不在此。"""
     return victory_status(db, state)
 
 

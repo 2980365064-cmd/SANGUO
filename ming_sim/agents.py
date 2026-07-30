@@ -466,7 +466,7 @@ def build_simulator_context(simulator_payload: Optional[Dict[str, object]]) -> s
             f"【本回合年月】{_y} 年 {_p} 月（第 {t.get('turn')} 回合）。"
             f"涉及年月时以此为准。\n"
             f"【奏章第二行必须逐字写】{_y}年{_p}月 {TURN_UNIT}末奏章\n"
-            f"不得改成“崇祯元年/正月/第一月”等：纪年用上面的 {_y} 年原数，月份用上面的 {_p} 月原数，"
+            f"不得改成史实年号或其他纪年：纪年用上面的 {_y} 年原数，月份用上面的 {_p} 月原数，"
             f"绝不可拿史实年号或回合序号覆盖这两个数字。\n"
         )
 

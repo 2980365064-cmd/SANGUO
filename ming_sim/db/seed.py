@@ -32,22 +32,37 @@ from ming_sim.db._helpers import (
 
 class _SeedMixin:
     def seed_static_data(self) -> None:
-        if not self.table_has_rows("strategic_nodes"):
-            routes = self.content.routes
-            if routes is None:
-                raise RuntimeError("GameContent.routes 尚未加载。")
-            self.conn.executemany(
-                "INSERT INTO strategic_nodes (id, name, province) VALUES (?, ?, ?)",
-                [(node.id, node.name, node.province) for node in routes.nodes],
-            )
-        if not self.table_has_rows("strategic_routes"):
-            routes = self.content.routes
-            if routes is None:
-                raise RuntimeError("GameContent.routes 尚未加载。")
-            self.conn.executemany(
-                "INSERT INTO strategic_routes (source, target, kind, note) VALUES (?, ?, ?, ?)",
-                [(edge.source, edge.target, edge.kind, edge.note) for edge in routes.edges],
-            )
+        catalog = self.content.city_strategic_catalog
+        if catalog is None:
+            raise RuntimeError("GameContent.city_strategic_catalog 尚未加载。")
+        # 战略节点与路线：使用 INSERT OR IGNORE 以保留玩家/动态改写。
+        # 首次播种时全量写入；再次调用时跳过已有行。
+        self.conn.executemany(
+            """INSERT OR IGNORE INTO strategic_nodes (id, name, province, commandery_id, x, y)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            [
+                (node.city_id, node.name, node.province_id, node.commandery_id, node.x, node.y)
+                for node in catalog.nodes
+            ],
+        )
+        self.conn.executemany(
+            """INSERT OR IGNORE INTO strategic_routes (source, target, kind, note)
+            VALUES (?, ?, ?, ?)""",
+            [
+                (edge.source, edge.target, edge.kind, edge.note)
+                for edge in catalog.edges
+            ],
+        )
+        # 写入拓扑版本标记
+        self.conn.execute(
+            "INSERT INTO kv_store (key, value) VALUES ('strategic_topology_version', ?)"
+            " ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (catalog.topology_version,),
+        )
+        self.conn.execute(
+            "INSERT INTO kv_store (key, value) VALUES ('strategic_node_model', 'city_only')"
+            " ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        )
         if not self.table_has_rows("offices"):
             for office_type, definition in self.content.office_definitions.items():
                 self.conn.execute(
@@ -287,6 +302,7 @@ class _SeedMixin:
                     json.dumps(region.fiscal, ensure_ascii=False),
                 ),
             )
+        self.seed_administrative_units()
         is_fresh_armies_seed = not self.table_has_rows("armies")
         if is_fresh_armies_seed:
             for army in self.content.armies.values():
@@ -340,7 +356,7 @@ class _SeedMixin:
                 """,
                 (
                     "liu_qi", "liu_bei", "驻军权",
-                    json.dumps({"node_id": "jiangxia", "station": "夏口", "scope": "三支刘备军驻扎与补给"}, ensure_ascii=False),
+                    json.dumps({"node_id": "city:jiangxia", "station": "夏口", "scope": "三支刘备军驻扎与补给"}, ensure_ascii=False),
                     1,
                 ),
             )
@@ -419,14 +435,40 @@ class _SeedMixin:
         scenario_row = self.conn.execute(
             "SELECT value FROM kv_store WHERE key='scenario_id'"
         ).fetchone()
-        legacy_power = self.conn.execute(
-            "SELECT 1 FROM powers WHERE id IN ('ming','houjin','mongol','korea','japan','rebels') LIMIT 1"
-        ).fetchone()
-        if scenario_row is None and legacy_power is None:
+        if scenario_row is None:
             self.conn.execute(
                 "INSERT INTO kv_store (key, value) VALUES ('scenario_id', ?)",
                 (SANGUO_SCENARIO_ID,),
             )
+        # 新局断言：战略节点集合 = 行政城池集合
+        if is_fresh_armies_seed:
+            node_ids = {
+                str(r["id"])
+                for r in self.conn.execute("SELECT id FROM strategic_nodes").fetchall()
+            }
+            city_ids = {
+                str(r["id"])
+                for r in self.conn.execute("SELECT id FROM administrative_cities").fetchall()
+            }
+            if node_ids != city_ids:
+                missing = city_ids - node_ids
+                extra = node_ids - city_ids
+                raise RuntimeError(
+                    f"战略节点与行政城池不一致。缺少: {sorted(missing)}；多余: {sorted(extra)}"
+                )
+            # 断言：所有军队驻城属于战略节点
+            for army_row in self.conn.execute("SELECT id, station_node FROM armies").fetchall():
+                if str(army_row["station_node"]) not in node_ids:
+                    raise RuntimeError(
+                        f"军队 {army_row['id']} 驻地 {army_row['station_node']} 不在战略节点中。"
+                    )
+            # 断言：所有路线端点属于战略节点
+            for route_row in self.conn.execute("SELECT source, target FROM strategic_routes").fetchall():
+                for endpoint in (str(route_row["source"]), str(route_row["target"])):
+                    if endpoint not in node_ids:
+                        raise RuntimeError(
+                            f"路线端点 {endpoint} 不在战略节点中。"
+                        )
         self.conn.commit()
 
     def _seed_opening_army_arms(self) -> None:

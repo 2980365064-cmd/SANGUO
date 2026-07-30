@@ -33,9 +33,11 @@ from ming_sim.db.turns import _TurnsMixin
 from ming_sim.db.chat import _ChatMixin
 from ming_sim.db.secret_orders import _SecretOrdersMixin
 from ming_sim.db.action_plans import _ActionPlansMixin
+from ming_sim.db.suggestions import _SuggestionsMixin
 from ming_sim.db.kv import _KvMixin
 from ming_sim.db.admin import _AdminMixin
 from ming_sim.db.strategy import _StrategyMixin
+from ming_sim.db.directive_drafts import _DirectiveDraftsMixin, _DirectiveBatchesMixin
 
 
 class GameDB(
@@ -56,6 +58,9 @@ class GameDB(
     _ChatMixin,
     _SecretOrdersMixin,
     _ActionPlansMixin,
+    _SuggestionsMixin,
+    _DirectiveDraftsMixin,
+    _DirectiveBatchesMixin,
     _KvMixin,
     _AdminMixin,
     _StrategyMixin,

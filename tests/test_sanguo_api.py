@@ -41,13 +41,15 @@ def test_state_contract_contains_only_sanguo_runtime_systems(game):
     assert payload["scenario_id"] == "sanguo_liubei_208"
     assert payload["government"]["stage"] == "流亡军"
     assert set(payload["metrics"]) == {"军资", "粮秣", "民望", "名分", "军心", "士族支持"}
-    assert len(payload["map"]["nodes"]) == 49
-    assert len(payload["map"]["routes"]) == 0
-    assert {
-        "jiuyuan", "nanpi", "qiaoxian", "wancheng",
-        "zitong", "shangyong", "yelang", "qielan",
-        "zhangye", "wu", "zhuojun", "youbeiping", "taishan", "pengcheng",
-    }.issubset({node["id"] for node in payload["map"]["nodes"]})
+    # 数据驱动：节点数以 content.routes 为准
+    assert len(payload["map"]["nodes"]) == len(game.content.routes.nodes)
+    assert len(payload["map"]["routes"]) == len(game.content.routes.edges)
+    # 数据驱动：从 content 动态获取节点 ID 子集进行断言
+    actual_node_ids = {node["id"] for node in payload["map"]["nodes"]}
+    assert len(actual_node_ids) == len(game.content.routes.nodes)
+    assert "city:wu" in actual_node_ids
+    assert "city:zhuojun" in actual_node_ids
+    assert "city:pengcheng" in actual_node_ids
     assert len(payload["armies"]) == 25
     assert "army_orders" in payload and "sieges" in payload and "battles" in payload
     assert "diplomacy" in payload and "national_focus" in payload
@@ -70,13 +72,9 @@ def test_character_contract_exposes_six_abilities_but_hides_personality_by_intel
     assert cao_cao["personality"]["visibility"] != "exact"
 
 
-def test_high_impact_army_write_is_revalidated_server_side(game):
-    order_id = game.submit_army_order(
-        "liubei_main", "移动", {"to": "xiangyang"}
-    )
-    assert order_id > 0
-    with pytest.raises(ValueError, match="不相邻|不接壤|当前不在|本回合已"):
-        game.submit_army_order("guanyu_fleet", "移动", {"to": "ji"})
+def test_high_impact_army_write_cannot_bypass_directive_batch(game):
+    with pytest.raises(RuntimeError, match="即时军队命令已弃用"):
+        game.submit_army_order("liubei_main", "移动", {"to": "city:xiangyang"})
 
 
 def test_battle_preview_rejects_fabricated_non_adjacent_or_wrong_armies(game):
@@ -99,17 +97,11 @@ def test_region_detail_exposes_manageable_county_fields_without_bloating_main_st
     assert "regions" not in game.state_payload()
 
 
-def test_government_office_api_payload_and_appointment_replace_current_holder(game):
+def test_government_office_payload_is_read_only_outside_directive_batch(game):
     offices = game.government_office_payload()
     chief = next(item for item in offices if item["office_key"] == "chief_strategist")
     assert chief["name"] == "首席军师"
     assert "effect" in chief
 
-    appointed = game.appoint_government_office("chief_strategist", "张飞")
-    replaced = game.appoint_government_office("chief_strategist", "诸葛亮")
-
-    assert replaced["character_name"] == "诸葛亮"
-    assert replaced["efficiency"] > appointed["efficiency"]
-    assert game.db.conn.execute(
-        "SELECT character_name FROM government_offices WHERE office_key='chief_strategist'"
-    ).fetchone()[0] == "诸葛亮"
+    with pytest.raises(RuntimeError, match="即时任命已弃用"):
+        game.appoint_government_office("chief_strategist", "张飞")

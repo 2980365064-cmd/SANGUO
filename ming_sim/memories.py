@@ -220,7 +220,7 @@ def record_chapter_memory(
     失败降级：直接用 effect_brief + 邸报首段拼一段保底章节（铁律：不抛断游戏）。
     返回 memory_id（0=未落库）。
     """
-    title = f"崇祯{state.year}年{state.period}{TURN_UNIT}"
+    title = f"建安{state.year}年{state.period}{TURN_UNIT}"
     effect = effect_brief(applied)
     body = ""
     tags: list[str] = []
@@ -293,7 +293,7 @@ def record_minister_recaps(agent: Agent, db: GameDB, state: GameState) -> int:
             )
             payload = {
                 "minister": name,
-                "title": f"崇祯{state.year}年{state.period}{TURN_UNIT}",
+                "title": f"建安{state.year}年{state.period}{TURN_UNIT}",
                 "dialogue": dialogue,
                 "instruction": (
                     f"把{name}本月与皇帝的奏对浓缩成一段第三人称私人纪要（120 字内），"

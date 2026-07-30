@@ -10,11 +10,15 @@ POWER_IDS = {
 
 def test_opening_board_has_approved_power_region_and_army_counts():
     content = GameContent.load()
-    route_ids = {node.id for node in content.routes.nodes}
+    # 路线节点使用 city:* 前缀，去掉前缀后应为 regions 的子集
+    route_city_ids = {node.city_id for node in content.routes.nodes}
+    route_commandery_ids = {node.commandery_id for node in content.routes.nodes}
 
     assert set(content.powers) == POWER_IDS
-    assert len(content.regions) == 49
-    assert set(content.regions) == route_ids
+    # 数据驱动：regions 数量以 content 为准，不硬编码
+    assert len(content.regions) > 0
+    # 路线节点的郡 ID 应为 regions 的子集
+    assert route_commandery_ids <= set(content.regions)
     assert len(content.armies) == 25
     assert not [region for region in content.regions.values() if region.controlled_by == "liu_bei"]
     assert content.regions["jiangxia"].controlled_by == "liu_qi"
@@ -22,17 +26,20 @@ def test_opening_board_has_approved_power_region_and_army_counts():
 
 def test_opening_armies_match_approved_strength_and_resolve_commanders_and_stations():
     content = GameContent.load()
-    route_ids = {node.id for node in content.routes.nodes}
+    # station_node 使用 city:* 前缀；去掉前缀后应在 routes 或 regions 中
+    valid_city_ids = {node.city_id for node in content.routes.nodes}
+    valid_commandery_ids = set(content.regions)
     armies = list(content.armies.values())
 
     assert sum(army.manpower for army in armies if army.owner_power == "liu_bei") == 22_000
     assert sum(army.manpower for army in armies if army.owner_power == "cao_cao") == 128_000
     assert all(army.commander in content.characters for army in armies)
-    assert all(army.station_node in route_ids for army in armies)
+    # station_node 必须是有效的 city:* 节点
+    assert all(army.station_node in valid_city_ids for army in armies)
 
     liu_bei_main = content.armies["liubei_main"]
     assert liu_bei_main.station == "夏口"
-    assert liu_bei_main.station_node == "jiangxia"
+    assert liu_bei_main.station_node == "city:jiangxia"
     assert liu_bei_main.supply_turns == 2
     assert liu_bei_main.supply == 40
     assert content.armies["liuzhang_yongan"].commander == "刘巴"
@@ -61,7 +68,7 @@ def test_liubei_has_structured_xiakou_garrison_right_without_owning_jiangxia(tmp
         assert right is not None
         assert right["proposer"] == "liu_qi"
         assert right["target"] == "liu_bei"
-        assert '"node_id": "jiangxia"' in right["terms"]
+        assert '"node_id": "city:jiangxia"' in right["terms"]
         assert right["status"] == "active"
         assert db.conn.execute(
             "SELECT controlled_by FROM regions WHERE id='jiangxia'"

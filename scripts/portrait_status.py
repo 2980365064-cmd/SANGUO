@@ -17,7 +17,7 @@ OUT = ROOT / "web" / "public" / "portraits"
 DOC = ROOT / "docs" / "portrait-status.md"
 CHARACTERS = ROOT / "content" / "characters.json"
 
-MING_POWER_ID = "ming"
+PLAYER_POWER_ID = "liu_bei"
 CONSORT_RANKS = {"皇后", "贵人", "贵妃", "妃", "嫔"}
 POOL_N = 20
 
@@ -35,7 +35,7 @@ def main() -> None:
     consorts = [
         (c["name"], c.get("office", ""), c.get("faction", ""), f"consort_{c['name']}.png")
         for c in characters
-        if c.get("power_id") == MING_POWER_ID and c.get("rank") in CONSORT_RANKS
+        if c.get("power_id") == PLAYER_POWER_ID and c.get("rank") in CONSORT_RANKS
     ]
 
     m_rows = ["| 人物 | 势力/派系 | 职位 | 文件 | 状态 |", "|---|---|---|---|---|"]

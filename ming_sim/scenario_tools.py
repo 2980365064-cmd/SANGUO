@@ -90,7 +90,7 @@ def build_scenario_editor_tools(scenario_dir: str) -> list:
     def upsert_character(
         name: str, office: str, office_type: str, faction: str,
         loyalty: int, ability: int, integrity: int, courage: int,
-        style: str = "", power_id: str = "ming",
+        style: str = "", power_id: str = "liu_bei",
         personal_skills_json: str = "[]", aliases_json: str = "[]",
         diplomacy=None, martial=None, stewardship=None, intrigue=None, learning=None,
         location: str = "", birth_year=None, status: str = "", summary: str = "",
@@ -98,7 +98,7 @@ def build_scenario_editor_tools(scenario_dir: str) -> list:
         historical_death_year=None, historical_death_month=None,
     ) -> str:
         """新增或修改一名人物（按姓名定位，已存在则覆盖）。loyalty/ability/integrity/courage 为
-        0–100 整数。faction 须是已存在的派系名（不存在请先 upsert_faction）。power_id 明臣填 ming。
+        0–100 整数。faction 须是已存在的派系名（不存在请先 upsert_faction）。power_id 己方臣属填 liu_bei。
         personal_skills_json/aliases_json 是 JSON 数组字符串如 ["制度名分"]，没有填 []，绝不能 null。
         diplomacy/martial/stewardship/intrigue/learning 为 0–100 整数，省略则回落 ability。
         rank 品秩/位号（如后宫「皇后/贵妃/妃」，外朝可留空）。
@@ -124,7 +124,7 @@ def build_scenario_editor_tools(scenario_dir: str) -> list:
         rec = {
             "name": nm, "office": off, "office_type": otype, "faction": fac,
             "loyalty": loy, "ability": abi, "integrity": inte, "courage": cou,
-            "style": (style or "").strip() or "持重", "power_id": (power_id or "ming").strip(),
+            "style": (style or "").strip() or "持重", "power_id": (power_id or "liu_bei").strip(),
             "personal_skills": skills, "aliases": aliases,
         }
         try:

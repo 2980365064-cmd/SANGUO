@@ -125,9 +125,9 @@ def test_world_event_dispatcher_accepts_legal_variant_choice(board, monkeypatch)
     state = _state(208, 9)
     evaluate_historical_event(board, state, "sun_liu_alliance")
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        assert pack["kind"] == "world_event"
-        assert pack["subject_id"] == "sun_liu_alliance"
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        assert kind == "world_event"
+        assert subject_id == "sun_liu_alliance"
         return {
             "outcome": "resolve_event_variant",
             "variant_id": "limited_cooperation",
@@ -136,7 +136,7 @@ def test_world_event_dispatcher_accepts_legal_variant_choice(board, monkeypatch)
             "changes": [],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     result = run_adjudication(
         board,
         state,
@@ -155,8 +155,8 @@ def test_resolve_world_events_applies_validated_variant_and_monthly_report_shows
     attach_adjudication_runtime(state, object(), None)
     before = state.metrics["名分"]
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        if pack["subject_id"] != "sun_liu_alliance":
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        if subject_id != "sun_liu_alliance":
             return {"outcome": "wait_for_window", "changes": []}
         return {
             "outcome": "resolve_event_variant",
@@ -166,7 +166,7 @@ def test_resolve_world_events_applies_validated_variant_and_monthly_report_shows
             "changes": [],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     results = resolve_world_events_for_turn(board, state)
 
     assert any(item["event_id"] == "sun_liu_alliance" and item["status"] == "resolved" for item in results)
@@ -199,8 +199,8 @@ def test_world_event_rejects_unknown_variant_and_forbidden_ending_change(board, 
     state = _state(208, 9)
     attach_adjudication_runtime(state, object(), None)
 
-    def bad_judge(_llm_config, _agno_db, pack, *, tag):
-        if pack["subject_id"] != "sun_liu_alliance":
+    def bad_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        if subject_id != "sun_liu_alliance":
             return {"outcome": "review_world_state", "changes": []}
         return {
             "outcome": "resolve_event_variant",
@@ -210,7 +210,7 @@ def test_world_event_rejects_unknown_variant_and_forbidden_ending_change(board, 
             "changes": [],
         }
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", bad_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", bad_judge)
     results = resolve_world_events_for_turn(board, state)
 
     assert any(item.get("status") == "pending_review" for item in results)
@@ -231,11 +231,11 @@ def test_resolve_world_events_does_not_repeat_terminal_event(board, monkeypatch)
     called_subjects = []
     attach_adjudication_runtime(state, object(), None)
 
-    def fake_judge(_llm_config, _agno_db, pack, *, tag):
-        called_subjects.append(pack["subject_id"])
+    def fake_judge(db, state, llm_config, agno_db, kind, subject_id, *, player_intent="", **kwargs):
+        called_subjects.append(subject_id)
         return {"outcome": "review_world_state", "changes": []}
 
-    monkeypatch.setattr(adjudication_module, "run_adjudication_llm", fake_judge)
+    monkeypatch.setattr(adjudication_module, "run_adjudication_with_tools", fake_judge)
     results = resolve_world_events_for_turn(board, state)
 
     assert not any(item["event_id"] == "sun_liu_alliance" and item.get("adjudication_status") == "validated" for item in results)

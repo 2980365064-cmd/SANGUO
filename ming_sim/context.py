@@ -62,6 +62,8 @@ ENDING_REGIME_COLLAPSED = "regime_collapsed"
 ENDING_HISTORICAL_BAIDI = "historical_baidi"
 ENDING_UNIFIED_VICTORY = "unified_victory"
 ENDING_REWRITTEN_223 = "rewritten_223"
+ENDING_THREE_KINGDOMS = "three_kingdoms_balance"
+ENDING_YIZHOU_GUARDIAN = "yizhou_guardian"
 
 # 五态结局的定调文案（前端弹窗标题/CLI 打印用）。ongoing 不入此表。
 ENDING_LABELS: Dict[str, str] = {
@@ -70,6 +72,8 @@ ENDING_LABELS: Dict[str, str] = {
     ENDING_REGIME_COLLAPSED: "军政瓦解",
     ENDING_HISTORICAL_BAIDI: "白帝托孤",
     ENDING_UNIFIED_VICTORY: "兴复汉室",
+    ENDING_THREE_KINGDOMS: "三足均衡",
+    ENDING_YIZHOU_GUARDIAN: "偏安守成",
     ENDING_REWRITTEN_223: "章武改写",
 }
 
@@ -144,7 +148,7 @@ def _ending_timeline(db: GameDB) -> List[Dict[str, object]]:
     return sorted(timeline, key=lambda item: (int(item["turn"]), str(item["kind"])))
 
 
-def _outcome(db: GameDB, state: GameState, status: str, summary: str) -> Dict[str, object]:
+def _outcome(db: GameDB, state: GameState, status: str, summary: str, evidence: List[Dict[str, object]] | None = None) -> Dict[str, object]:
     scores = _ending_scores(db, state)
     average = round(sum(scores.values()) / len(scores))
     grade = "兴复之功" if average >= 85 else "建基之业" if average >= 65 else "守成未就" if average >= 45 else "大业中衰"
@@ -154,7 +158,7 @@ def _outcome(db: GameDB, state: GameState, status: str, summary: str) -> Dict[st
         f"外交{scores['外交']}、军功{scores['军功']}。论其成败，既须观克复郡国之广狭，"
         "亦当观汉室名义能否系人心、将相能否同德、军民能否久任战事。"
     )
-    return {"status": status, "summary": summary, "scores": scores, "grade": grade, "review": review, "timeline": _ending_timeline(db)}
+    return {"status": status, "route": status, "summary": summary, "scores": scores, "grade": grade, "review": review, "evidence": evidence or [], "timeline": _ending_timeline(db)}
 
 
 def _tick_counter(db: GameDB, state: GameState, field: str, condition: bool) -> int:
@@ -222,9 +226,19 @@ def victory_status(db: GameDB, state: GameState) -> Dict[str, object]:
         "SELECT COUNT(*) FROM armies WHERE owner_power!='liu_bei' AND active=1 AND manpower>0"
     ).fetchone()[0] or 0)
     if total_regions > 0 and other_regions == 0 and other_armies == 0:
-        return _outcome(db, state, ENDING_UNIFIED_VICTORY, "天下郡国尽归刘备，其他势力已无领土与现役军，兴复汉室的统一条件达成。")
+        return _outcome(db, state, ENDING_UNIFIED_VICTORY, "天下郡国尽归刘备，其他势力已无领土与现役军，兴复汉室的统一条件达成。", [{"kind": "领土", "detail": "全部地区归属刘备"}, {"kind": "军势", "detail": "无其他势力现役军"}])
 
     if int(state.year) > 223 or (int(state.year) == 223 and int(state.period) >= 4):
+        controlled = {str(row["id"]) for row in db.conn.execute("SELECT id FROM regions WHERE controlled_by='liu_bei'").fetchall()}
+        major_powers = int(db.conn.execute("SELECT COUNT(*) FROM powers WHERE id!='liu_bei' AND status NOT IN ('defeated','destroyed','collapsed','inactive')").fetchone()[0] or 0)
+        stable = int(state.metrics.get("民望", 0)) >= 45 and int(state.metrics.get("军心", 0)) >= 45
+        jingzhou_held = bool(controlled.intersection({"xiangyang", "jiangling", "jiangxia", "jingnan"}))
+        yizhou_held = {"chengdu", "jiangzhou", "yongan"}.issubset(controlled)
+        if yizhou_held and jingzhou_held and major_powers >= 2 and stable:
+            return _outcome(db, state, ENDING_THREE_KINGDOMS, "益荆两地相维，魏吴等强权仍存，天下形成可守可进的三足均衡。", [{"kind":"领土","detail":"益州核心与荆州核心均在掌握"},{"kind":"天下","detail":f"仍有{major_powers}方主要外部势力"},{"kind":"国势","detail":"民望、军心稳定"}])
+        if yizhou_held and not jingzhou_held and stable:
+            return _outcome(db, state, ENDING_YIZHOU_GUARDIAN, "益州根本稳固而荆州不复，刘备集团选择偏安守成，保存汉家一隅。", [{"kind":"领土","detail":"成都、江州、永安稳定"},{"kind":"国势","detail":"民望、军心稳定"}])
+
         return _outcome(db, state, ENDING_REWRITTEN_223, "223年四月，刘备仍存而天下未统，此局以存活且未完成统一的改写历史收束。")
     db.conn.commit()
     return {"status": ENDING_ONGOING, "summary": "天下未定，刘备大业仍在推进。"}
@@ -301,7 +315,7 @@ def character_context(character: Character) -> str:
         parts.append(f"当前所在：{character.location}")
     if character.status and character.status != "active":
         parts.append(f"当前状态：{character.status}")
-    if character.power_id and character.power_id != "ming":
+    if character.power_id and character.power_id != "liu_bei":
         parts.append(f"所属势力：{character.power_id}")
     return "，".join(parts)
 

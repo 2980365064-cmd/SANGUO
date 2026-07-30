@@ -21,6 +21,9 @@ export type Government = {
 
 export type StrategicNode = {
   id: string;
+  commandery_id?: string;
+  city_id?: string;
+  province_id?: string;
   name: string;
   province: string;
   x: number;
@@ -33,6 +36,62 @@ export type StrategicNode = {
   status: string;
   stationed_army_ids: string[];
   is_capital?: boolean;  // 是否州治/首都
+};
+
+export type StrategicCity = {
+  id: string;
+  name: string;
+  commandery_id: string;
+  province_id: string;
+  province: string;
+  x: number;
+  y: number;
+  controller: string;
+  strategic_role: string;
+  is_commandery_capital: boolean;
+  fortification: number;
+  grain_stock: number;
+  siege_status: string;
+  population: number;
+  public_support: number;
+  unrest: number;
+  military_pressure: number;
+  status: string;
+  stationed_army_ids: string[];
+};
+
+export type AdministrativeScope = "province" | "commandery" | "city";
+export type AdministrativeDetail = {
+  scope: AdministrativeScope;
+  id: string;
+  name: string;
+  controlled_by: string;
+  province_id?: string;
+  commandery_id?: string;
+  status: string;
+  population?: number;
+  public_support?: number;
+  unrest?: number;
+  military_pressure?: number;
+  tax_per_turn?: number;
+  fiscal?: Record<string, number | string | null>;
+  gentry_resistance?: number;
+  city?: { id: string; name: string; controlled_by: string; fortification: number; grain_stock: number } | null;
+  cities?: Array<{ id: string; name: string; controlled_by: string; fortification: number; grain_stock: number; is_commandery_capital: number; strategic_role: string; siege_status: string }>;
+  commanderies?: Array<{ id: string; name: string; controlled_by: string }>;
+  commandery_count?: number;
+  city_count?: number;
+  transport?: number;
+  mobilization?: number;
+  security_coordination?: number;
+  strategic_role?: string;
+  order_score?: number;
+  grain_stock?: number;
+  market_capacity?: number;
+  fortification?: number;
+  garrison_capacity?: number;
+  siege_status?: string;
+  stationed_armies?: Army[];
 };
 
 // 城池节点 - 最小行政单位
@@ -123,7 +182,7 @@ export type RegionDetail = {
   natural_disaster: string;
   human_disaster: string;
   fiscal: Record<string, number | string | null>;
-  investment: null | Record<string, unknown>;
+  investment: null | InvestmentDetail;
   investment_logs: Array<Record<string, unknown>>;
   stationed_armies: Army[];
 };
@@ -146,6 +205,8 @@ export type Character = {
   personality: IntelBlock;
   intel_level: number;
   favorite: boolean;
+  loyalty_status: number;
+  loyalty_recent: Array<{ delta: number; reason: string; turn: number }>;
 };
 
 export type GovernmentOfficeEffect = {
@@ -220,36 +281,123 @@ export type GameState = {
   scenario_id: "sanguo_liubei_208";
   turn: Turn;
   government: Government;
+  long_term: {
+    reputation: { score: number; recent: Array<{ id?: number; metric: string; delta: number; summary: string; turn?: number }> };
+    factions: Array<{ faction_key: string; label: string; agenda: string; status: string; activated_turn: number; support: number }>;
+    loyalty_risks: Array<{ name: string; loyalty: number }>;
+    identity: string;
+  };
+  identity: {
+    stage: string;
+    next_stage: string;
+    eligible: boolean;
+    legitimacy: string;
+    in_window: boolean;
+    unmet_conditions: string[];
+    available_action: string;
+    political_pressure: string;
+    external_pressure: number;
+    consequence_preview: string[];
+  };
   metrics: Record<"军资" | "粮秣" | "民望" | "名分" | "军心" | "士族支持", number>;
   previous_summary: string;
-  map: { nodes: StrategicNode[]; routes: StrategicRoute[] };
+  map: { nodes: StrategicNode[]; cities?: StrategicCity[]; routes: StrategicRoute[] };
   armies: Army[];
   army_orders: ArmyOrder[];
-  sieges: Array<Record<string, unknown>>;
-  battles: Array<Record<string, unknown>>;
+  sieges: Siege[];
+  battles: Battle[];
   diplomacy: {
-    relations: Array<Record<string, unknown>>;
-    treaties: Array<Record<string, unknown>>;
+    relations: DiplomaticRelation[];
+    treaties: Treaty[];
   };
   national_focus: {
     definitions: Record<string, FocusDefinition>;
     progress: FocusProgress[];
-    effects: Array<Record<string, unknown>>;
+    effects: FocusEffect[];
     points_per_turn: Record<string, number>;
   };
-  region_investments: Array<Record<string, unknown>>;
+  region_investments: RegionInvestment[];
   timeline: TimelineItem[];
   characters: Character[];
-  offices: Array<Record<string, unknown>>;
-  families: Array<Record<string, unknown>>;
+  offices: Office[];
+  families: Family[];
   powers: Power[];
-  victory_status: Record<string, unknown>;
-  ending: null | { status: string; label: string; summary: string; timeline: unknown[] };
-  structured_directives: unknown[];
+  victory_status: VictoryStatus;
+  ending: null | { status: string; label: string; summary: string; route: string; evidence: Array<Record<string, unknown>>; timeline: Array<Record<string, unknown>> };
+  structured_directives: StructuredDirective[];
   pending_count: number;
-  pending_decisions: unknown[];
+  pending_decisions: PendingDecision[];
   last_decree: string;
   last_report: string;
+  world: WorldState;
+};
+
+// === 第二阶段：区域局势类型 ===
+
+export type RegionalVisibility = "own" | "rumor" | "assessment" | "confirmed";
+
+export type RegionalState = {
+  region_id: string;
+  name: string;
+  visibility: RegionalVisibility;
+  road_condition: number | null;
+  grain_transport_pressure: number | null;
+  harvest_outlook: number | null;
+  epidemic_pressure: number | null;
+  public_mood_delta: number | null;
+  incident_ids: number[];
+};
+
+export type RegionalIncident = {
+  id: number;
+  region_id: string;
+  title: string;
+  tier: "ordinary" | "dramatic";
+  visibility: RegionalVisibility;
+  summary: string;
+  status: string;
+  local_effects: Array<Record<string, unknown>>;
+  policy_pending: boolean;
+};
+
+export type MinisterMemorial = {
+  id: number;
+  minister_name: string;
+  memorial_kind: string;
+  title: string;
+  summary: string;
+  subject_ref: string;
+  risk_note: string;
+  evidence_json: string;
+  suggested_action_json: string;
+  status: string;
+};
+
+export type ExternalIntelligence = {
+  id: number;
+  power_id: string;
+  visibility: "rumor" | "assessment" | "confirmed";
+  title: string;
+  summary: string;
+  source_type: string;
+  reliability: number;
+  verification_status: "unverified" | "confirmed" | "refuted" | "expired";
+  valid_until_turn: number;
+  resolution_summary: string;
+  evidence_refs: string[];
+  usable_as_fact: number;
+};
+
+export type WorldState = {
+  campaign: {
+    season: string;
+    weather_summary: string;
+    turn: number;
+  };
+  regions: RegionalState[];
+  incidents: RegionalIncident[];
+  memorials: MinisterMemorial[];
+  intelligence: ExternalIntelligence[];
 };
 
 export type ApiErrorDetail = {
@@ -413,9 +561,202 @@ export type MonthlyReport = {
   sections: MonthlyReportSection[];
 };
 
+export type StrategyEventSeverity = "urgent" | "important" | "suggestion" | "opportunity";
+
+export type StrategyEvent = {
+  id: string;
+  title: string;
+  summary: string;
+  severity: StrategyEventSeverity;
+  category: string;
+  section_title: string;
+  action_label: string;
+  action_type: "court_chat" | "secret_chat" | "detail" | "decision" | "dismiss";
+  action_entry: string;
+};
+
 export type ReputationSummary = {
   score: number;
   recent: Array<Record<string, unknown>>;
 };
 
 export type SteamEvent = { type: string; [key: string]: unknown };
+
+// ---------- 补全类型：消除 Record<string, unknown> ----------
+
+export type Siege = {
+  id?: number | string;
+  attacker?: string;
+  defender?: string;
+  target_node?: string;
+  status?: string;
+  start_turn?: number;
+  end_turn?: number;
+  result?: string;
+  [key: string]: unknown;
+};
+
+export type Battle = {
+  id?: number | string;
+  attacker_power?: string;
+  defender_power?: string;
+  node?: string;
+  status?: string;
+  turn?: number;
+  result?: string;
+  [key: string]: unknown;
+};
+
+export type DiplomaticRelation = {
+  power_a?: string;
+  power_b?: string;
+  relation_type?: string;
+  trust?: number;
+  tension?: number;
+  [key: string]: unknown;
+};
+
+export type Treaty = {
+  id?: number | string;
+  parties?: string[];
+  treaty_type?: string;
+  status?: string;
+  signed_turn?: number;
+  expires_turn?: number;
+  [key: string]: unknown;
+};
+
+export type FocusEffect = {
+  focus_id?: string;
+  label?: string;
+  value?: string | number;
+  [key: string]: unknown;
+};
+
+export type RegionInvestment = {
+  id?: number | string;
+  region?: string;
+  category?: string;
+  level?: number;
+  progress?: number;
+  [key: string]: unknown;
+};
+
+export type Office = {
+  key?: string;
+  name?: string;
+  holder?: string;
+  office_type?: string;
+  efficiency?: number;
+  [key: string]: unknown;
+};
+
+export type Family = {
+  id?: string;
+  name?: string;
+  members?: string[];
+  power_id?: string;
+  [key: string]: unknown;
+};
+
+export type VictoryStatus = {
+  status?: string;
+  progress?: Record<string, number>;
+  conditions?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+};
+
+export type StructuredDirective = {
+  id?: number | string;
+  template_id?: string;
+  text?: string;
+  status?: string;
+  [key: string]: unknown;
+};
+
+export type PendingDecision = {
+  id?: number | string;
+  kind?: string;
+  title?: string;
+  description?: string;
+  options?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+};
+
+export type InvestmentDetail = {
+  category?: string;
+  progress?: number;
+  level?: number;
+  [key: string]: unknown;
+};
+
+// P0: 方略草案
+export type DirectiveDraft = {
+  id: number;
+  turn: number;
+  year: number;
+  period: number;
+
+  // 草案来源
+  source_type: 'council_chat' | 'secret_chat' | 'map_detail' | 'manual' | 'suggestion';
+  source_id?: number;
+
+  // 结构化行动字段
+  directive_type: 'internal' | 'military' | 'diplomatic' | 'other' | 'secret';
+  title: string;
+  assignee?: string;
+  target?: string;
+  duration_months: number;
+  priority: number;
+
+  // 资源与约束
+  resources_json: string;
+  constraints_json: string;
+  risks_json: string;
+
+  // 文书说明
+  narrative_text: string;
+  compiled_text: string;
+
+  // 状态
+  status: 'draft' | 'validated' | 'invalid' | 'issued' | 'rejected';
+  validation_result_json: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// P0: 颁令批次项目
+export type DirectiveBatchItem = {
+  id: number;
+  batch_id: number;
+  draft_id: number;
+  execution_order: number;
+  execution_status: 'pending' | 'success' | 'partial' | 'failed';
+  execution_result_json: string;
+
+  // 关联的草案信息（查询时填充）
+  draft_title?: string;
+  directive_type?: string;
+  assignee?: string;
+  target?: string;
+};
+
+// P0: 颁令批次
+export type DirectiveBatch = {
+  id: number;
+  turn: number;
+  year: number;
+  period: number;
+
+  batch_title: string;
+  decree_text: string;
+  total_drafts: number;
+
+  status: 'pending' | 'issued' | 'executing' | 'completed' | 'failed';
+  created_at: string;
+  issued_at?: string;
+  completed_at?: string;
+
+  // 批次项目（查询时填充）
+  items: DirectiveBatchItem[];
+};

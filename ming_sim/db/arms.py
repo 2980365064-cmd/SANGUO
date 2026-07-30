@@ -194,7 +194,7 @@ class _ArmsMixin:
         raw_troop = str(troop_type or "").strip()
         troop = (
             raw_troop
-            if raw_troop and str(army["owner_power"] or "") != "ming"
+            if raw_troop and str(army["owner_power"] or "") != "liu_bei"
             else canon_troop_name(raw_troop, self.content.troop_cost) if raw_troop else ""
         )
         if not troop:

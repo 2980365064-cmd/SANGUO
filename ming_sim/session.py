@@ -443,6 +443,8 @@ class GameSession:
         """加载/刷新本回合：历史卒、上回合奏报、重建 registry。幂等。"""
         self.state = self.db.load_state()
         self._sync_government_stage()
+        from ming_sim.long_term import refresh_long_term_state
+        refresh_long_term_state(self.db, self.state)
         self.deaths_this_turn = self.db.apply_historical_deaths(self.state)
         self.debuts_this_turn = self.db.apply_historical_debuts(self.state)
         self.power_renames_this_turn = self.db.apply_historical_power_renames(self.state)
@@ -477,7 +479,9 @@ class GameSession:
             "SELECT office FROM characters WHERE name='刘备'"
         ).fetchone()
         office_text = str(liubei["office"] or "") if liubei else ""
-        titles = [title for title in ("益州牧", "汉中王") if title in office_text]
+        titles = [title for title in ("汉中王",) if title in office_text]
+        if self.db.kv_get("identity_hanzhong_granted") == "1" and "汉中王" not in titles:
+            titles.append("汉中王")
         stage = government_stage(
             int(self.state.year),
             int(self.state.period),
@@ -534,13 +538,17 @@ class GameSession:
             getattr(self, "llm_config", None),
             getattr(self, "agno_db", None),
         )
+        from ming_sim.world_simulation import get_or_create_world_context
+        setattr(strategic_state, "world_simulation_context", get_or_create_world_context(self.db, strategic_state))
         # 外部势力先从规则层合法候选中选择一项行动，再与玩家军令共用同一结算链。
-        resolve_power_ai_turn(self.db, strategic_state)
+        power_ai_results = resolve_power_ai_turn(self.db, strategic_state)
+        setattr(strategic_state, "_power_ai_results", power_ai_results)
         resolve_army_orders_for_turn(self.db, int(getattr(strategic_state, "turn")))
         resolve_supply_orders_for_turn(self.db, strategic_state)
         settle_all_army_supply(self.db, strategic_state)
         resolve_battle_orders_for_turn(self.db, strategic_state)
         resolve_siege_turn(self.db, strategic_state)
+        self.db.settle_administrative_layers(strategic_state)
         advance_all_focuses(self.db, strategic_state)
         advance_all_region_investments(self.db, strategic_state)
         if hasattr(self.db, "adjudicate_pending_secret_orders"):
@@ -566,6 +574,8 @@ class GameSession:
             str(outcome["status"]),
             str(outcome.get("review") or outcome.get("summary") or ""),
             list(outcome.get("timeline") or []),
+            route=str(outcome.get("route") or outcome.get("status") or ""),
+            evidence=list(outcome.get("evidence") or []),
         )
         self.db.save_state(self.state)
         return outcome
@@ -1137,24 +1147,124 @@ class GameSession:
         if self.state.ended:
             raise ValueError("本局已经收束，不能继续推进月份。")
         settled_year, settled_month, settled_turn = self.state.year, self.state.period, self.state.turn
+        from ming_sim.long_term import refresh_long_term_state, long_term_summary
+        refresh_long_term_state(self.db, self.state)
+
+        # === 第二阶段：区域状态与事件系统（在外势行动前结算） ===
+        from ming_sim.world_random import ensure_campaign_seed
+        ensure_campaign_seed(self.db)
+
         strategic_state = self.turn_snapshot()
+        from ming_sim.world_simulation import (
+            build_monthly_memorials,
+            ensure_regional_world_states,
+            generate_regional_incidents,
+            apply_local_incident_effects,
+            build_incident_policy_issue,
+            get_or_create_world_context,
+            ensure_power_internal_dynamics,
+            apply_power_internal_dynamic_effects,
+            build_intelligence_reports_for_turn,
+            resolve_intelligence_verification,
+            build_incident_intelligence_reports,
+            generate_incident_diplomatic_reactions,
+            collect_significant_battle_outcomes,
+            collect_significant_siege_outcomes,
+            collect_treaty_breach_outcomes,
+            generate_geopolitical_reactions,
+            apply_geopolitical_reaction_effects,
+            build_geopolitical_intelligence_reports,
+        )
+        ensure_regional_world_states(self.db, strategic_state)
+        incidents = generate_regional_incidents(self.db, strategic_state)
+        for inc in incidents:
+            apply_local_incident_effects(self.db, strategic_state, inc)
+            build_incident_policy_issue(self.db, strategic_state, inc)
+        # 第四期连锁：区域事件→情报/外交反应（在 power AI 前结算）
+        incident_intel = build_incident_intelligence_reports(self.db, strategic_state, incidents)
+        incident_reactions = generate_incident_diplomatic_reactions(self.db, strategic_state, incidents)
+        # 外势内部动态：在区域事件之后、世界上下文之前结算
+        dynamics = ensure_power_internal_dynamics(self.db, strategic_state)
+        for dyn in dynamics:
+            apply_power_internal_dynamic_effects(self.db, strategic_state, dyn)
+
+        # === 旧系统兼容 ===
+        from ming_sim.random_events import ensure_templates_seeded, generate_random_events, advance_random_events
+        ensure_templates_seeded(self.db)
+
+        get_or_create_world_context(self.db, strategic_state)
+        memorials = build_monthly_memorials(self.db, strategic_state)
         ongoing_results = self.db.advance_ongoing_plans(self.state)
+        envoy_results = self.db.advance_envoy_missions(self.state)
+        campaign_results = self.db.advance_all_campaigns(self.state)
+        generated = generate_random_events(self.state, self.db)
+        random_results = advance_random_events(self.state, self.db)
         outcome = self._resolve_strategic_turn(strategic_state)
+        # 第五期连锁：提取重大战果与条约违约事实 → 地缘反应 → 情报
+        source_events = (
+            collect_significant_battle_outcomes(self.db, strategic_state)
+            + collect_significant_siege_outcomes(self.db, strategic_state)
+            + collect_treaty_breach_outcomes(self.db, strategic_state)
+        )
+        reactions = generate_geopolitical_reactions(self.db, strategic_state, source_events)
+        for rxn in reactions:
+            apply_geopolitical_reaction_effects(self.db, strategic_state, rxn)
+        geopolitical_intel = build_geopolitical_intelligence_reports(self.db, strategic_state, reactions)
+        # 情报网络：在外势行动和内部动态结算后生成情报
+        power_ai_results = getattr(strategic_state, "_power_ai_results", []) or []
+        build_intelligence_reports_for_turn(self.db, strategic_state, power_ai_results, dynamics)
+        resolve_intelligence_verification(self.db, strategic_state)
+        # 第四期连锁：战争状态→外交持续漂移
+        from ming_sim.diplomacy import apply_war_diplomatic_drift
+        war_drifts = apply_war_diplomatic_drift(self.db, strategic_state)
         orders = self.db.list_army_orders(settled_turn)
-        envoys = self.db.list_envoy_missions(status="active")
-        reputation = self.db.reputation_summary(limit=6)
+        envoys = self.db.list_envoy_missions(status="")  # 所有任务
+        active_envoys = [e for e in envoys if e.get("status") not in ("completed", "failed")]
+        reputation = long_term_summary(self.db, self.state, limit=6)["reputation"]
         issued = sum(1 for item in orders if item.get("status") in {"issued", "resolved", "completed"})
         report_lines = [
             "《月末军政报》",
             f"{settled_year}年{settled_month}月",
             f"持续方略核销 {len(ongoing_results)} 项。",
             f"本月共核发军令 {len(orders)} 道，已结算 {issued} 道。",
-            f"使臣在途 {len(envoys)} 起。",
+            f"使臣在途 {len(active_envoys)} 起。",
             f"仁义口碑参考值 {reputation['score']}。",
             "六项国势：" + "；".join(f"{key}{round(value)}" for key, value in self.state.metrics.items()),
         ]
         if ongoing_results:
             report_lines.append("持续方略：" + "；".join(str(item["narrative"]) for item in ongoing_results))
+        if envoy_results:
+            for er in envoy_results:
+                status = er.get("status", "")
+                envoy = er.get("envoy", "")
+                if status == "completed":
+                    report_lines.append(f"使臣归来：{envoy}——{er.get('result', '')}")
+                elif status == "failed":
+                    report_lines.append(f"使臣失败：{envoy}——{er.get('reason', '')}")
+                else:
+                    report_lines.append(f"使臣动态：{envoy} 进入{status}阶段")
+        if campaign_results:
+            for cr in campaign_results:
+                name = cr.get("name", "")
+                status = cr.get("status", "")
+                actual = cr.get("actual_turns", 0)
+                if status == "completed":
+                    report_lines.append(f"战役完结：{name}（历时{actual}回合）")
+                else:
+                    report_lines.append(f"战役推进：{name}（第{actual}回合）")
+        if generated:
+            for ge in generated:
+                report_lines.append(f"随机事件：{ge['title']}（{ge['category']}）")
+        if incidents:
+            for inc in incidents:
+                tier_label = "重大" if inc.get("tier") == "dramatic" else "区域"
+                report_lines.append(f"{tier_label}事件：{inc['title']}")
+        if memorials:
+            report_lines.append("群臣上奏：" + "；".join(f"{item['minister']}《{item['title']}》" for item in memorials))
+        if random_results:
+            for rr in random_results:
+                if rr.get("status") == "expired":
+                    report_lines.append(f"事件过期：{rr.get('title', '')}——超期未处理")
         if envoys:
             report_lines.append("使臣外交：" + "；".join(f"{item['envoy']}赴{item['target_power']}：{item['goal']}" for item in envoys))
         if reputation["recent"]:

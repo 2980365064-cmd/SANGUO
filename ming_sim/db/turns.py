@@ -56,20 +56,23 @@ class _TurnsMixin:
     # ── 结局总结 ──
 
     def save_ending_summary(
-        self, state: GameState, ending_status: str, summary: str, timeline: List[Dict[str, object]]
+        self, state: GameState, ending_status: str, summary: str, timeline: List[Dict[str, object]],
+        *, route: str = "", evidence: List[Dict[str, object]] | None = None,
     ) -> None:
         self.conn.execute(
             """
-            INSERT INTO ending_summary (turn, year, period, ending_status, summary, timeline)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO ending_summary (turn, year, period, ending_status, summary, timeline, route, evidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(turn) DO UPDATE SET
                 year = excluded.year, period = excluded.period,
                 ending_status = excluded.ending_status,
-                summary = excluded.summary, timeline = excluded.timeline
+                summary = excluded.summary, timeline = excluded.timeline,
+                route = excluded.route, evidence = excluded.evidence
             """,
             (
                 state.turn, state.year, state.period, str(ending_status or ""),
                 str(summary or ""), json.dumps(timeline or [], ensure_ascii=False),
+                str(route or ending_status or ""), json.dumps(evidence or [], ensure_ascii=False),
             ),
         )
         self.conn.commit()
@@ -77,7 +80,7 @@ class _TurnsMixin:
     def get_ending_summary(self) -> Optional[Dict[str, object]]:
         """取最近一条结局总结（单库一局，按 turn 取最大）。无则 None。"""
         row = self.conn.execute(
-            "SELECT turn, year, period, ending_status, summary, timeline "
+            "SELECT turn, year, period, ending_status, summary, timeline, route, evidence "
             "FROM ending_summary ORDER BY turn DESC LIMIT 1"
         ).fetchone()
         if row is None:
@@ -86,6 +89,10 @@ class _TurnsMixin:
             timeline = json.loads(row["timeline"] or "[]")
         except Exception:
             timeline = []
+        try:
+            evidence = json.loads(row["evidence"] or "[]")
+        except Exception:
+            evidence = []
         return {
             "turn": int(row["turn"]),
             "year": int(row["year"]),
@@ -93,6 +100,8 @@ class _TurnsMixin:
             "ending_status": row["ending_status"],
             "summary": row["summary"] or "",
             "timeline": timeline,
+            "route": str(row["route"] or row["ending_status"] or ""),
+            "evidence": evidence if isinstance(evidence, list) else [],
         }
 
     def list_archived_turns(self) -> List[Dict[str, object]]:

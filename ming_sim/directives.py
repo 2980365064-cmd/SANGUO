@@ -71,7 +71,7 @@ def _compile_tax_reform(cleaned: Dict[str, str]) -> str:
     )
 
 
-def _validate_ming_selectables(template: Dict[str, Any], cleaned: Dict[str, str], db: Any = None) -> None:
+def _validate_player_selectables(template: Dict[str, Any], cleaned: Dict[str, str], db: Any = None) -> None:
     if db is None:
         return
     for spec in template.get("fields") or []:
@@ -92,8 +92,8 @@ def _validate_ming_selectables(template: Dict[str, Any], cleaned: Dict[str, str]
                 matched_id = match_army_id_from_text(value, armies)
                 if matched_id:
                     row = db.conn.execute("SELECT * FROM armies WHERE id = ?", (matched_id,)).fetchone()
-            if row is None or str(row["owner_power"] or "ming") != "ming":
-                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择大明军队。")
+            if row is None or str(row["owner_power"] or "liu_bei") != "liu_bei":
+                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择己方军队。")
         elif source in ("regions", "regions_or_all") and value != "全国":
             row = db.conn.execute("SELECT * FROM regions WHERE name = ? OR id = ?", (value, value)).fetchone()
             if row is None:
@@ -116,7 +116,7 @@ def _validate_ming_selectables(template: Dict[str, Any], cleaned: Dict[str, str]
                             gentry_resistance=int(item["gentry_resistance"]),
                             military_pressure=int(item["military_pressure"]),
                             status=str(item["status"]),
-                            controlled_by=str(item.get("controlled_by") or "ming"),
+                            controlled_by=str(item.get("controlled_by") or "liu_bei"),
                             fiscal=fiscal,
                         )
                     except (TypeError, ValueError, KeyError):
@@ -124,15 +124,15 @@ def _validate_ming_selectables(template: Dict[str, Any], cleaned: Dict[str, str]
                 matched_id = match_region_id_from_text(value, regions)
                 if matched_id:
                     row = db.conn.execute("SELECT * FROM regions WHERE id = ?", (matched_id,)).fetchone()
-            if row is None or str(row["controlled_by"] or "ming") != "ming":
-                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择大明辖治地区。")
+            if row is None or str(row["controlled_by"] or "liu_bei") != "liu_bei":
+                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择己方辖治地区。")
         elif source == "people":
             row = db.conn.execute(
                 "SELECT power_id FROM characters WHERE name = ?",
                 (value,),
             ).fetchone()
-            if row is None or str(row["power_id"] or "ming") != "ming":
-                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择大明人物。")
+            if row is None or str(row["power_id"] or "liu_bei") != "liu_bei":
+                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择己方人物。")
         elif source == "buildings":
             row = db.conn.execute(
                 """
@@ -142,14 +142,14 @@ def _validate_ming_selectables(template: Dict[str, Any], cleaned: Dict[str, str]
                 """,
                 (value, value),
             ).fetchone()
-            if row is None or str(row["controlled_by"] or "ming") != "ming":
-                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择大明辖内建筑。")
+            if row is None or str(row["controlled_by"] or "liu_bei") != "liu_bei":
+                raise StructuredDirectiveError(f"字段「{spec.get('label') or key}」只能选择己方辖内建筑。")
 
 
 def compile_structured_directive(template_id: str, fields: Dict[str, Any], db: Any = None) -> Dict[str, Any]:
     template = get_directive_template(template_id)
     cleaned = _clean_fields(template, fields)
-    _validate_ming_selectables(template, cleaned, db)
+    _validate_player_selectables(template, cleaned, db)
     if str(template.get("id") or template_id) == "tax_reform":
         compiled = _compile_tax_reform(cleaned)
     else:

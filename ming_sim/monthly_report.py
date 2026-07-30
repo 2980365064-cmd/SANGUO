@@ -13,10 +13,13 @@ SECTION_ORDER = (
     ("adjudication", "裁决概览"),
     ("military", "军事"),
     ("internal", "内政"),
+    ("regional", "区域局势"),
+    ("geopolitical", "天下态势"),
     ("diplomacy", "外交"),
     ("personnel", "人事"),
     ("secret", "密令暗流"),
     ("world", "天下动向"),
+    ("reactions", "人物与天下反应"),
     ("reputation", "仁义口碑"),
 )
 
@@ -175,6 +178,126 @@ def _internal_items(db, turn: int) -> List[Dict[str, Any]]:
     return items
 
 
+def _regional_items(db, turn: int) -> List[Dict[str, Any]]:
+    """区域局势 section：本月区域事件 + 重大事件待议。"""
+    items: List[Dict[str, Any]] = []
+    for row in db.conn.execute(
+        "SELECT * FROM regional_incidents WHERE turn=? ORDER BY CASE tier WHEN 'dramatic' THEN 0 ELSE 1 END, id",
+        (turn,),
+    ).fetchall():
+        region = _safe_name(db, "regions", "id", str(row["region_id"]), str(row["region_id"]))
+        tier_label = "重大" if str(row["tier"]) == "dramatic" else "区域"
+        local_effects = _decode(row["local_effects_json"], [])
+        effects_summary = "；".join(
+            f"{_effect_label(e.get('field', ''))}{_effect_delta(e.get('delta', 0))}"
+            for e in local_effects
+            if isinstance(e, dict)
+        ) or "无显著变化"
+        items.append({
+            "id": f"regional_incident:{int(row['id'])}",
+            "kind": f"{tier_label}事件",
+            "title": str(row["title"]),
+            "summary": f"{region}：{str(row['summary'])}。局部后果：{effects_summary}",
+            "action": {"entry": "方略", "label": "查看待议策略" if str(row["tier"]) == "dramatic" else "查看详情"},
+            "audit": {
+                "region_id": str(row["region_id"]),
+                "region_name": region,
+                "tier": str(row["tier"]),
+                "visibility": str(row["visibility"]),
+                "local_effects": local_effects,
+                "draw_refs": _decode(row["draw_refs_json"], []),
+            },
+        })
+    return items
+
+
+def _geopolitical_items(db, turn: int) -> List[Dict[str, Any]]:
+    """天下态势 section：本月地缘反应记录。"""
+    items: List[Dict[str, Any]] = []
+    rows = db.conn.execute(
+        "SELECT * FROM geopolitical_reactions WHERE turn=? ORDER BY id",
+        (turn,),
+    ).fetchall()
+    reaction_label = {
+        "opportunism": "伺机而动",
+        "balancing": "扶弱抑强",
+        "caution": "审慎观望",
+        "condemnation": "公开谴责",
+        "reassurance": "安抚保证",
+    }
+    source_label = {
+        "battle": "野战",
+        "siege": "围城",
+        "treaty_breach": "违约",
+    }
+    for row in rows:
+        actor = _safe_name(db, "powers", "id", str(row["actor_power_id"]), str(row["actor_power_id"]))
+        target = _safe_name(db, "powers", "id", str(row["target_power_id"]), str(row["target_power_id"]))
+        rxn_type = str(row["reaction_type"] or "")
+        src_kind = str(row["source_kind"] or "")
+        soft = _decode(row["soft_effects_json"], {})
+        effect_label = {
+            "public_relation_delta": "公开关系",
+            "trust_delta": "互信",
+            "military_coordination_delta": "军事协调",
+            "power_action_score_delta": "行动倾向",
+        }
+        changes = "；".join(
+            f"{effect_label.get(k, k)}{v:+d}"
+            for k, v in soft.items() if isinstance(v, int) and v != 0
+        ) or "无显著变化"
+        items.append({
+            "id": f"geopolitical:{int(row['id'])}",
+            "kind": "天下态势",
+            "title": f"{actor}{reaction_label.get(rxn_type, rxn_type)}",
+            "summary": (
+                f"因{source_label.get(src_kind, src_kind)}（{str(row['source_ref'] or '')}），"
+                f"{actor}对{target}作出{reaction_label.get(rxn_type, rxn_type)}姿态。"
+                f"有界变动：{changes}"
+            ),
+            "action": {"entry": "外交", "label": "查看反应依据"},
+            "audit": {
+                "source_kind": src_kind,
+                "source_ref": str(row["source_ref"] or ""),
+                "actor_power": actor,
+                "target_power": target,
+                "reaction_type": rxn_type,
+                "severity": int(row["severity"] or 0),
+                "soft_effects": soft,
+                "evidence": _decode(row["evidence_json"], {}),
+                "action_hints": _decode(row["action_hint_json"], {}),
+            },
+        })
+    return items
+
+
+def _effect_label(field: str) -> str:
+    """将字段名翻译为中文标签。"""
+    return {
+        "public_support": "民心",
+        "unrest": "动乱",
+        "military_pressure": "军压",
+        "road_condition": "道路",
+        "grain_transport_pressure": "粮运",
+        "harvest_outlook": "收成",
+        "epidemic_pressure": "疫病",
+        "disaster_risk": "灾害",
+        "hazard_combat_multiplier": " hazard 战",
+        "supply_combat_multiplier": "补给战",
+    }.get(field, field)
+
+
+def _effect_delta(delta: object) -> str:
+    """格式化带符号 delta。"""
+    try:
+        d = int(delta)
+    except (TypeError, ValueError):
+        return ""
+    if d == 0:
+        return "±0"
+    return f"{'+' if d > 0 else ''}{d}"
+
+
 def _diplomacy_items(db, turn: int) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     envoys = db.conn.execute(
@@ -299,6 +422,25 @@ def _world_items(db, state: object, source_report: str) -> List[Dict[str, Any]]:
         for item in timeline[:4]
     ]
     items = chronicle_items + items
+    context = db.conn.execute("SELECT * FROM world_simulation_contexts WHERE turn=?", (report_turn,)).fetchone()
+    if context is not None:
+        weather = _decode(context["weather_json"], {})
+        mood = _decode(context["public_mood_json"], {})
+        items.insert(0, {
+            "id": f"world-context:{report_turn}", "kind": "世界环境", "title": f"{context['season']}季·{weather.get('kind', '天候未明')}",
+            "summary": f"民情{mood.get('trend', '观望')}；本月环境由可复现种子派生。",
+            "action": {"entry": "史册", "label": "查世界审计"},
+            "audit": {"seed": context["seed"], "weather": weather, "public_mood": mood, "regional_conditions": _decode(context["regional_conditions_json"], {})},
+        })
+    intel_rows = db.conn.execute("SELECT * FROM external_intelligence_reports WHERE turn=? ORDER BY id DESC", (report_turn,)).fetchall()
+    for intel in intel_rows:
+        visibility = str(intel["visibility"])
+        label = {"rumor": "传闻", "assessment": "研判", "confirmed": "确认"}.get(visibility, visibility)
+        items.append({
+            "id": f"intel:{int(intel['id'])}", "kind": f"外部{label}", "title": str(intel["title"]),
+            "summary": str(intel["summary"]), "action": {"entry": "外交", "label": "查看外势"},
+            "audit": {"visibility": visibility, "usable_as_fact": bool(intel["usable_as_fact"]), "evidence_refs": _decode(intel["evidence_json"], [])},
+        })
     if source_report:
         items.insert(0, {
             "id": "source-report",
@@ -431,7 +573,10 @@ def _summary(label: str, items: Iterable[Dict[str, Any]], empty: str) -> str:
 def build_monthly_report(db, state: object) -> Dict[str, Any]:
     """返回每回合开始展示的结构化军政总计。"""
     current_turn = int(getattr(state, "turn", 1) or 1)
-    report_turn = max(0, current_turn - 1)
+    # 颁令批次在本回合核销时即保存回奏；尚未进入下月时应优先展示这份刚生成的
+    # 回奏（尤其是重大天下反应的待决），进入下月后才自然回看上月。
+    current_row = db.conn.execute("SELECT 1 FROM turn_reports WHERE turn=?", (current_turn,)).fetchone()
+    report_turn = current_turn if current_row is not None else max(0, current_turn - 1)
     row = db.conn.execute(
         "SELECT year, period, report FROM turn_reports WHERE turn=?",
         (report_turn,),
@@ -442,24 +587,57 @@ def build_monthly_report(db, state: object) -> Dict[str, Any]:
 
     military_items = _battle_items(db, report_turn) + _army_pressure_items(db, report_turn)
     internal_items = _internal_items(db, report_turn)
+    regional_items = _regional_items(db, report_turn)
+    geopolitical_items = _geopolitical_items(db, report_turn)
     diplomacy_items = _diplomacy_items(db, report_turn)
     personnel_items = _personnel_items(db, report_turn)
+    memorial_rows = db.conn.execute("SELECT * FROM minister_memorials WHERE turn=? ORDER BY id", (report_turn,)).fetchall()
+    personnel_items.extend({
+        "id": f"memorial:{int(item['id'])}", "kind": str(item["memorial_kind"]), "title": str(item["title"]),
+        "summary": f"{item['minister_name']}：{item['summary']}", "action": {"entry": "朝议", "label": "纳入方略"},
+        "audit": {"risk": item["risk_note"], "evidence_refs": _decode(item["evidence_json"], []), "suggested_action": _decode(item["suggested_action_json"], {})},
+    } for item in memorial_rows)
     secret_items = _secret_items(db, state, report_turn)
     world_items = _world_items(db, state, source_report)
     reputation_items = _reputation_items(db, report_turn)
     pending_items = _pending_items(db, report_turn)
     adjudication_items = _adjudication_items(db, report_turn)
+    reaction_rows = db.conn.execute(
+        "SELECT * FROM reaction_events WHERE turn=? ORDER BY id",
+        (report_turn,),
+    ).fetchall()
+    reaction_items = [
+        {
+            "id": f"reaction:{int(row['id'])}",
+            "kind": "重大天下反应" if str(row["reaction_level"]) == "major" else "天下反应",
+            "title": str(row["actor"] or "天下反应"),
+            "summary": str(row["outcome_summary"] or ""),
+            "status": str(row["status"]), "level": str(row["reaction_level"]),
+            "action": {"entry": "朝议", "label": "查看反应依据"},
+            "audit": {
+                **_row_dict(row),
+                "rule_facts_snapshot": _decode(row["rule_facts_snapshot"], {}),
+                "ai_proposal": _decode(row["ai_proposal"], {}),
+                "validation_result": _decode(row["validation_result"], {}),
+            },
+        }
+        for row in reaction_rows
+    ]
     reputation_score = db.reputation_summary(limit=8)["score"]
 
     sections = [
         _section("military", _summary("军令战事", military_items, "上月无明确战役，仍需留意补给、疲劳与驻防。"), military_items),
         _section("internal", _summary("郡县经营", internal_items, "上月未见郡县投资推进，可从粮仓、城防、民心中择要问策。"), internal_items),
+        _section("regional", _summary("区域局势", regional_items, "上月区域平稳，无显著灾害或事件。"), regional_items),
+        _section("geopolitical", _summary("天下态势", geopolitical_items, "上月无跨势力地缘反应。"), geopolitical_items),
         _section("diplomacy", _summary("使臣盟约", diplomacy_items, "上月无新外交回报，可继续审视孙刘、荆州与借粮议题。"), diplomacy_items),
         _section("personnel", _summary("人事任命", personnel_items, "上月无新任事记录，空缺与效率仍可在廷议中追问。"), personnel_items),
         _section("secret", _summary("密令暗流", secret_items, "暂无进行中密令。"), secret_items),
         _section("world", _summary("天下动向", world_items, "暂无新的天下条目。"), world_items),
         _section("reputation", f"仁义口碑 {reputation_score}，以近期可见民心与名望回声为准。", reputation_items),
     ]
+    if reaction_items:
+        sections.insert(-1, _section("reactions", _summary("人物与天下反应", reaction_items, "暂无新的天下反应。"), reaction_items))
     if pending_items:
         sections.insert(0, _section("pending", _summary("待核议裁决", pending_items, "暂无被规则暂停的裁决。"), pending_items))
     if adjudication_items:

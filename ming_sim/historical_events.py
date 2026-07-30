@@ -9,14 +9,37 @@ import json
 from typing import Any, Dict, Iterable
 
 from ming_sim.adjudication import (
+    COMMON_FORBIDDEN_TEXT,
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
     validate_ai_proposal,
 )
 from ming_sim.context import victory_status
 from ming_sim.models import Event
+
+
+# ---------------------------------------------------------------------------
+# 自由世界事件路径边界常量
+# ---------------------------------------------------------------------------
+
+FREE_WORLD_EVENT_BOUNDS = {
+    "urgency_delta": (-5, 10),
+}
+
+WORLD_EVENT_FORBIDDEN_FIELDS = {"ending_status", "effects", "outcome_effects", "power_status", "character_status"}
+
+WORLD_EVENT_FORBIDDEN_TEXT = {
+    **COMMON_FORBIDDEN_TEXT,
+    "灭国": "天下事件模型不得用叙事创造灭国",
+    "覆灭": "天下事件模型不得用叙事创造覆灭",
+    "天下归一": "天下事件模型不得用叙事创造统一",
+    "统一天下": "天下事件模型不得用叙事创造统一",
+    "病逝": "天下事件模型不得用叙事创造人物病逝",
+    "身死": "天下事件模型不得用叙事创造人物身死",
+}
 
 
 LIFECYCLE = {"scheduled", "eligible", "adapted", "resolved", "superseded", "expired"}
@@ -443,46 +466,97 @@ def build_world_event_adjudication_pack(
     )
 
 
-def run_world_event_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
-    try:
-        forbidden_fields = {"ending_status", "effects", "outcome_effects", "power_status", "character_status"}
-        present_forbidden = sorted(field for field in forbidden_fields if field in proposal)
-        if present_forbidden:
-            raise ValueError(f"天下事件模型不得直接携带世界变更字段：{','.join(present_forbidden)}")
-        text = "\n".join(str(proposal.get(key) or "") for key in ("narrative", "reason", "risk_note", "recommended_followup"))
-        for marker in ("灭国", "覆灭", "天下归一", "统一天下", "病逝", "身死"):
-            if marker in text:
-                raise ValueError("天下事件模型不得用叙事创造灭国、终局或人物死亡。")
-        selected = ((pack.get("facts") or {}).get("selected_event") or {})
-        event_info = selected.get("event") if isinstance(selected, dict) else {}
-        event_id = str((event_info or {}).get("id") or "")
-        state_info = selected.get("state") if isinstance(selected, dict) else {}
-        event_status = str((state_info or {}).get("status") or "")
-        variants = {
-            str(item.get("id") or "")
-            for item in ((event_info or {}).get("variants") or [])
-            if str(item.get("id") or "")
+def _validate_free_world_event(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由世界事件提案是否在边界内。
+
+    世界事件已有较强的自定义校验逻辑，自由路径在此基础上叠加。
+    """
+    # 0. 禁止字段检查（世界事件特有 + 通用）
+    check_forbidden_fields(proposal, extra=WORLD_EVENT_FORBIDDEN_FIELDS)
+
+    # 1. feasibility=impossible → 安全默认（保持事件状态）
+    feasibility = str(proposal.get("feasibility", "medium"))
+    if feasibility == "impossible":
+        return {
+            "event_action": "保持现状",
+            "urgency_delta": 0,
+            "feasibility": "impossible",
+            "reasoning": proposal.get("reasoning", []),
+            "narrative": str(proposal.get("narrative", "事件方案不可行，保持现状。")),
+            "risk_note": str(proposal.get("risk_note", "")),
+            "variant_id": "",
+            "event_id": str(((pack.get("facts") or {}).get("selected_event") or {}).get("event", {}).get("id", "")),
         }
-        outcome = str(proposal.get("outcome") or "")
-        variant_id = str(proposal.get("variant_id") or "")
-        if outcome == "resolve_event_variant":
-            if event_status not in {"eligible", "adapted"}:
-                raise ValueError(f"事件当前状态不可由模型结案：{event_status}")
-            if not variant_id:
-                raise ValueError("天下事件结案必须提供 variant_id。")
-            if variant_id not in variants:
-                raise ValueError(f"事件变体不在允许范围：{variant_id}")
-        if outcome == "record_chronicle" and proposal.get("changes"):
-            raise ValueError("天下事件补史册只允许摘要，不允许结构化世界变更。")
-        validated = validate_ai_proposal(
-            pack,
-            proposal,
-            allowed_change_kinds=["historical_event_status", "chronicle_record"],
-        )
-        if variant_id:
-            validated["variant_id"] = variant_id
-        validated["event_id"] = event_id
-        return validated
+
+    # 2. 提取并裁剪 urgency_delta
+    urgency_delta = int(proposal.get("urgency_delta", 0))
+    urgency_delta = max(
+        FREE_WORLD_EVENT_BOUNDS["urgency_delta"][0],
+        min(FREE_WORLD_EVENT_BOUNDS["urgency_delta"][1], urgency_delta),
+    )
+
+    # 3. 禁止文本检查
+    reasoning_text = " ".join(str(r) for r in proposal.get("reasoning", []))
+    narrative = str(proposal.get("narrative", ""))
+    reason = str(proposal.get("reason", ""))
+    combined = f"{reasoning_text}\n{narrative}\n{reason}"
+    for marker, message in WORLD_EVENT_FORBIDDEN_TEXT.items():
+        if marker in combined:
+            raise ValueError(message)
+
+    # 4. 事件变体校验
+    selected = ((pack.get("facts") or {}).get("selected_event") or {})
+    event_info = selected.get("event") if isinstance(selected, dict) else {}
+    event_id = str((event_info or {}).get("id") or "")
+    state_info = selected.get("state") if isinstance(selected, dict) else {}
+    event_status = str((state_info or {}).get("status") or "")
+    variants = {
+        str(item.get("id") or "")
+        for item in ((event_info or {}).get("variants") or [])
+        if str(item.get("id") or "")
+    }
+
+    variant_id = str(proposal.get("variant_id") or "")
+    event_action = str(proposal.get("event_action", ""))
+
+    # 如果提案要结案变体，校验状态和变体 ID
+    if event_action == "resolve_event_variant" or str(proposal.get("outcome")) == "resolve_event_variant":
+        if event_status not in {"eligible", "adapted"}:
+            raise ValueError(f"事件当前状态不可由模型结案：{event_status}")
+        if not variant_id:
+            raise ValueError("天下事件结案必须提供 variant_id。")
+        if variant_id not in variants:
+            raise ValueError(f"事件变体不在允许范围：{variant_id}")
+
+    # 补史册不允许结构化变更
+    if event_action == "record_chronicle" and proposal.get("changes"):
+        raise ValueError("天下事件补史册只允许摘要，不允许结构化世界变更。")
+
+    # 5. 事实一致性检查
+    facts = pack.get("facts", {})
+
+    # 声称"事件窗口已开" → 检查事件状态
+    if "窗口已开" in reasoning_text or "时机已到" in reasoning_text:
+        if event_status not in {"eligible", "adapted"}:
+            raise ValueError("AI 声称'事件窗口已开'，但盘面事实不支持（事件未 eligible/adapted）。")
+
+    return {
+        "event_action": str(proposal.get("event_action", "自由事件评估")),
+        "outcome": str(proposal.get("outcome") or proposal.get("event_action", "")),
+        "urgency_delta": urgency_delta,
+        "feasibility": feasibility,
+        "reasoning": proposal.get("reasoning", []),
+        "narrative": narrative,
+        "risk_note": str(proposal.get("risk_note", "")),
+        "variant_id": variant_id,
+        "event_id": event_id,
+    }
+
+
+def run_world_event_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """世界事件 AI 裁判：统一走自由路径。"""
+    try:
+        return _validate_free_world_event(pack, proposal)
     except ValueError as error:
         pending = record_pending_adjudication(db, state, pack, str(error), proposal)
         return {"status": "pending_review", "pending_adjudication": pending}

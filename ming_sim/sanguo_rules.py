@@ -1,33 +1,46 @@
-"""三国版战略地图与基础硬规则。前端按州块交互，旧路线数据仅作州邻接兼容源。"""
+"""三国版战略地图与基础硬规则。
+
+72 城池网络：administrative_units.json.strategic 是城池节点与城际路线的唯一目录。
+行军、围城、战役、补给、AI 候选都只使用城池节点 (city:*) 和直连城际边。
+"""
 
 from __future__ import annotations
 
 import json
 import sqlite3
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 
 from ming_sim.assets import load_json_asset, require_dict, require_list, str_field
 
 
 PRIMARY_ORDERS = {"移动", "驻守", "围城", "突袭", "补给", "撤退"}
 DANGEROUS_ROUTES = {"江河", "山道"}
-ROUTE_KINDS = {"普通路", "江河", "山道", "关隘", "州块"}
+# 首版所有边均为普通路；保留扩展类型供未来路线编辑使用
+ROUTE_KINDS = {"普通路", "江河", "山道", "关隘"}
 
 
 class ArmyOrderError(ValueError):
     pass
 
 
+# ── 城池战略目录数据结构（administrative_units.json.strategic） ──
+
+
 @dataclass(frozen=True)
-class StrategicNode:
-    id: str
+class CityStrategicNode:
+    """城池战略节点：city_id 即 administrative_cities.id。"""
+    city_id: str
     name: str
-    province: str
+    commandery_id: str
+    province_id: str
+    x: float
+    y: float
 
 
 @dataclass(frozen=True)
-class StrategicEdge:
+class CityStrategicEdge:
+    """城际路线边：source/target 均为 city:* ID。"""
     source: str
     target: str
     kind: str
@@ -35,49 +48,204 @@ class StrategicEdge:
 
 
 @dataclass(frozen=True)
-class StrategicRouteCatalog:
-    nodes: List[StrategicNode]
-    edges: List[StrategicEdge]
+class CityStrategicCatalog:
+    """城池战略目录：72 城节点 + 固化路线边表。"""
+    topology_version: str
+    nodes: List[CityStrategicNode]
+    edges: List[CityStrategicEdge]
+
+    @property
+    def city_ids(self) -> Set[str]:
+        return {n.city_id for n in self.nodes}
+
+    @property
+    def node_map(self) -> Dict[str, CityStrategicNode]:
+        return {n.city_id: n for n in self.nodes}
 
 
-def load_strategic_routes() -> StrategicRouteCatalog:
-    raw = require_dict(load_json_asset("routes.json"), "routes.json")
-    nodes = [
-        StrategicNode(
-            id=str_field(require_dict(item, f"routes.json.nodes[{idx}]"), "id", f"routes.json.nodes[{idx}]"),
-            name=str_field(require_dict(item, f"routes.json.nodes[{idx}]"), "name", f"routes.json.nodes[{idx}]"),
-            province=str_field(require_dict(item, f"routes.json.nodes[{idx}]"), "province", f"routes.json.nodes[{idx}]"),
+def load_city_strategic_catalog(admin_units: Dict[str, object]) -> CityStrategicCatalog:
+    """从 administrative_units 加载结果中解析并严格校验城池战略目录。
+
+    加载期验证：
+    - strategic 字段存在且 topology_version 非空
+    - 节点数 = 城池数，city_id 集合严格相等
+    - 所有 city_id 以 city: 开头，无重复
+    - 锚点坐标为数值且非缺失
+    - 路线端点均在现役城池中，无自环、无重复无向边
+    - 路线类型合法
+    - 图连通
+    """
+    strategic = admin_units.get("strategic")
+    if not isinstance(strategic, dict):
+        raise SystemExit("administrative_units.json 缺少 strategic 字段。")
+
+    topology_version = str(strategic.get("topology_version") or "").strip()
+    if not topology_version:
+        raise SystemExit("administrative_units.json.strategic.topology_version 不可为空。")
+
+    # 解析行政城池索引
+    cities: List[Dict] = admin_units.get("cities", [])  # type: ignore[assignment]
+    city_index: Dict[str, Dict] = {}
+    for city in cities:
+        cid = str(city["id"])
+        if not cid.startswith("city:"):
+            raise SystemExit(f"行政城池 id 必须以 city: 开头：{cid}")
+        if cid in city_index:
+            raise SystemExit(f"行政城池 id 重复：{cid}")
+        city_index[cid] = city
+
+    # 解析节点
+    raw_nodes = require_list(strategic.get("nodes"), "strategic.nodes")
+    nodes: List[CityStrategicNode] = []
+    node_ids: Set[str] = set()
+    anchor_keys: Set[Tuple[float, float]] = set()
+
+    for idx, raw in enumerate(raw_nodes, 1):
+        item = require_dict(raw, f"strategic.nodes[{idx}]")
+        city_id = str_field(item, "city_id", f"strategic.nodes[{idx}]")
+        if not city_id.startswith("city:"):
+            raise SystemExit(f"strategic.nodes[{idx}] city_id 必须以 city: 开头：{city_id}")
+        if city_id in node_ids:
+            raise SystemExit(f"strategic.nodes 节点 city_id 重复：{city_id}")
+        if city_id not in city_index:
+            raise SystemExit(
+                f"strategic.nodes 中的 {city_id} 不在行政城池名册中。"
+            )
+        node_ids.add(city_id)
+
+        # 坐标校验
+        x_raw = item.get("x")
+        y_raw = item.get("y")
+        if x_raw is None or y_raw is None:
+            raise SystemExit(f"strategic.nodes[{idx}] ({city_id}) 缺少坐标。")
+        try:
+            x = float(x_raw)
+            y = float(y_raw)
+        except (TypeError, ValueError):
+            raise SystemExit(
+                f"strategic.nodes[{idx}] ({city_id}) 坐标非数值：x={x_raw!r}, y={y_raw!r}"
+            )
+        anchor = (x, y)
+        if anchor in anchor_keys:
+            raise SystemExit(f"strategic.nodes 锚点坐标重复：({x}, {y})")
+        anchor_keys.add(anchor)
+
+        city_data = city_index[city_id]
+        nodes.append(CityStrategicNode(
+            city_id=city_id,
+            name=str(city_data["name"]),
+            commandery_id=str(city_data["commandery_id"]),
+            province_id=str(city_data["province_id"]),
+            x=x,
+            y=y,
+        ))
+
+    # 节点集合必须与城池集合严格相等
+    missing_from_nodes = set(city_index.keys()) - node_ids
+    if missing_from_nodes:
+        raise SystemExit(
+            f"strategic.nodes 缺少以下行政城池节点：{sorted(missing_from_nodes)}"
         )
-        for idx, item in enumerate(require_list(raw.get("nodes"), "routes.json.nodes"), 1)
-    ]
-    node_ids = {node.id for node in nodes}
-    if len(node_ids) != len(nodes):
-        raise SystemExit("routes.json 节点 id 重复。")
-    node_names = {node.name for node in nodes}
-    if len(node_names) != len(nodes):
-        raise SystemExit("routes.json 节点名称重复。")
-    edges: List[StrategicEdge] = []
-    edge_keys: set[tuple[str, str]] = set()
-    for idx, raw_edge in enumerate(require_list(raw.get("edges"), "routes.json.edges"), 1):
-        item = require_dict(raw_edge, f"routes.json.edges[{idx}]")
-        edge = StrategicEdge(
-            source=str_field(item, "source", f"routes.json.edges[{idx}]"),
-            target=str_field(item, "target", f"routes.json.edges[{idx}]"),
-            kind=str_field(item, "kind", f"routes.json.edges[{idx}]"),
-            note=str(item.get("note") or ""),
+    extra_nodes = node_ids - set(city_index.keys())
+    if extra_nodes:
+        raise SystemExit(
+            f"strategic.nodes 包含不在行政城池名册中的节点：{sorted(extra_nodes)}"
         )
-        if edge.source not in node_ids or edge.target not in node_ids:
-            raise SystemExit(f"routes.json.edges[{idx}] 引用了不存在的节点。")
-        if edge.kind not in ROUTE_KINDS:
-            raise SystemExit(f"routes.json.edges[{idx}] 路线类型非法：{edge.kind}")
-        if edge.source == edge.target:
-            raise SystemExit(f"routes.json.edges[{idx}] 不允许节点自连。")
-        edge_key = tuple(sorted((edge.source, edge.target)))
+
+    # 解析边
+    raw_edges = require_list(strategic.get("edges"), "strategic.edges")
+    edges: List[CityStrategicEdge] = []
+    edge_keys: Set[Tuple[str, str]] = set()
+
+    for idx, raw in enumerate(raw_edges, 1):
+        item = require_dict(raw, f"strategic.edges[{idx}]")
+        source = str_field(item, "source", f"strategic.edges[{idx}]")
+        target = str_field(item, "target", f"strategic.edges[{idx}]")
+        kind = str_field(item, "kind", f"strategic.edges[{idx}]")
+        note = str(item.get("note") or "")
+
+        if source == target:
+            raise SystemExit(f"strategic.edges[{idx}] 不允许自环：{source}")
+        if source not in node_ids:
+            raise SystemExit(
+                f"strategic.edges[{idx}] source '{source}' 不在现役城池节点中。"
+            )
+        if target not in node_ids:
+            raise SystemExit(
+                f"strategic.edges[{idx}] target '{target}' 不在现役城池节点中。"
+            )
+        if kind not in ROUTE_KINDS:
+            raise SystemExit(
+                f"strategic.edges[{idx}] 路线类型非法：{kind!r}（合法值：{sorted(ROUTE_KINDS)}）"
+            )
+        edge_key = tuple(sorted((source, target)))
         if edge_key in edge_keys:
-            raise SystemExit(f"routes.json.edges[{idx}] 路线重复：{edge.source}—{edge.target}")
+            raise SystemExit(
+                f"strategic.edges[{idx}] 路线重复：{source}—{target}"
+            )
         edge_keys.add(edge_key)
-        edges.append(edge)
-    return StrategicRouteCatalog(nodes=nodes, edges=edges)
+        edges.append(CityStrategicEdge(
+            source=edge_key[0],
+            target=edge_key[1],
+            kind=kind,
+            note=note,
+        ))
+
+    # 图连通性检查（BFS）
+    if nodes:
+        adj: Dict[str, List[str]] = {n.city_id: [] for n in nodes}
+        for e in edges:
+            adj[e.source].append(e.target)
+            adj[e.target].append(e.source)
+        visited: Set[str] = set()
+        queue = [nodes[0].city_id]
+        while queue:
+            node = queue.pop(0)
+            if node in visited:
+                continue
+            visited.add(node)
+            queue.extend(adj[node])
+        if len(visited) != len(nodes):
+            unreachable = node_ids - visited
+            raise SystemExit(
+                f"strategic.edges 图不连通，以下节点不可达：{sorted(unreachable)}"
+            )
+
+    return CityStrategicCatalog(
+        topology_version=topology_version,
+        nodes=nodes,
+        edges=edges,
+    )
+
+
+# ── 城池节点校验与城际路线查询 ──
+
+
+def require_city_node(node_id: str, *, label: str = "节点") -> str:
+    """校验 node_id 以 city: 开头，否则报错。"""
+    if not node_id or not str(node_id).startswith("city:"):
+        raise ArmyOrderError(f"{label}必须是城池节点 (city:*)：{node_id!r}")
+    return str(node_id)
+
+
+def find_strategic_route(db, source: str, target: str) -> CityStrategicEdge | None:
+    """查询两城池节点之间的直连路线。同节点返回 None（无需路线）。"""
+    if source == target:
+        return None
+    row = db.conn.execute(
+        """SELECT source, target, kind, note FROM strategic_routes
+           WHERE (source=? AND target=?) OR (source=? AND target=?)
+           LIMIT 1""",
+        (source, target, target, source),
+    ).fetchone()
+    if row is None:
+        return None
+    return CityStrategicEdge(
+        source=str(row["source"]),
+        target=str(row["target"]),
+        kind=str(row["kind"]),
+        note=str(row["note"] or ""),
+    )
 
 
 def apply_route_entry(kind: str, *, supply: int, hazard_turns: int) -> Dict[str, float | int]:
@@ -100,42 +268,29 @@ def apply_route_entry(kind: str, *, supply: int, hazard_turns: int) -> Dict[str,
     }
 
 
-def _node_province(db, node_id: str) -> str:
-    row = db.conn.execute(
-        "SELECT province FROM strategic_nodes WHERE id=?", (node_id,)
+def validate_route_move(
+    db,
+    army_id: str,
+    source: str,
+    target: str,
+) -> CityStrategicEdge:
+    """验证军队按直连城际路线移动。"""
+    require_city_node(source, label="出发节点")
+    require_city_node(target, label="目标节点")
+    army = db.conn.execute(
+        "SELECT id, station_node, owner_power, supply, hazard_turns FROM armies WHERE id=? AND active=1",
+        (army_id,),
     ).fetchone()
-    if row is None:
-        raise ArmyOrderError(f"目标节点不存在：{node_id}")
-    return str(row["province"])
-
-
-def province_block_between(db, source: str, target: str) -> StrategicEdge:
-    """按州块验证行动：同州内可调动，相邻州之间可跨州，不再使用具体路线。"""
+    if army is None:
+        raise ArmyOrderError(f"军队不存在或已失效：{army_id}")
+    if str(army["station_node"]) != source:
+        raise ArmyOrderError(f"军队 {army_id} 当前不在 {source}。")
     if source == target:
-        return StrategicEdge(source=source, target=target, kind="州块", note="同郡")
-    source_province = _node_province(db, source)
-    target_province = _node_province(db, target)
-    if source_province == target_province:
-        return StrategicEdge(source=source, target=target, kind="州块", note=source_province)
-    row = db.conn.execute(
-        """
-        SELECT 1
-        FROM strategic_routes sr
-        JOIN strategic_nodes s ON s.id = sr.source
-        JOIN strategic_nodes t ON t.id = sr.target
-        WHERE (s.province=? AND t.province=?) OR (s.province=? AND t.province=?)
-        LIMIT 1
-        """,
-        (source_province, target_province, target_province, source_province),
-    ).fetchone()
-    if row is None:
-        raise ArmyOrderError(f"{source_province} 与 {target_province} 不接壤，不可跨州行动。")
-    return StrategicEdge(
-        source=source,
-        target=target,
-        kind="州块",
-        note=f"{source_province}-{target_province}",
-    )
+        return CityStrategicEdge(source=source, target=target, kind="同地", note="同节点")
+    edge = find_strategic_route(db, source, target)
+    if edge is None:
+        raise ArmyOrderError(f"{source} 与 {target} 之间无直连路线，不可移动。")
+    return edge
 
 
 def issue_army_order(
@@ -156,24 +311,6 @@ def issue_army_order(
         conn.commit()
     except sqlite3.IntegrityError as error:
         raise ArmyOrderError(f"军队 {army_id} 本回合已执行主军令。") from error
-
-
-def validate_route_move(
-    db,
-    army_id: str,
-    source: str,
-    target: str,
-) -> StrategicEdge:
-    """验证军队按州块移动：同州或邻州合法，不再执行路线/关隘硬阻断。"""
-    army = db.conn.execute(
-        "SELECT id, station_node, owner_power, supply, hazard_turns FROM armies WHERE id=? AND active=1",
-        (army_id,),
-    ).fetchone()
-    if army is None:
-        raise ArmyOrderError(f"军队不存在或已失效：{army_id}")
-    if str(army["station_node"]) != source:
-        raise ArmyOrderError(f"军队 {army_id} 当前不在 {source}。")
-    return province_block_between(db, source, target)
 
 
 def _decode_json_list(raw: object) -> List[str]:
@@ -207,7 +344,7 @@ def _settle_route_hazards(db, turn: int) -> None:
 
 
 def resolve_army_order(db, state: object, order_id: int) -> Dict[str, object]:
-    """结算一道当前已支持的结构化军令；移动按州块耗时一回合。"""
+    """结算一道当前已支持的结构化军令；移动按直连路线耗时一回合。"""
     order = db.conn.execute(
         "SELECT id, army_id, turn, order_type, payload, status, result FROM army_orders WHERE id=?",
         (int(order_id),),
@@ -243,7 +380,7 @@ def resolve_army_order(db, state: object, order_id: int) -> Dict[str, object]:
         if edge.kind == "山道" and "山地" in specialties:
             mobility_multiplier = 0.65
         target_row = db.conn.execute(
-            "SELECT name FROM strategic_nodes WHERE id=?", (target,)
+            "SELECT name FROM administrative_cities WHERE id=?", (target,)
         ).fetchone()
         target_name = str(target_row["name"] if target_row else target)
         update_fields = [

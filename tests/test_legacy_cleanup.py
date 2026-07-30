@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
-from ming_sim.paths import SANGUO_SCENARIO_ID, migrate_legacy_ming_data
+from ming_sim.paths import SANGUO_SCENARIO_ID
 from ming_sim.content import GameContent
 from ming_sim.db import GameDB
 from ming_sim.models import GameState
@@ -24,36 +24,6 @@ def _make_db(path: Path, *, scenario_id: str = "", legacy_power: str = "") -> No
         conn.commit()
     finally:
         conn.close()
-
-
-def test_first_start_removes_only_recognizable_ming_databases(tmp_path):
-    saves = tmp_path / "saves"
-    saves.mkdir()
-    legacy_main = tmp_path / "ming_sim.db"
-    legacy_save = saves / "old_ming.db"
-    sanguo_save = saves / "sanguo.db"
-    unrelated = saves / "notes.db"
-    _make_db(legacy_main, legacy_power="houjin")
-    _make_db(legacy_save, legacy_power="ming")
-    _make_db(sanguo_save, scenario_id=SANGUO_SCENARIO_ID)
-    unrelated.write_text("not sqlite", encoding="utf-8")
-
-    removed = migrate_legacy_ming_data(tmp_path)
-
-    assert {Path(item).name for item in removed} == {"ming_sim.db", "old_ming.db"}
-    assert not legacy_main.exists() and not legacy_save.exists()
-    assert sanguo_save.exists() and unrelated.exists()
-    assert (tmp_path / ".sanguo_liubei_208_migrated").exists()
-
-
-def test_legacy_cleanup_runs_only_once(tmp_path):
-    (tmp_path / "saves").mkdir()
-    migrate_legacy_ming_data(tmp_path)
-    late_legacy = tmp_path / "saves" / "late.db"
-    _make_db(late_legacy, legacy_power="houjin")
-
-    assert migrate_legacy_ming_data(tmp_path) == []
-    assert late_legacy.exists()
 
 
 def test_new_database_is_stamped_with_unambiguous_sanguo_scenario_id():

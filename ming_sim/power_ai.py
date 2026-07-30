@@ -6,29 +6,39 @@ import json
 from typing import Dict, Iterable
 
 from ming_sim.adjudication import (
+    COMMON_FORBIDDEN_TEXT,
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
     validate_ai_proposal,
 )
 from ming_sim.supply import reachable_friendly_granary
+from ming_sim.world_simulation import get_or_create_world_context
+from ming_sim.ws_utils import status_terminal as _status_terminal
 
 
 MILITARY_TYPES = {"move", "attack", "siege", "fortify", "resupply"}
 DIPLOMACY_TYPES = {"declare_war", "seek_peace", "intrigue", "propose_alliance"}
 ACTION_TYPES = MILITARY_TYPES | DIPLOMACY_TYPES
+
+# ---------------------------------------------------------------------------
+# 自由势力行动路径边界常量
+# ---------------------------------------------------------------------------
+
+FREE_POWER_ACTION_BOUNDS = {
+    "priority": ("low", "normal", "high"),
+    "risk_level": ("low", "medium", "high"),
+}
+
+POWER_ACTION_FORBIDDEN_TEXT = {
+    **COMMON_FORBIDDEN_TEXT,
+}
 FORBIDDEN_FIELDS = {
     "region_control", "controlled_by", "kill_character", "character_status",
     "manpower_delta", "territory_delta", "spawn_army", "reinforcements",
 }
-
-
-def _status_terminal(status: str) -> bool:
-    lowered = str(status).lower()
-    return lowered in {"defeated", "destroyed", "collapsed", "inactive"} or any(
-        token in str(status) for token in ("灭亡", "瓦解", "覆灭", "已亡")
-    )
 
 
 def _relation(db, power_a: str, power_b: str):
@@ -63,6 +73,62 @@ def _intelligence_confidence(db, power_id: str) -> int:
         (power_id,),
     ).fetchone()
     return max(20, min(95, int(row["best"] or 40)))
+
+
+def _apply_geopolitical_hints(
+    db, state: object, power_id: str, actions: list[Dict[str, object]],
+) -> None:
+    """将本回合地缘反应的 action_hint 叠加到匹配候选的评分上。
+
+    不生成新候选，不突破第二槽限制，不绕过进攻上限。
+    在匹配 action 的 factors 中写入 geopolitical_reaction_ids。
+    """
+    import json as _json
+    turn = int(getattr(state, "turn", 0))
+    rows = db.conn.execute(
+        "SELECT id, target_power_id, reaction_type, action_hint_json "
+        "FROM geopolitical_reactions WHERE turn=? AND actor_power_id=? AND status='resolved'",
+        (turn, power_id),
+    ).fetchall()
+    if not rows:
+        return
+    for row in rows:
+        rxn_id = int(row["id"])
+        target_power = str(row["target_power_id"] or "")
+        hints_raw = str(row["action_hint_json"] or "{}")
+        try:
+            hints = _json.loads(hints_raw)
+        except (TypeError, ValueError, _json.JSONDecodeError):
+            continue
+        deltas = hints.get("action_score_deltas") or []
+        for hint in deltas:
+            if not isinstance(hint, dict):
+                continue
+            hint_action = str(hint.get("action_type") or "")
+            hint_target = str(hint.get("target_power") or "")
+            delta = float(hint.get("delta") or 0)
+            delta = max(-12.0, min(12.0, delta))
+            if delta == 0:
+                continue
+            for act in actions:
+                if str(act.get("action_type") or "") != hint_action:
+                    continue
+                if str(act.get("target_power") or "") != hint_target:
+                    continue
+                old_score = float(act.get("score") or 0)
+                new_score = max(0.0, old_score + delta)
+                act["score"] = round(new_score, 2)
+                factors = act.get("factors") or {}
+                rxn_ids = list(factors.get("geopolitical_reaction_ids") or [])
+                if rxn_id not in rxn_ids:
+                    rxn_ids.append(rxn_id)
+                factors["geopolitical_reaction_ids"] = rxn_ids
+                reasons = list(act.get("reasons") or [])
+                hint_reason = f"天下态势({row['reaction_type']}):{target_power}"
+                if hint_reason not in reasons:
+                    reasons.append(hint_reason)
+                act["reasons"] = reasons
+                act["factors"] = factors
 
 
 def _base_action(
@@ -128,10 +194,10 @@ def available_power_actions(db, state: object, power_id: str) -> list[Dict[str, 
             ))
 
         for target, route_kind in _adjacent_nodes(db, node):
-            region = db.conn.execute(
-                "SELECT controlled_by FROM regions WHERE id=?", (target,)
+            city = db.conn.execute(
+                "SELECT controlled_by FROM administrative_cities WHERE id=?", (target,)
             ).fetchone()
-            controller = str(region["controlled_by"] if region else "")
+            controller = str(city["controlled_by"] if city else "")
             if controller and controller != power_id:
                 border_targets.setdefault(controller, set()).add(target)
             defenders = db.conn.execute(
@@ -228,13 +294,22 @@ def available_power_actions(db, state: object, power_id: str) -> list[Dict[str, 
             continue
         target_row = db.conn.execute("SELECT name FROM powers WHERE id=?", (target_power,)).fetchone()
         target_name = str(target_row["name"] if target_row else target_power)
-        node_names = [
-            str(row["name"])
-            for row in db.conn.execute(
-                f"SELECT name FROM regions WHERE id IN ({','.join('?' for _ in target_nodes)})",
-                tuple(sorted(target_nodes)),
-            ).fetchall()
-        ]
+        node_rows = db.conn.execute(
+            f"SELECT name, commandery_id FROM administrative_cities WHERE id IN ({','.join('?' for _ in target_nodes)})",
+            tuple(sorted(target_nodes)),
+        ).fetchall()
+        node_names = [str(row["name"]) for row in node_rows]
+        # 同时检查郡名（中文名称可能出现在议程中）
+        commandery_ids = sorted(set(str(row["commandery_id"]) for row in node_rows))
+        if commandery_ids:
+            commandery_names = [
+                str(row["name"])
+                for row in db.conn.execute(
+                    f"SELECT name FROM regions WHERE id IN ({','.join('?' for _ in commandery_ids)})",
+                    tuple(commandery_ids),
+                ).fetchall()
+            ]
+            node_names.extend(commandery_names)
         intent_conflict = target_name in agenda or any(name in agenda for name in node_names)
         intent_conflict = intent_conflict or any(word in agenda for word in ("统一天下", "争夺", "压服", "控制长江"))
         if intent_conflict and military_strength >= 40 and power_supply >= 40:
@@ -244,6 +319,8 @@ def available_power_actions(db, state: object, power_id: str) -> list[Dict[str, 
                 reasons=[f"与{target_name}控区相邻", f"战略意图：{agenda}", f"军力{military_strength}/总补给{power_supply}"],
                 intelligence=intelligence,
             ))
+    # 第五期：叠加地缘反应的 action_hint 评分修正
+    _apply_geopolitical_hints(db, state, power_id, actions)
     return sorted(actions, key=lambda item: (-float(item["score"]), str(item["action_type"]), str(item["army_id"])))
 
 
@@ -284,6 +361,7 @@ def build_power_action_adjudication_pack(db, state: object, power_id: str) -> Di
     if power is None:
         raise ValueError(f"势力不存在：{power_id}")
     candidates = available_power_actions(db, state, power_id)
+    world_context = get_or_create_world_context(db, state)
     armies = db.conn.execute(
         """
         SELECT id, name, commander, station_node, manpower, morale, supply, fatigue, status
@@ -305,6 +383,7 @@ def build_power_action_adjudication_pack(db, state: object, power_id: str) -> Di
             "armies": [dict(item) for item in armies],
             "relations": [dict(item) for item in relations],
             "legal_candidates": candidates,
+            "world_context": {"seed": world_context["seed"], "season": world_context["season"], "public_mood": world_context["public_mood"]},
         },
         rules={
             "candidate_rule": "外部势力行动必须来自 available_power_actions 或通过同等硬校验。",
@@ -315,22 +394,105 @@ def build_power_action_adjudication_pack(db, state: object, power_id: str) -> Di
         allowed_outcomes=allowed,
         forbidden_outcomes=["direct_region_control", "kill_character", "spawn_army", "direct_manpower_delta"],
         ai_options=candidates,
-        audit={"candidate_count": len(candidates), "best_candidate": candidates[0] if candidates else {}},
-        source_tables=["powers", "armies", "strategic_routes", "regions", "diplomatic_relations", "characters"],
+        audit={"candidate_count": len(candidates), "best_candidate": candidates[0] if candidates else {}, "evidence_refs": [f"powers:{power_id}", f"world_context:{getattr(state, 'turn', 0)}"]},
+        source_tables=["powers", "armies", "strategic_routes", "administrative_cities", "diplomatic_relations", "characters"],
     )
 
 
-def run_power_action_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
-    try:
-        validated = validate_ai_proposal(
-            pack,
-            proposal,
-            allowed_change_kinds=["queue_army_order", "relation_status", "trust", "public_relation"],
+def _validate_free_power_action(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由势力行动提案是否在边界内。
+
+    AI 通过查询工具获取势力数据后，输出自由评估。
+    校验器确保 priority/risk_level 在枚举范围内，且 AI 的声称与盘面事实一致。
+    """
+    # 1. feasibility=impossible → 安全默认（no_action）
+    feasibility = str(proposal.get("feasibility", "medium"))
+    if feasibility == "impossible":
+        return {
+            "power_action": "no_action",
+            "action_type": "no_action",
+            "priority": "low",
+            "risk_level": "low",
+            "feasibility": "impossible",
+            "reasoning": proposal.get("reasoning", []),
+            "narrative": str(proposal.get("narrative", "行动方案不可行，按兵不动。")),
+            "risk_note": str(proposal.get("risk_note", "")),
+        }
+
+    # 1b. 禁止字段检查
+    check_forbidden_fields(proposal)
+
+    # 2. 提取并验证枚举字段
+    priority = str(proposal.get("priority", "normal"))
+    risk_level = str(proposal.get("risk_level", "medium"))
+    if priority not in FREE_POWER_ACTION_BOUNDS["priority"]:
+        priority = "normal"
+    if risk_level not in FREE_POWER_ACTION_BOUNDS["risk_level"]:
+        risk_level = "medium"
+
+    # 3. action_type 合法性
+    action_type = str(proposal.get("action_type", ""))
+    if action_type and action_type not in ACTION_TYPES and action_type != "no_action":
+        raise ValueError(f"行动类型不在允许范围：{action_type}")
+
+    # 4. 禁止文本检查
+    reasoning_text = " ".join(str(r) for r in proposal.get("reasoning", []))
+    narrative = str(proposal.get("narrative", ""))
+    combined = f"{reasoning_text}\n{narrative}"
+    for marker, message in POWER_ACTION_FORBIDDEN_TEXT.items():
+        if marker in combined:
+            raise ValueError(message)
+
+    # 5. 事实一致性检查
+    facts = pack.get("facts", {})
+    power = facts.get("power", {})
+    armies = facts.get("armies", [])
+    relations = facts.get("relations", [])
+
+    # 声称"军力优势" → 检查 military_strength
+    if "军力优势" in reasoning_text or "兵力占优" in reasoning_text:
+        mil = int(power.get("military_strength", 0))
+        if mil < 50:
+            raise ValueError("AI 声称'军力优势'，但盘面事实不支持（military_strength<50）。")
+
+    # 声称"补给充足" → 检查 supply
+    if "补给充足" in reasoning_text or "粮草充裕" in reasoning_text:
+        supply = int(power.get("supply", 0))
+        if supply < 30:
+            raise ValueError("AI 声称'补给充足'，但盘面事实不支持（supply<30）。")
+
+    # 声称"外交孤立" → 检查 relations
+    if "外交孤立" in reasoning_text or "四面楚歌" in reasoning_text:
+        has_ally = any(
+            str(r.get("status", "")) == "allied"
+            for r in relations
         )
-        action = proposal.get("action") if isinstance(proposal.get("action"), dict) else proposal
-        power_id = str(pack.get("subject_id") or action.get("power_id") or "")
-        action = {**dict(action), "power_id": power_id}
-        validated["action"] = validate_power_action(db, state, action)["action"]
+        if has_ally:
+            raise ValueError("AI 声称'外交孤立'，但盘面事实不支持（存在盟友）。")
+
+    return {
+        "power_action": str(proposal.get("power_action", action_type or "自由行动评估")),
+        "outcome": str(proposal.get("outcome") or action_type or ""),
+        "action_type": action_type,
+        "priority": priority,
+        "risk_level": risk_level,
+        "feasibility": feasibility,
+        "reasoning": proposal.get("reasoning", []),
+        "narrative": narrative,
+        "risk_note": str(proposal.get("risk_note", "")),
+    }
+
+
+def run_power_action_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """势力行动 AI 裁判：统一走自由路径。"""
+    try:
+        validated = _validate_free_power_action(pack, proposal)
+        # 如果提案包含具体行动，还需走硬校验
+        action = proposal.get("action") if isinstance(proposal.get("action"), dict) else {}
+        if action and action.get("action_type"):
+            power_id = str(pack.get("subject_id") or action.get("power_id") or "")
+            action = {**dict(action), "power_id": power_id}
+            validated["action"] = validate_power_action(db, state, action)["action"]
         return validated
     except ValueError as error:
         pending = record_pending_adjudication(db, state, pack, str(error), proposal)
@@ -414,6 +576,7 @@ def _record_power_ai_action(
     state: object,
     power_id: str,
     *,
+    action_slot: int,
     action_type: str,
     action_json: Dict[str, object],
     score: float,
@@ -423,14 +586,15 @@ def _record_power_ai_action(
     cursor = db.conn.execute(
         """
         INSERT INTO power_ai_actions
-        (turn, year, period, power_id, action_type, action_json, score, status, result)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (turn, year, period, power_id, action_slot, action_type, action_json, score, status, result)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             int(getattr(state, "turn", 0)),
             int(getattr(state, "year", 0)),
             int(getattr(state, "period", 0)),
             power_id,
+            int(action_slot),
             action_type,
             json.dumps(action_json, ensure_ascii=False),
             float(score),
@@ -472,74 +636,144 @@ def _choose_power_action_with_judge(
     return {"status": "validated", "action": validate_power_action(db, state, candidates[0])["action"], "ai_proposal": {}}
 
 
+# 第二槽允许的候选类型（不含攻击/围城/宣战）
+_SLOT_2_ALLOWED_TYPES = {"fortify", "resupply", "move", "seek_peace", "propose_alliance", "intrigue"}
+# 每势力每月最多一次的进攻类型（跨 slot 合计）
+_OFFENSIVE_TYPES = {"attack", "siege", "declare_war"}
+
+
 def resolve_power_ai_turn(
     db,
     state: object,
     llm_config: object | None = None,
     agno_db: object | None = None,
 ) -> list[Dict[str, object]]:
-    """每月每个外部势力最多执行一项高优先级合法行动。"""
+    """每月每个外部势力按 power_budgets 执行最多 2 槽行动。
+
+    第一槽允许所有合法候选；第二槽仅限防御/补给/外交，且不得复用第一槽的
+    army_id/target_node/target_power。每势力每 month 最多一次 attack/siege/declare_war。
+    """
     turn = int(getattr(state, "turn", 0))
     runtime_llm, runtime_agno = adjudication_runtime_from_state(state)
     llm_config = llm_config if llm_config is not None else runtime_llm
     agno_db = agno_db if agno_db is not None else runtime_agno
     results: list[Dict[str, object]] = []
     powers = db.conn.execute("SELECT id FROM powers WHERE id!='liu_bei' ORDER BY id").fetchall()
+    world_context = get_or_create_world_context(db, state)
     for row in powers:
         power_id = str(row["id"])
-        if db.conn.execute(
-            "SELECT 1 FROM power_ai_actions WHERE turn=? AND power_id=?", (turn, power_id)
-        ).fetchone():
+        budget = int((world_context.get("power_budgets") or {}).get(power_id, 0))
+        if budget <= 0:
             continue
-        candidates = available_power_actions(db, state, power_id)
-        if not candidates:
-            continue
-        choice = _choose_power_action_with_judge(db, state, power_id, candidates, llm_config, agno_db)
-        if choice.get("status") == "pending_review":
-            pending = dict(choice.get("pending_adjudication") or {})
+        # 记录该势力本月是否已使用进攻类型
+        used_offensive = False
+        # 记录第一槽的 army_id/target_node/target_power 供第二槽去重
+        slot1_army_id: str | None = None
+        slot1_target_node: str | None = None
+        slot1_target_power: str | None = None
+        for slot in range(1, budget + 1):
+            # 检查该槽位是否已有记录（幂等）
+            if db.conn.execute(
+                "SELECT 1 FROM power_ai_actions WHERE turn=? AND power_id=? AND action_slot=?",
+                (turn, power_id, slot),
+            ).fetchone():
+                # 已存在 → 读取第一槽信息用于第二槽去重
+                if slot == 1:
+                    existing = db.conn.execute(
+                        "SELECT action_json, action_type FROM power_ai_actions "
+                        "WHERE turn=? AND power_id=? AND action_slot=?",
+                        (turn, power_id, 1),
+                    ).fetchone()
+                    if existing:
+                        act_json = _decode_json(existing["action_json"], {})
+                        slot1_army_id = str(act_json.get("army_id") or "") or None
+                        slot1_target_node = str(act_json.get("target_node") or "") or None
+                        slot1_target_power = str(act_json.get("target_power") or "") or None
+                        if str(existing["action_type"]) in _OFFENSIVE_TYPES:
+                            used_offensive = True
+                continue
+            candidates = available_power_actions(db, state, power_id)
+            if not candidates:
+                continue
+            # 第二槽：限制候选类型 + 去重
+            if slot == 2:
+                candidates = [
+                    c for c in candidates
+                    if str(c.get("action_type")) in _SLOT_2_ALLOWED_TYPES
+                    and (slot1_army_id is None or str(c.get("army_id") or "") != slot1_army_id)
+                    and (slot1_target_node is None or str(c.get("target_node") or "") != slot1_target_node)
+                    and (slot1_target_power is None or str(c.get("target_power") or "") != slot1_target_power)
+                ]
+                if not candidates:
+                    continue
+            # 跨 slot 进攻上限：如果已用过进攻类型，排除所有进攻候选
+            if used_offensive:
+                candidates = [c for c in candidates if str(c.get("action_type")) not in _OFFENSIVE_TYPES]
+                if not candidates:
+                    continue
+            choice = _choose_power_action_with_judge(db, state, power_id, candidates, llm_config, agno_db)
+            if choice.get("status") == "pending_review":
+                pending = dict(choice.get("pending_adjudication") or {})
+                action_id = _record_power_ai_action(
+                    db,
+                    state,
+                    power_id,
+                    action_slot=slot,
+                    action_type="pending_review",
+                    action_json={"pending_adjudication_id": pending.get("id", 0)},
+                    score=0,
+                    status="pending_review",
+                    result={"reason": pending.get("reason", "裁判模型输出待核议")},
+                )
+                results.append({
+                    "id": action_id,
+                    "power_id": power_id,
+                    "action_slot": slot,
+                    "status": "pending_review",
+                    "pending_adjudication": pending,
+                })
+                continue
+            validated = dict(choice["action"])
+            status = "executed"
+            try:
+                execution = _execute_validated_action(db, state, validated)
+            except Exception as error:  # 单一势力行动失败不得中断全世界月末结算。
+                status = "rejected"
+                execution = {"reason": str(error)}
+            action_record = dict(validated)
+            if choice.get("ai_proposal"):
+                action_record["ai_proposal"] = {
+                    key: choice["ai_proposal"].get(key)
+                    for key in ("outcome", "reason", "narrative", "risk_note", "recommended_followup")
+                    if isinstance(choice.get("ai_proposal"), dict) and choice["ai_proposal"].get(key)
+                }
             action_id = _record_power_ai_action(
                 db,
                 state,
                 power_id,
-                action_type="pending_review",
-                action_json={"pending_adjudication_id": pending.get("id", 0)},
-                score=0,
-                status="pending_review",
-                result={"reason": pending.get("reason", "裁判模型输出待核议")},
+                action_slot=slot,
+                action_type=str(validated["action_type"]),
+                action_json=action_record,
+                score=float(validated["score"]),
+                status=status,
+                result=execution,
             )
             results.append({
-                "id": action_id,
-                "power_id": power_id,
-                "status": "pending_review",
-                "pending_adjudication": pending,
+                "id": action_id, "power_id": power_id, "action_slot": slot, "status": status,
+                "action": validated, "ai_proposal": choice.get("ai_proposal") or {}, "result": execution,
             })
-            continue
-        validated = dict(choice["action"])
-        status = "executed"
-        try:
-            execution = _execute_validated_action(db, state, validated)
-        except Exception as error:  # 单一势力行动失败不得中断全世界月末结算。
-            status = "rejected"
-            execution = {"reason": str(error)}
-        action_record = dict(validated)
-        if choice.get("ai_proposal"):
-            action_record["ai_proposal"] = {
-                key: choice["ai_proposal"].get(key)
-                for key in ("outcome", "reason", "narrative", "risk_note", "recommended_followup")
-                if isinstance(choice.get("ai_proposal"), dict) and choice["ai_proposal"].get(key)
-            }
-        action_id = _record_power_ai_action(
-            db,
-            state,
-            power_id,
-            action_type=str(validated["action_type"]),
-            action_json=action_record,
-            score=float(validated["score"]),
-            status=status,
-            result=execution,
-        )
-        results.append({
-            "id": action_id, "power_id": power_id, "status": status,
-            "action": validated, "ai_proposal": choice.get("ai_proposal") or {}, "result": execution,
-        })
+            # 更新第一槽信息用于下一槽去重
+            if slot == 1:
+                slot1_army_id = str(validated.get("army_id") or "") or None
+                slot1_target_node = str(validated.get("target_node") or "") or None
+                slot1_target_power = str(validated.get("target_power") or "") or None
+            if str(validated.get("action_type")) in _OFFENSIVE_TYPES:
+                used_offensive = True
     return results
+
+
+def _decode_json(value: object, fallback: object) -> object:
+    try:
+        return json.loads(str(value or ""))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return fallback

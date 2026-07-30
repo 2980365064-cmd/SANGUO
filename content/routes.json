@@ -26,11 +26,6 @@
       "province": "冀州"
     },
     {
-      "id": "bohai",
-      "name": "渤海",
-      "province": "冀州"
-    },
-    {
       "id": "chenliu",
       "name": "陈留",
       "province": "兖州"
@@ -72,22 +67,37 @@
     },
     {
       "id": "ji",
-      "name": "蓟",
+      "name": "广阳郡/蓟",
       "province": "幽州"
     },
     {
       "id": "liaodong",
-      "name": "辽东",
+      "name": "辽东郡/襄平",
       "province": "幽州"
     },
     {
       "id": "taiyuan",
-      "name": "太原",
+      "name": "太原郡/晋阳",
       "province": "并州"
     },
     {
       "id": "shangdang",
-      "name": "上党",
+      "name": "上党郡/长子",
+      "province": "并州"
+    },
+    {
+      "id": "yunzhong",
+      "name": "云中郡/云中",
+      "province": "并州"
+    },
+    {
+      "id": "xihe",
+      "name": "西河郡/离石",
+      "province": "并州"
+    },
+    {
+      "id": "yanmen",
+      "name": "雁门郡/阴馆",
       "province": "并州"
     },
     {
@@ -122,22 +132,32 @@
     },
     {
       "id": "jingnan",
-      "name": "长沙/荆南",
+      "name": "长沙",
       "province": "荆州"
     },
     {
-      "id": "jianye",
-      "name": "建业",
+      "id": "wuling",
+      "name": "武陵",
+      "province": "荆州"
+    },
+    {
+      "id": "guiyang",
+      "name": "桂阳",
+      "province": "荆州"
+    },
+    {
+      "id": "danyang",
+      "name": "丹阳",
       "province": "扬州"
     },
     {
-      "id": "chaisang",
-      "name": "柴桑",
+      "id": "yuzhang",
+      "name": "豫章",
       "province": "扬州"
     },
     {
-      "id": "hefei",
-      "name": "合肥/庐江",
+      "id": "jiujiang",
+      "name": "九江",
       "province": "扬州"
     },
     {
@@ -162,7 +182,7 @@
     },
     {
       "id": "yongan",
-      "name": "永安/白帝",
+      "name": "鱼复/白帝",
       "province": "益州"
     },
     {
@@ -176,8 +196,33 @@
       "province": "交州"
     },
     {
+      "id": "cangwu",
+      "name": "苍梧",
+      "province": "交州"
+    },
+    {
+      "id": "yulin",
+      "name": "郁林",
+      "province": "交州"
+    },
+    {
+      "id": "hepu",
+      "name": "合浦",
+      "province": "交州"
+    },
+    {
+      "id": "jiuzhen",
+      "name": "九真",
+      "province": "交州"
+    },
+    {
+      "id": "rinan",
+      "name": "日南",
+      "province": "交州"
+    },
+    {
       "id": "jiuyuan",
-      "name": "九原",
+      "name": "五原郡/九原",
       "province": "并州"
     },
     {
@@ -187,7 +232,7 @@
     },
     {
       "id": "qiaoxian",
-      "name": "谯县",
+      "name": "沛国",
       "province": "豫州"
     },
     {
@@ -197,7 +242,7 @@
     },
     {
       "id": "zitong",
-      "name": "梓潼",
+      "name": "阆中/巴西郡",
       "province": "益州"
     },
     {
@@ -221,25 +266,32 @@
       "province": "凉州"
     },
     {
+      "id": "jiuquan",
+      "name": "酒泉郡/禄福",
+      "province": "凉州"
+    },
+    {
+      "id": "dunhuang",
+      "name": "敦煌郡/敦煌",
+      "province": "凉州"
+    },
+    {
       "id": "wu",
       "name": "吴郡",
       "province": "扬州"
     },
     {
       "id": "zhuojun",
-      "name": "涿郡",
+      "name": "涿郡/涿",
       "province": "幽州"
     },
     {
       "id": "youbeiping",
-      "name": "右北平",
+      "name": "右北平郡/土垠",
       "province": "幽州"
     },
-    {
-      "id": "taishan",
-      "name": "泰山",
-      "province": "兖州"
-    },
+    {"id":"yuyang","name":"渔阳郡/渔阳","province":"幽州"},
+    {"id":"liaoxi","name":"辽西郡/阳乐","province":"幽州"},
     {
       "id": "pengcheng",
       "name": "彭城",
@@ -311,11 +363,6 @@
     },
     {
       "source": "ye",
-      "target": "bohai",
-      "kind": "普通路"
-    },
-    {
-      "source": "ye",
       "target": "dongjun",
       "kind": "普通路"
     },
@@ -351,36 +398,31 @@
     },
     {
       "source": "guangling",
-      "target": "jianye",
+      "target": "danyang",
       "kind": "江河"
     },
     {
       "source": "guangling",
-      "target": "hefei",
+      "target": "jiujiang",
       "kind": "普通路"
     },
     {
-      "source": "hefei",
-      "target": "jianye",
+      "source": "jiujiang",
+      "target": "yuzhang",
       "kind": "江河"
     },
     {
-      "source": "jianye",
-      "target": "chaisang",
-      "kind": "江河"
-    },
-    {
-      "source": "jianye",
+      "source": "danyang",
       "target": "kuaiji",
       "kind": "普通路"
     },
     {
-      "source": "chaisang",
+      "source": "yuzhang",
       "target": "jiangxia",
       "kind": "江河"
     },
     {
-      "source": "chaisang",
+      "source": "yuzhang",
       "target": "jingnan",
       "kind": "江河"
     },
@@ -402,6 +444,16 @@
     {
       "source": "jiangling",
       "target": "jingnan",
+      "kind": "普通路"
+    },
+    {
+      "source": "jingnan",
+      "target": "guiyang",
+      "kind": "普通路"
+    },
+    {
+      "source": "jingnan",
+      "target": "wuling",
       "kind": "普通路"
     },
     {
@@ -457,20 +509,14 @@
       "kind": "普通路"
     },
     {
-      "source": "linzi",
-      "target": "bohai",
-      "kind": "普通路"
-    },
-    {
-      "source": "bohai",
-      "target": "ji",
-      "kind": "普通路"
-    },
-    {
       "source": "ji",
       "target": "liaodong",
       "kind": "普通路"
     },
+    {"source":"ji","target":"yuyang","kind":"普通路"},
+    {"source":"yuyang","target":"youbeiping","kind":"普通路"},
+    {"source":"youbeiping","target":"liaoxi","kind":"普通路"},
+    {"source":"liaoxi","target":"liaodong","kind":"普通路"},
     {
       "source": "jingnan",
       "target": "nanhai",
@@ -488,6 +534,31 @@
     },
     {
       "source": "jiuyuan",
+      "target": "yunzhong",
+      "kind": "山道"
+    },
+    {
+      "source": "yunzhong",
+      "target": "xihe",
+      "kind": "山道"
+    },
+    {
+      "source": "yunzhong",
+      "target": "yanmen",
+      "kind": "山道"
+    },
+    {
+      "source": "yanmen",
+      "target": "taiyuan",
+      "kind": "山道"
+    },
+    {
+      "source": "xihe",
+      "target": "taiyuan",
+      "kind": "山道"
+    },
+    {
+      "source": "jiuyuan",
       "target": "wuwei",
       "kind": "山道"
     },
@@ -498,7 +569,7 @@
     },
     {
       "source": "nanpi",
-      "target": "bohai",
+      "target": "ji",
       "kind": "普通路"
     },
     {
@@ -568,8 +639,48 @@
       "kind": "山道"
     },
     {
+      "source": "nanhai",
+      "target": "cangwu",
+      "kind": "江河"
+    },
+    {
+      "source": "cangwu",
+      "target": "yulin",
+      "kind": "山道"
+    },
+    {
+      "source": "yulin",
+      "target": "hepu",
+      "kind": "山道"
+    },
+    {
+      "source": "hepu",
+      "target": "jiaozhi",
+      "kind": "江河"
+    },
+    {
+      "source": "jiaozhi",
+      "target": "jiuzhen",
+      "kind": "山道"
+    },
+    {
+      "source": "jiuzhen",
+      "target": "rinan",
+      "kind": "山道"
+    },
+    {
       "source": "zhangye",
       "target": "wuwei",
+      "kind": "普通路"
+    },
+    {
+      "source": "zhangye",
+      "target": "jiuquan",
+      "kind": "普通路"
+    },
+    {
+      "source": "jiuquan",
+      "target": "dunhuang",
       "kind": "普通路"
     },
     {
@@ -589,7 +700,7 @@
     },
     {
       "source": "wu",
-      "target": "jianye",
+      "target": "danyang",
       "kind": "普通路"
     },
     {
@@ -599,7 +710,7 @@
     },
     {
       "source": "wu",
-      "target": "chaisang",
+      "target": "yuzhang",
       "kind": "江河"
     },
     {
@@ -620,21 +731,6 @@
     {
       "source": "youbeiping",
       "target": "liaodong",
-      "kind": "普通路"
-    },
-    {
-      "source": "taishan",
-      "target": "dongjun",
-      "kind": "普通路"
-    },
-    {
-      "source": "taishan",
-      "target": "linzi",
-      "kind": "山道"
-    },
-    {
-      "source": "taishan",
-      "target": "xiapi",
       "kind": "普通路"
     },
     {

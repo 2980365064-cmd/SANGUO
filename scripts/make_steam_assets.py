@@ -61,7 +61,7 @@ def fit_font(draw, text, path, start_size, max_w):
 
 # ─────────────────────────────────────────────────────────────────
 # overlay_logo  —  used by main / header / vertical capsules
-# Places "明末" large + "力挽狂澜" below, centered horizontally,
+# Places "三国" large + "乱世雄起" below, centered horizontally,
 # vertically in the lower third.  No panel, no badge.
 # ─────────────────────────────────────────────────────────────────
 def overlay_logo(img, lang="cn"):
@@ -70,11 +70,11 @@ def overlay_logo(img, lang="cn"):
 
     if lang == "cn":
         path = XINGKAI
-        t1, t2 = "明末", "力挽狂澜"
+        t1, t2 = "三国", "乱世雄起"
         sz1, sz2 = int(H * 0.30), int(H * 0.17)
     else:
         path = PALATINO
-        t1, t2 = "Ming Dynasty", "Last Stand"
+        t1, t2 = "Three Kingdoms", "Rise of Heroes"
         sz1, sz2 = int(H * 0.22), int(H * 0.13)
 
     draw = ImageDraw.Draw(img)
@@ -110,11 +110,11 @@ def make_small_capsule(lang):
 
     if lang == "schinese":
         path = XINGKAI
-        t1, t2 = "明末", "力挽狂澜"
+        t1, t2 = "三国", "乱世雄起"
         sz1, sz2 = 68, 36
     else:
         path = PALATINO
-        t1, t2 = "Ming Dynasty", "Last Stand"
+        t1, t2 = "Three Kingdoms", "Rise of Heroes"
         sz1, sz2 = 42, 28
 
     f1 = fit_font(draw, t1, path, sz1, logo_w)

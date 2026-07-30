@@ -1,5 +1,5 @@
 {
-  "_comment": "extractor 全字段覆盖测试集。每 case：directive=诏书草案文本；expect_fields=本诏书应触发的顶层字段（抽出 JSON 里非空即命中）；start_ym/jump_to/sql/set_metric/cheat 可选（透传 direct_decree_probe 同名参数）。cheat 把既成事实直接拼到邸报喂 extractor，用于强制某字段必现。覆盖 4 档房 21 顶层字段：internal(国势变化/钱粮收支/财政制度变化/新立月度收支/裁撤月度收支/派系变化/阶级变化/地区变化) issues(局势推进/新立局势/撤销局势/结案局势) military_external(军队变化/新建军队/军备变化/势力变化/四方动向) personnel_secret(人物变化/后宫册封/密令进度/密令结案/崇祯结局)。注：personnel_secret 现行 prompt 把任免/状态/降敌合并为单一『人物变化』，旧的『人事变更/人物状态变化/人物易主』三分字段已废。",
+  "_comment": "extractor 全字段覆盖测试集。每 case：directive=诏书草案文本；expect_fields=本诏书应触发的顶层字段（抽出 JSON 里非空即命中）；start_ym/jump_to/sql/set_metric/cheat 可选（透传 direct_decree_probe 同名参数）。cheat 把既成事实直接拼到邸报喂 extractor，用于强制某字段必现。覆盖 4 档房 21 顶层字段：internal(国势变化/钱粮收支/财政制度变化/新立月度收支/裁撤月度收支/派系变化/阶级变化/地区变化) issues(局势推进/新立局势/撤销局势/结案局势) military_external(军队变化/新建军队/军备变化/势力变化/四方动向) personnel_secret(人物变化/后宫册封/密令进度/密令结案)。注：personnel_secret 现行 prompt 把任免/状态/降敌合并为单一『人物变化』，旧的『人事变更/人物状态变化/人物易主』三分字段已废。",
   "all_fields": [
     "国势变化",
     "钱粮收支",
@@ -21,8 +21,7 @@
     "人物变化",
     "后宫册封",
     "密令进度",
-    "密令结案",
-    "崇祯结局"
+    "密令结案"
   ],
   "cases": [
     {
@@ -418,11 +417,11 @@
         "人物变化": [
           {
             "姓名": "刘国能",
-            "new_power": "ming"
+            "new_power": "liu_bei"
           }
         ]
       },
-      "note": "归正必抽 new_power=ming；原『某某』占位违反姓名原文命中铁律故改真名"
+      "note": "归正必抽 new_power=liu_bei；原『某某』占位违反姓名原文命中铁律故改真名"
     },
     {
       "id": "c040_hougong_cefeng",
@@ -857,8 +856,8 @@
     },
     {
       "id": "c076_diqu_shoufu",
-      "directive": "明军收复遵化，城归大明",
-      "cheat": "本月收复遵化，控制权由 houjin 转 ming。",
+      "directive": "汉军收复襄阳，城归刘备",
+      "cheat": "本月收复襄阳，控制权由 cao_cao 转 liu_bei。",
       "expect_fields": [
         "地区变化"
       ]
@@ -1072,31 +1071,6 @@
       "expect_fields": [
         "后宫册封"
       ]
-    },
-    {
-      "id": "c098_jieju_null",
-      "directive": "京师戒严，崇祯帝亲临城头督战，安然无恙",
-      "cheat": "本月京师戒严，崇祯帝督战无恙，未退位未身死。",
-      "expect_fields": [],
-      "expect_emperor_fate": null
-    },
-    {
-      "id": "c099_jieju_suicide",
-      "directive": "京师陷落，崇祯帝缢于煤山",
-      "cheat": "本月京师陷落，崇祯帝自缢殉国于煤山。",
-      "expect_fields": [
-        "崇祯结局"
-      ],
-      "expect_emperor_fate": "suicide"
-    },
-    {
-      "id": "c100_jieju_abdicate",
-      "directive": "崇祯帝下诏逊国禅让",
-      "cheat": "本月崇祯帝明诏退位逊国禅让。",
-      "expect_fields": [
-        "崇祯结局"
-      ],
-      "expect_emperor_fate": "abdicate"
     },
     {
       "id": "c101_neg_jiuanchongti",
@@ -2241,18 +2215,6 @@
           }
         ]
       }
-    },
-    {
-      "id": "c315_jieju_null",
-      "directive": "崇祯亲征议而未行朝局如常",
-      "cheat": "本月崇祯议亲征未成，本人未退位未身死，朝局如常。",
-      "expect_fields": [],
-      "expect_emperor_fate": null,
-      "neg_note": "崇祯结局应为 null（未明写退位/身死）",
-      "neg_check_fields": [
-        "崇祯结局"
-      ],
-      "note": "负样本：崇祯结局须为 null；过度抽的其他字段不计"
     }
   ]
 }

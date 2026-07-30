@@ -37,7 +37,9 @@ def _section(report, section_id):
 
 
 def test_monthly_report_aggregates_world_events_into_named_sections(board, monkeypatch):
-    monkeypatch.setattr(battle_module.random, "randint", lambda _a, _b: 1)
+    # 固定存档种子以确保 draw_int 结果可复现
+    from ming_sim.world_random import CAMPAIGN_SEED_KEY
+    board.kv_set(CAMPAIGN_SEED_KEY, "monthly_report_test_seed" + "0" * 39)
     settled = _state(1)
     board.conn.execute("UPDATE regions SET controlled_by='liu_bei' WHERE id='jiangxia'")
     resolve_battle(
@@ -46,9 +48,9 @@ def test_monthly_report_aggregates_world_events_into_named_sections(board, monke
         {
             "attacker_ids": ["guanyu_fleet"],
             "defender_ids": ["cao_vanguard"],
-            "node_id": "xiangyang",
+            "node_id": "city:xiangyang",
         },
-        {"tactic": "水战突击", "actor": "关羽"},
+        {"tactic": "正面交锋", "actor": "关羽"},
     )
     board.create_envoy_mission(
         settled,
@@ -67,14 +69,15 @@ def test_monthly_report_aggregates_world_events_into_named_sections(board, monke
 
     assert report["title"] == "建安十三年正月军政总计"
     assert [item["id"] for item in report["sections"]] == [
-        "military", "internal", "diplomacy", "personnel", "secret", "world", "reputation",
+        "military", "internal", "regional", "geopolitical", "diplomacy", "personnel", "secret", "world", "reputation",
     ]
     assert "关羽水战得胜" in report["source_report"]
 
     military = _section(report, "military")
     assert any(item["kind"] == "战役" for item in military["items"])
     battle_item = next(item for item in military["items"] if item["kind"] == "战役")
-    assert battle_item["audit"]["random_roll"] == 1
+    # draw_int 确定性抽取，掷骰在 [1, 100] 范围
+    assert 1 <= battle_item["audit"]["random_roll"] <= 100
     assert "army_breakdown" in battle_item["audit"]
     assert "random_roll" not in battle_item["summary"]
 
@@ -97,16 +100,18 @@ def test_monthly_report_aggregates_world_events_into_named_sections(board, monke
 
 
 def test_monthly_report_keeps_battle_detail_inside_expandable_audit(board, monkeypatch):
-    monkeypatch.setattr(battle_module.random, "randint", lambda _a, _b: 42)
+    # 固定存档种子以确保 draw_int 结果可复现
+    from ming_sim.world_random import CAMPAIGN_SEED_KEY
+    board.kv_set(CAMPAIGN_SEED_KEY, "battle_detail_test_seed" + "0" * 40)
     resolve_battle(
         board,
         _state(1),
         {
             "attacker_ids": ["guanyu_fleet"],
             "defender_ids": ["cao_vanguard"],
-            "node_id": "xiangyang",
+            "node_id": "city:xiangyang",
         },
-        {"tactic": "水战突击", "actor": "关羽"},
+        {"tactic": "正面交锋", "actor": "关羽"},
     )
 
     report = build_monthly_report(board, _state(2))

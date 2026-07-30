@@ -3,6 +3,7 @@ import { Loader2, UserRoundCog } from "lucide-react";
 
 import { appointGovernmentOffice, getGovernmentOffices } from "../api";
 import type { Character, GameState, GovernmentOfficeEffect } from "../types";
+import { errorText } from "../utils/errorText";
 
 const ABILITY_LABELS: Record<string, string> = {
   martial: "武力",
@@ -12,8 +13,6 @@ const ABILITY_LABELS: Record<string, string> = {
   diplomacy: "外交",
   charisma: "魅力",
 };
-
-function errorText(error: unknown) { return error instanceof Error ? error.message : String(error); }
 
 function candidateLabel(character: Character) {
   return `${character.name} · ${character.office || character.political_group}`;

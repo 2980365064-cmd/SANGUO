@@ -630,7 +630,7 @@
     },
     {
       "id": "taiyuan",
-      "name": "太原",
+      "name": "太原郡/晋阳",
       "kind": "并州",
       "population": 150,
       "public_support": 56,
@@ -642,7 +642,7 @@
       "tax_per_turn": 3,
       "gentry_resistance": 40,
       "military_pressure": 35,
-      "status": "太原为并州战略节点。",
+      "status": "太原郡治晋阳，兼为并州州治。",
       "controlled_by": "cao_cao",
       "fiscal": {
         "population": 150,
@@ -669,7 +669,7 @@
     },
     {
       "id": "shangdang",
-      "name": "上党",
+      "name": "上党郡/长子",
       "kind": "并州",
       "population": 110,
       "public_support": 56,
@@ -681,7 +681,7 @@
       "tax_per_turn": 2,
       "gentry_resistance": 40,
       "military_pressure": 65,
-      "status": "上党为并州战略节点。",
+      "status": "上党郡治长子；壶关为辖内关隘。",
       "controlled_by": "cao_cao",
       "fiscal": {
         "population": 110,
@@ -942,7 +942,7 @@
     },
     {
       "id": "jingnan",
-      "name": "长沙/荆南",
+      "name": "长沙",
       "kind": "荆州",
       "population": 150,
       "public_support": 56,
@@ -954,7 +954,7 @@
       "tax_per_turn": 3,
       "gentry_resistance": 40,
       "military_pressure": 35,
-      "status": "长沙/荆南为荆州战略节点。",
+      "status": "长沙为荆州南部郡治；运行 id jingnan 仅保留旧档兼容。",
       "controlled_by": "cao_cao",
       "fiscal": {
         "population": 150,
@@ -978,6 +978,99 @@
         "tian_fu_li": 100,
         "liao_xiang_li": 0
       }
+    },
+    {
+      "id": "wuling", "name": "武陵", "kind": "荆州", "population": 125,
+      "public_support": 53, "unrest": 19, "natural_disaster": "无重大灾害", "human_disaster": "五溪道路不靖",
+      "registered_land": 500, "hidden_land": 80, "tax_per_turn": 2, "gentry_resistance": 45,
+      "military_pressure": 50, "status": "东汉旧武陵郡，治临沅。", "controlled_by": "cao_cao",
+      "fiscal": {"population": 125, "farmland": 500, "grain_output": 275, "granary": 179, "tax": 2, "commerce": 3, "gentry_support": 54, "security": 50, "fortification": 45, "transport": 45, "revolt_risk": 19, "grain_stock": 179, "guan_min_tian": 500, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 3, "corruption": 45, "tian_fu_li": 100, "liao_xiang_li": 0}
+    },
+    {
+      "id": "lingling", "name": "零陵", "kind": "荆州", "population": 120,
+      "public_support": 54, "unrest": 17, "natural_disaster": "无重大灾害", "human_disaster": "岭道转运迟滞",
+      "registered_land": 480, "hidden_land": 77, "tax_per_turn": 2, "gentry_resistance": 44,
+      "military_pressure": 44, "status": "东汉旧零陵郡，治泉陵。", "controlled_by": "cao_cao",
+      "fiscal": {"population": 120, "farmland": 480, "grain_output": 264, "granary": 172, "tax": 2, "commerce": 3, "gentry_support": 56, "security": 53, "fortification": 44, "transport": 46, "revolt_risk": 17, "grain_stock": 172, "guan_min_tian": 480, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 3, "corruption": 44, "tian_fu_li": 100, "liao_xiang_li": 0}
+    },
+    {
+      "id": "guiyang", "name": "桂阳", "kind": "荆州", "population": 110,
+      "public_support": 54, "unrest": 16, "natural_disaster": "无重大灾害", "human_disaster": "南岭边道紧张",
+      "registered_land": 440, "hidden_land": 70, "tax_per_turn": 2, "gentry_resistance": 43,
+      "military_pressure": 46, "status": "东汉旧桂阳郡，治郴县。", "controlled_by": "cao_cao",
+      "fiscal": {"population": 110, "farmland": 440, "grain_output": 242, "granary": 157, "tax": 2, "commerce": 3, "gentry_support": 56, "security": 54, "fortification": 45, "transport": 48, "revolt_risk": 16, "grain_stock": 157, "guan_min_tian": 440, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 3, "corruption": 43, "tian_fu_li": 100, "liao_xiang_li": 0}
+    },
+    {
+      "id": "danyang",
+      "name": "丹阳",
+      "kind": "扬州",
+      "population": 260,
+      "public_support": 56,
+      "unrest": 10,
+      "natural_disaster": "无重大灾害",
+      "human_disaster": "江东腹地",
+      "registered_land": 1040,
+      "hidden_land": 166,
+      "tax_per_turn": 6,
+      "gentry_resistance": 36,
+      "military_pressure": 35,
+      "status": "建安十三年丹阳郡，秣陵、芜湖皆在其境。",
+      "controlled_by": "sun_quan",
+      "fiscal": {"population": 260, "farmland": 1040, "grain_output": 702, "granary": 632, "tax": 6, "commerce": 7, "gentry_support": 64, "security": 70, "fortification": 62, "transport": 72, "revolt_risk": 10, "grain_stock": 632, "guan_min_tian": 1040, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 7, "corruption": 36, "tian_fu_li": 100, "liao_xiang_li": 0}
+    },
+    {
+      "id": "jiujiang",
+      "name": "九江",
+      "kind": "扬州",
+      "population": 145,
+      "public_support": 54,
+      "unrest": 16,
+      "natural_disaster": "无重大灾害",
+      "human_disaster": "淮南军路紧张",
+      "registered_land": 580,
+      "hidden_land": 92,
+      "tax_per_turn": 3,
+      "gentry_resistance": 38,
+      "military_pressure": 64,
+      "status": "建安十三年九江郡；寿春为郡治，合肥为属县要冲。",
+      "controlled_by": "sun_quan",
+      "fiscal": {"population": 145, "farmland": 580, "grain_output": 390, "granary": 258, "tax": 3, "commerce": 4, "gentry_support": 61, "security": 60, "fortification": 76, "transport": 70, "revolt_risk": 16, "grain_stock": 258, "guan_min_tian": 580, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 4, "corruption": 38, "tian_fu_li": 100, "liao_xiang_li": 0}
+    },
+    {
+      "id": "lujiang",
+      "name": "庐江",
+      "kind": "扬州",
+      "population": 112,
+      "public_support": 55,
+      "unrest": 16,
+      "natural_disaster": "无重大灾害",
+      "human_disaster": "江淮转运受阻",
+      "registered_land": 448,
+      "hidden_land": 72,
+      "tax_per_turn": 2,
+      "gentry_resistance": 38,
+      "military_pressure": 58,
+      "status": "建安十三年庐江郡，治舒。",
+      "controlled_by": "sun_quan",
+      "fiscal": {"population": 112, "farmland": 448, "grain_output": 300, "granary": 196, "tax": 2, "commerce": 3, "gentry_support": 61, "security": 58, "fortification": 66, "transport": 66, "revolt_risk": 16, "grain_stock": 196, "guan_min_tian": 448, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 3, "corruption": 38, "tian_fu_li": 100, "liao_xiang_li": 0}
+    },
+    {
+      "id": "yuzhang",
+      "name": "豫章",
+      "kind": "扬州",
+      "population": 220,
+      "public_support": 56,
+      "unrest": 14,
+      "natural_disaster": "无重大灾害",
+      "human_disaster": "江口舟运繁忙",
+      "registered_land": 880,
+      "hidden_land": 141,
+      "tax_per_turn": 5,
+      "gentry_resistance": 37,
+      "military_pressure": 42,
+      "status": "建安十三年豫章郡，治南昌；柴桑为其西北江口属城。",
+      "controlled_by": "sun_quan",
+      "fiscal": {"population": 220, "farmland": 880, "grain_output": 594, "granary": 468, "tax": 5, "commerce": 6, "gentry_support": 63, "security": 62, "fortification": 54, "transport": 72, "revolt_risk": 14, "grain_stock": 468, "guan_min_tian": 880, "huang_tian": 0, "wang_tian": 0, "salt_tax": 0, "commerce_tax": 6, "corruption": 37, "tian_fu_li": 100, "liao_xiang_li": 0}
     },
     {
       "id": "jianye",
@@ -1254,7 +1347,7 @@
     },
     {
       "id": "yongan",
-      "name": "永安/白帝",
+      "name": "鱼复/白帝",
       "kind": "益州",
       "population": 110,
       "public_support": 56,
@@ -1266,7 +1359,7 @@
       "tax_per_turn": 2,
       "gentry_resistance": 42,
       "military_pressure": 65,
-      "status": "永安/白帝为益州战略节点。",
+      "status": "鱼复/白帝为建安十三年巴东郡治；永安为后世改名。",
       "controlled_by": "liu_zhang",
       "fiscal": {
         "population": 110,
@@ -1370,8 +1463,38 @@
       }
     },
     {
+      "id": "cangwu", "name": "苍梧", "kind": "交州", "population": 130, "public_support": 55, "unrest": 18,
+      "natural_disaster": "无重大灾害", "human_disaster": "岭道阻隔", "registered_land": 520, "hidden_land": 83,
+      "tax_per_turn": 3, "gentry_resistance": 46, "military_pressure": 38, "status": "苍梧郡治广信。", "controlled_by": "shi_xie",
+      "fiscal": {"population":130,"farmland":520,"grain_output":286,"granary":186,"tax":3,"commerce":4,"gentry_support":54,"security":57,"fortification":46,"transport":48,"revolt_risk":18,"grain_stock":186,"guan_min_tian":520,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":4,"corruption":46,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "yulin", "name": "郁林", "kind": "交州", "population": 120, "public_support": 53, "unrest": 22,
+      "natural_disaster": "无重大灾害", "human_disaster": "山越与乌浒压力", "registered_land": 480, "hidden_land": 77,
+      "tax_per_turn": 2, "gentry_resistance": 48, "military_pressure": 45, "status": "郁林郡治布山。", "controlled_by": "shi_xie",
+      "fiscal": {"population":120,"farmland":480,"grain_output":264,"granary":171,"tax":2,"commerce":3,"gentry_support":51,"security":50,"fortification":42,"transport":42,"revolt_risk":22,"grain_stock":171,"guan_min_tian":480,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":3,"corruption":48,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "hepu", "name": "合浦", "kind": "交州", "population": 120, "public_support": 54, "unrest": 20,
+      "natural_disaster": "无重大灾害", "human_disaster": "海寇与乌浒压力", "registered_land": 480, "hidden_land": 77,
+      "tax_per_turn": 2, "gentry_resistance": 47, "military_pressure": 42, "status": "合浦郡治合浦，徐闻为海路城。", "controlled_by": "shi_xie",
+      "fiscal": {"population":120,"farmland":480,"grain_output":264,"granary":171,"tax":2,"commerce":4,"gentry_support":52,"security":52,"fortification":45,"transport":55,"revolt_risk":20,"grain_stock":171,"guan_min_tian":480,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":4,"corruption":47,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "jiuzhen", "name": "九真", "kind": "交州", "population": 110, "public_support": 51, "unrest": 25,
+      "natural_disaster": "无重大灾害", "human_disaster": "南境部族压力", "registered_land": 440, "hidden_land": 70,
+      "tax_per_turn": 2, "gentry_resistance": 50, "military_pressure": 48, "status": "九真郡治胥浦。", "controlled_by": "shi_xie",
+      "fiscal": {"population":110,"farmland":440,"grain_output":242,"granary":157,"tax":2,"commerce":2,"gentry_support":49,"security":46,"fortification":40,"transport":38,"revolt_risk":25,"grain_stock":157,"guan_min_tian":440,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":50,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "rinan", "name": "日南", "kind": "交州", "population": 100, "public_support": 48, "unrest": 30,
+      "natural_disaster": "无重大灾害", "human_disaster": "极南边郡", "registered_land": 400, "hidden_land": 64,
+      "tax_per_turn": 1, "gentry_resistance": 53, "military_pressure": 55, "status": "日南郡治西卷。", "controlled_by": "shi_xie",
+      "fiscal": {"population":100,"farmland":400,"grain_output":220,"granary":143,"tax":1,"commerce":2,"gentry_support":45,"security":40,"fortification":38,"transport":30,"revolt_risk":30,"grain_stock":143,"guan_min_tian":400,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":53,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
       "id": "jiuyuan",
-      "name": "九原",
+      "name": "五原郡/九原",
       "kind": "并州",
       "population": 110,
       "public_support": 56,
@@ -1383,7 +1506,7 @@
       "tax_per_turn": 2,
       "gentry_resistance": 40,
       "military_pressure": 65,
-      "status": "九原为并州战略节点。",
+      "status": "五原郡治九原；运行 id jiuyuan 仅保留旧档兼容。",
       "controlled_by": "cao_cao",
       "fiscal": {
         "population": 110,
@@ -1409,8 +1532,40 @@
       }
     },
     {
+      "id": "yunzhong", "name": "云中郡", "kind": "并州", "population": 100, "public_support": 47, "unrest": 28,
+      "natural_disaster": "无重大灾害", "human_disaster": "边塞流徙", "registered_land": 400, "hidden_land": 64,
+      "tax_per_turn": 1, "gentry_resistance": 52, "military_pressure": 72, "status": "云中郡治云中。", "controlled_by": "cao_cao",
+      "fiscal": {"population":100,"farmland":400,"grain_output":220,"granary":143,"tax":1,"commerce":2,"gentry_support":45,"security":40,"fortification":52,"transport":34,"revolt_risk":28,"grain_stock":143,"guan_min_tian":400,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":52,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "xihe", "name": "西河郡/离石", "kind": "并州", "population": 105, "public_support": 50, "unrest": 24,
+      "natural_disaster": "无重大灾害", "human_disaster": "河谷边防", "registered_land": 420, "hidden_land": 67,
+      "tax_per_turn": 2, "gentry_resistance": 49, "military_pressure": 58, "status": "西河郡治离石。", "controlled_by": "cao_cao",
+      "fiscal": {"population":105,"farmland":420,"grain_output":231,"granary":150,"tax":2,"commerce":2,"gentry_support":48,"security":46,"fortification":48,"transport":42,"revolt_risk":24,"grain_stock":150,"guan_min_tian":420,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":49,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "yanmen", "name": "雁门郡/阴馆", "kind": "并州", "population": 100, "public_support": 48, "unrest": 27,
+      "natural_disaster": "无重大灾害", "human_disaster": "塞北兵患", "registered_land": 400, "hidden_land": 64,
+      "tax_per_turn": 1, "gentry_resistance": 51, "military_pressure": 70, "status": "雁门郡治阴馆。", "controlled_by": "cao_cao",
+      "fiscal": {"population":100,"farmland":400,"grain_output":220,"granary":143,"tax":1,"commerce":2,"gentry_support":46,"security":42,"fortification":55,"transport":36,"revolt_risk":27,"grain_stock":143,"guan_min_tian":400,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":51,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "jiuquan", "name": "酒泉郡/禄福", "kind": "凉州", "population": 105, "public_support": 52, "unrest": 21,
+      "natural_disaster": "无重大灾害", "human_disaster": "走廊戍防", "registered_land": 420, "hidden_land": 67,
+      "tax_per_turn": 2, "gentry_resistance": 47, "military_pressure": 52, "status": "酒泉郡治禄福。", "controlled_by": "ma_han",
+      "fiscal": {"population":105,"farmland":420,"grain_output":231,"granary":150,"tax":2,"commerce":3,"gentry_support":50,"security":50,"fortification":48,"transport":48,"revolt_risk":21,"grain_stock":150,"guan_min_tian":420,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":3,"corruption":47,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {
+      "id": "dunhuang", "name": "敦煌郡", "kind": "凉州", "population": 95, "public_support": 49, "unrest": 25,
+      "natural_disaster": "无重大灾害", "human_disaster": "西陲戍防", "registered_land": 380, "hidden_land": 61,
+      "tax_per_turn": 1, "gentry_resistance": 50, "military_pressure": 60, "status": "敦煌郡治敦煌。", "controlled_by": "ma_han",
+      "fiscal": {"population":95,"farmland":380,"grain_output":209,"granary":136,"tax":1,"commerce":2,"gentry_support":47,"security":45,"fortification":54,"transport":38,"revolt_risk":25,"grain_stock":136,"guan_min_tian":380,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":50,"tian_fu_li":100,"liao_xiang_li":0}
+    },
+    {"id":"yuyang","name":"渔阳郡","kind":"幽州","population":105,"public_support":52,"unrest":20,"natural_disaster":"无重大灾害","human_disaster":"北境戍防","registered_land":420,"hidden_land":67,"tax_per_turn":2,"gentry_resistance":47,"military_pressure":55,"status":"渔阳郡治渔阳。","controlled_by":"gongsun_kang","fiscal":{"population":105,"farmland":420,"grain_output":231,"granary":150,"tax":2,"commerce":3,"gentry_support":50,"security":50,"fortification":48,"transport":46,"revolt_risk":20,"grain_stock":150,"guan_min_tian":420,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":3,"corruption":47,"tian_fu_li":100,"liao_xiang_li":0}},
+    {"id":"liaoxi","name":"辽西郡/阳乐","kind":"幽州","population":100,"public_support":50,"unrest":23,"natural_disaster":"无重大灾害","human_disaster":"辽西边防","registered_land":400,"hidden_land":64,"tax_per_turn":1,"gentry_resistance":49,"military_pressure":60,"status":"辽西郡治阳乐。","controlled_by":"gongsun_kang","fiscal":{"population":100,"farmland":400,"grain_output":220,"granary":143,"tax":1,"commerce":2,"gentry_support":48,"security":47,"fortification":52,"transport":42,"revolt_risk":23,"grain_stock":143,"guan_min_tian":400,"huang_tian":0,"wang_tian":0,"salt_tax":0,"commerce_tax":2,"corruption":49,"tian_fu_li":100,"liao_xiang_li":0}},
+    {
       "id": "nanpi",
-      "name": "南皮",
+      "name": "勃海郡/南皮",
       "kind": "冀州",
       "population": 150,
       "public_support": 56,
@@ -1449,7 +1604,7 @@
     },
     {
       "id": "qiaoxian",
-      "name": "谯县",
+      "name": "沛国",
       "kind": "豫州",
       "population": 150,
       "public_support": 56,
@@ -1461,7 +1616,7 @@
       "tax_per_turn": 3,
       "gentry_resistance": 40,
       "military_pressure": 35,
-      "status": "谯县为豫州战略节点。",
+      "status": "建安十三年沛国，治相；运行 id qiaoxian 仅保留旧档兼容。",
       "controlled_by": "cao_cao",
       "fiscal": {
         "population": 150,
@@ -1527,19 +1682,19 @@
     },
     {
       "id": "zitong",
-      "name": "梓潼",
+      "name": "阆中/巴西郡",
       "kind": "益州",
       "population": 110,
       "public_support": 56,
       "unrest": 15,
       "natural_disaster": "无重大灾害",
-      "human_disaster": "剑阁门户",
+      "human_disaster": "巴西北部门户",
       "registered_land": 440,
       "hidden_land": 70,
       "tax_per_turn": 2,
       "gentry_resistance": 40,
       "military_pressure": 65,
-      "status": "梓潼为益州战略节点。",
+      "status": "阆中为建安十三年巴西郡治；运行 id zitong 仅保留旧档兼容。",
       "controlled_by": "liu_zhang",
       "fiscal": {
         "population": 110,
@@ -1825,45 +1980,6 @@
         "security": 47,
         "fortification": 48,
         "transport": 45,
-        "revolt_risk": 15,
-        "grain_stock": 157,
-        "guan_min_tian": 440,
-        "huang_tian": 0,
-        "wang_tian": 0,
-        "salt_tax": 0,
-        "commerce_tax": 3,
-        "corruption": 40,
-        "tian_fu_li": 100,
-        "liao_xiang_li": 0
-      }
-    },
-    {
-      "id": "taishan",
-      "name": "泰山",
-      "kind": "兖州",
-      "population": 110,
-      "public_support": 56,
-      "unrest": 15,
-      "natural_disaster": "无重大灾害",
-      "human_disaster": "兖青徐交界",
-      "registered_land": 440,
-      "hidden_land": 70,
-      "tax_per_turn": 2,
-      "gentry_resistance": 40,
-      "military_pressure": 55,
-      "status": "泰山为兖州战略节点。",
-      "controlled_by": "cao_cao",
-      "fiscal": {
-        "population": 110,
-        "farmland": 440,
-        "grain_output": 242,
-        "granary": 157,
-        "tax": 2,
-        "commerce": 3,
-        "gentry_support": 60,
-        "security": 47,
-        "fortification": 48,
-        "transport": 50,
         "revolt_risk": 15,
         "grain_stock": 157,
         "guan_min_tian": 440,

@@ -29,8 +29,11 @@ def test_sanguo_strategic_tables_seed_from_approved_route_catalog(tmp_path):
         db.seed_static_data()
         nodes = db.conn.execute("SELECT COUNT(*) AS n FROM strategic_nodes").fetchone()["n"]
         edges = db.conn.execute("SELECT COUNT(*) AS n FROM strategic_routes").fetchone()["n"]
-        assert nodes == 49
-        assert edges == 79
+        # 数据驱动：以 content 为准，不硬编码
+        from ming_sim.content import GameContent
+        content = GameContent.load()
+        assert nodes == len(content.routes.nodes)
+        assert edges == len(content.routes.edges)
     finally:
         db.close()
 
@@ -47,18 +50,20 @@ def test_campaign_tables_cover_orders_sieges_treaties_and_attribute_logs(tmp_pat
 
 
 def test_strategy_mixin_lists_routes_and_enforces_one_order_per_army_turn(tmp_path):
-    db = GameDB(str(tmp_path / "sanguo.db"))
+    from ming_sim.content import GameContent
+    content = GameContent.load()
+    db = GameDB(str(tmp_path / "sanguo.db"), content=content)
     try:
         db.seed_static_data()
-        assert len(db.list_strategic_nodes()) == 49
-        assert len(db.list_strategic_routes()) == 79
+        assert len(db.list_strategic_nodes()) == len(content.routes.nodes)
+        assert len(db.list_strategic_routes()) == len(content.routes.edges)
 
         state = GameState(turn=7)
-        order_id = db.issue_army_order(state, "liubei_main", "移动", {"to": "xiangyang"})
+        order_id = db.issue_army_order(state, "liubei_main", "移动", {"to": "city:xiangyang"})
         assert order_id > 0
         orders = db.list_army_orders(7)
         assert orders[0]["id"] == order_id
-        assert orders[0]["payload"] == {"to": "xiangyang"}
+        assert orders[0]["payload"] == {"to": "city:xiangyang"}
 
         try:
             db.issue_army_order(state, "liubei_main", "补给", {})
@@ -77,13 +82,13 @@ def test_sanguo_campaign_state_fields_round_trip(tmp_path):
             year=214,
             period=8,
             turn=70,
-            stage="益州牧",
+            stage="益州治蜀",
             collapse_turns=2,
             chengdu_crisis_turns=1,
         )
         db.save_state(state)
         loaded = db.load_state()
-        assert loaded.stage == "益州牧"
+        assert loaded.stage == "益州治蜀"
         assert loaded.collapse_turns == 2
         assert loaded.chengdu_crisis_turns == 1
     finally:
@@ -94,10 +99,10 @@ def test_seed_static_data_does_not_overwrite_existing_strategic_board(tmp_path):
     db = GameDB(str(tmp_path / "sanguo.db"))
     try:
         db.seed_static_data()
-        db.conn.execute("UPDATE strategic_nodes SET name='玩家改写名称' WHERE id='changan'")
+        db.conn.execute("UPDATE strategic_nodes SET name='玩家改写名称' WHERE id='city:changan'")
         db.conn.commit()
         db.seed_static_data()
-        row = db.conn.execute("SELECT name FROM strategic_nodes WHERE id='changan'").fetchone()
+        row = db.conn.execute("SELECT name FROM strategic_nodes WHERE id='city:changan'").fetchone()
         assert row["name"] == "玩家改写名称"
     finally:
         db.close()

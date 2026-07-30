@@ -18,7 +18,7 @@ def metric_bar(value: int) -> str:
 
 def print_header(state: GameState, db: Optional[GameDB] = None) -> None:
     print("\n" + "=" * 88)
-    print(f"崇祯重生 MVP | {period_label(state.year, state.period)} | 第 {state.turn} 回合")
+    print(f"三国·乱世雄起 | {period_label(state.year, state.period)} | 第 {state.turn} 回合")
     print("=" * 88)
     for key in ECONOMY_ACCOUNTS:
         print(f"{key:>4}: {format_money(state.metrics[key])}")

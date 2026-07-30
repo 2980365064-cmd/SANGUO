@@ -352,7 +352,7 @@ class _ActionPlansMixin:
             """
             INSERT INTO envoy_missions
             (turn, year, period, target_power, envoy, goal, boundaries, status, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'active', '')
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'preparing', '')
             """,
             (
                 int(getattr(state, "turn", 0)),
@@ -381,6 +381,166 @@ class _ActionPlansMixin:
             params = (status,)
         sql += " ORDER BY id DESC"
         return [self._row_dict(row) for row in self.conn.execute(sql, params).fetchall()]
+
+    # ─── 使臣任务自动推进 ──────────────────────────────────────
+
+    # 使臣状态机：preparing → traveling → negotiating → returning → completed/failed
+    ENVOY_PHASE_TURNS = {
+        "preparing": 1,     # 准备 1 回合
+        "traveling": 2,     # 旅途 2 回合
+        "negotiating": 2,   # 谈判 2 回合
+        "returning": 1,     # 返程 1 回合
+    }
+
+    def advance_envoy_missions(self, state: object) -> List[Dict[str, Any]]:
+        """月末推进所有进行中的使臣任务。
+
+        返回本回合有状态变更的任务列表。
+        """
+        current_turn = int(getattr(state, "turn", 0))
+        results: List[Dict[str, Any]] = []
+
+        active = self.list_envoy_missions()
+        for mission in active:
+            status = mission.get("status", "")
+            if status in ("completed", "failed"):
+                continue
+
+            # 检查使臣是否仍然可用
+            envoy = mission.get("envoy", "")
+            if status != "preparing":  # preparing 阶段不检查（刚任命）
+                try:
+                    power_id, char_status = self._character_power_status(envoy)
+                    if char_status != "active":
+                        self.conn.execute(
+                            "UPDATE envoy_missions SET status='failed', result=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                            (f"使臣{envoy}已不可用（{char_status}）", mission["id"]),
+                        )
+                        self.conn.commit()
+                        results.append({"id": mission["id"], "status": "failed", "reason": f"{envoy}已{char_status}"})
+                        continue
+                except Exception:
+                    pass
+
+            # 读取 progress（JSON 存储在 result 字段中，用于中间状态跟踪）
+            import json as _json
+            progress_raw = mission.get("result", "") or "{}"
+            try:
+                progress = _json.loads(progress_raw) if progress_raw.startswith("{") else {}
+            except _json.JSONDecodeError:
+                progress = {}
+
+            phase_turns = progress.get("phase_turns", 0) + 1
+            required = self.ENVOY_PHASE_TURNS.get(status, 1)
+
+            if status == "preparing":
+                if phase_turns >= required:
+                    self._update_envoy_status(mission["id"], "traveling", "")
+                    results.append({"id": mission["id"], "status": "traveling", "envoy": envoy})
+                else:
+                    progress["phase_turns"] = phase_turns
+                    self._update_envoy_progress(mission["id"], progress)
+
+            elif status == "traveling":
+                if phase_turns >= required:
+                    self._update_envoy_status(mission["id"], "negotiating", "")
+                    results.append({"id": mission["id"], "status": "negotiating", "envoy": envoy})
+                else:
+                    progress["phase_turns"] = phase_turns
+                    self._update_envoy_progress(mission["id"], progress)
+
+            elif status == "negotiating":
+                if phase_turns >= required:
+                    # 谈判完成：生成结果
+                    outcome = self._resolve_envoy_negotiation(mission, state)
+                    self._update_envoy_status(mission["id"], "returning", outcome)
+                    results.append({"id": mission["id"], "status": "returning", "envoy": envoy, "outcome": outcome})
+                else:
+                    progress["phase_turns"] = phase_turns
+                    self._update_envoy_progress(mission["id"], progress)
+
+            elif status == "returning":
+                if phase_turns >= required:
+                    # 使臣归来
+                    final_result = progress.get("outcome", mission.get("result", ""))
+                    self._update_envoy_status(mission["id"], "completed", final_result)
+                    results.append({"id": mission["id"], "status": "completed", "envoy": envoy, "result": final_result})
+                else:
+                    progress["phase_turns"] = phase_turns
+                    self._update_envoy_progress(mission["id"], progress)
+
+        return results
+
+    def _update_envoy_status(self, mission_id: int, new_status: str, result: str) -> None:
+        self.conn.execute(
+            "UPDATE envoy_missions SET status=?, result=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (new_status, result, int(mission_id)),
+        )
+        self.conn.commit()
+
+    def _update_envoy_progress(self, mission_id: int, progress: Dict[str, Any]) -> None:
+        import json as _json
+        self.conn.execute(
+            "UPDATE envoy_missions SET result=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (_json.dumps(progress, ensure_ascii=False), int(mission_id)),
+        )
+        self.conn.commit()
+
+    def _resolve_envoy_negotiation(self, mission: Dict[str, Any], state: object) -> str:
+        """简化版谈判结果生成。
+
+        基于使臣能力、目标势力关系、外交目标计算一个结构化结果。
+        完整 AI 裁决将在后续版本接入。
+        """
+        envoy = mission.get("envoy", "")
+        target = mission.get("target_power", "")
+        goal = mission.get("goal", "")
+
+        # 获取使臣外交能力
+        envoy_ability = 50  # 默认值
+        row = self.conn.execute(
+            "SELECT abilities FROM characters WHERE name=?", (envoy,)
+        ).fetchone()
+        if row:
+            import json as _json
+            try:
+                abilities = _json.loads(row[0]) if row[0] else {}
+                envoy_ability = int(abilities.get("diplomacy", abilities.get("politics", 50)))
+            except (ValueError, TypeError):
+                pass
+
+        # 获取当前外交关系
+        rel_row = self.conn.execute(
+            "SELECT public_relation, trust FROM diplomatic_relations WHERE (power_a=? AND power_b=?) OR (power_a=? AND power_b=?)",
+            ("liu_bei", target, target, "liu_bei"),
+        ).fetchone()
+        base_relation = int(rel_row[0]) if rel_row else 0
+        base_trust = int(rel_row[1]) if rel_row else 50
+
+        # 简化判定：使臣能力 * 0.4 + 关系基础 * 0.3 + 信任 * 0.3
+        score = envoy_ability * 0.4 + max(0, (base_relation + 100) / 2) * 0.3 + base_trust * 0.3
+
+        if score >= 70:
+            outcome = f"出使成功：{envoy}与{target}达成良好共识，外交关系改善。目标：{goal}"
+            # 改善外交关系
+            if rel_row:
+                self.conn.execute(
+                    "UPDATE diplomatic_relations SET public_relation = MIN(100, public_relation + 10), trust = MIN(100, trust + 5) WHERE (power_a=? AND power_b=?) OR (power_a=? AND power_b=?)",
+                    ("liu_bei", target, target, "liu_bei"),
+                )
+                self.conn.commit()
+        elif score >= 40:
+            outcome = f"出使部分成功：{envoy}与{target}进行了有限接触，关系略有改善。目标：{goal}"
+            if rel_row:
+                self.conn.execute(
+                    "UPDATE diplomatic_relations SET public_relation = MIN(100, public_relation + 5) WHERE (power_a=? AND power_b=?) OR (power_a=? AND power_b=?)",
+                    ("liu_bei", target, target, "liu_bei"),
+                )
+                self.conn.commit()
+        else:
+            outcome = f"出使受阻：{envoy}在{target}未能达成预期目标。关系未改善。目标：{goal}"
+
+        return outcome
 
     def month_agenda(self, state: object) -> List[Dict[str, Any]]:
         items: List[Dict[str, Any]] = []

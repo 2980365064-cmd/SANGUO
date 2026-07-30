@@ -450,7 +450,7 @@ class _MemoriesMixin:
             subject_type="court",
             subject_id="chapter",
             event_type="chapter_summary",
-            title=str(title or f"崇祯{state.year}年{state.period}月")[:40],
+            title=str(title or f"建安{state.year}年{state.period}月")[:40],
             outcome=str(title or "")[:80],
             sentiment="neutral",
             importance=5,
@@ -507,7 +507,7 @@ class _MemoriesMixin:
         text = (recap or "").strip()
         if not name or not text:
             return 0
-        title = f"崇祯{state.year}年{state.period}{TURN_UNIT}·{name}奏对"
+        title = f"建安{state.year}年{state.period}{TURN_UNIT}·{name}奏对"
         memory_id = self.upsert_event_memory(
             state,
             subject_type="character",

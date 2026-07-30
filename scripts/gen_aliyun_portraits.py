@@ -35,7 +35,7 @@ OUT = ROOT / "web" / "public" / "portraits" / "sanguo"
 
 DEFAULT_MODEL = "wan2.6-t2i"
 DEFAULT_SIZE = "1664*928"
-DEFAULT_PROMPT_EXTEND = False
+DEFAULT_PROMPT_EXTEND = True
 DEFAULT_SYNC_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
 DEFAULT_ASYNC_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/image-generation/generation"
 DEFAULT_NEGATIVE = (
@@ -44,11 +44,18 @@ DEFAULT_NEGATIVE = (
     "text, Chinese characters, calligraphy, poem, caption, title, subtitle, watermark, logo, signature, frame, cropped head, "
     "childish face, generic handsome man, angry tyrant, exaggerated monster ears, grotesque long arms, "
     "3D render, CGI, blender, octane render, photorealistic, realistic metal shine, glossy armor, plastic skin, "
-    "volumetric lighting, cinematic 3d, game screenshot, fake realistic texture"
+    "volumetric lighting, cinematic 3d, game screenshot, fake realistic texture, "
+    "cartoon, anime style, chibi, comic book style, pop art, "
+    "bright colors, vivid colors, saturated colors, colorful palette, "
+    "red sun, orange sunset, red sky, orange sky, fire, flames, burning, "
+    "green clothes, red clothes, orange clothes, vivid green, vivid red, vivid orange, "
+    "detailed buildings, complex background, city, palace, temple, "
+    "ugly face, distorted features, creepy expression, "
+    "heavy random grain, noisy face, speckled skin, over-textured robe"
 )
 
 POWER_STYLE = {
-    "liu_bei": "蜀汉阵营气质，温润青绿与朱砂细节，衣甲朴厚而有汉室正统感",
+    "liu_bei": "蜀汉阵营气质，灰黑与淡墨细节，衣甲朴厚而有汉室正统感，极低饱和度",
     "cao_cao": "曹魏阵营气质，玄黑重甲与冷金细节，威严、秩序、北方军府感",
     "sun_quan": "江东阵营气质，青铜绿与赤金细节，水军、江南士族、年轻锐气",
     "liu_zhang": "益州阵营气质，蜀地士族服饰，沉稳、守成、锦纹细节",
@@ -70,18 +77,17 @@ OFFICE_STYLE = {
 
 NAME_STYLE = {
     "刘备": (
-        "刘备专属风格锚点，严格参考《三国演义》人物描述：性宽和，寡言语，喜怒不形于色；"
-        "身长七尺五寸，耳垂明显偏长并要能看见但不要怪异，双臂修长、宽袖自然下垂接近膝部，面如冠玉，唇色温润。"
-        "人物气质突出仁义、宽厚、能纳众人的温和威仪，不画成霸气帝王、冷酷武夫或普通英俊青年。"
-        "服饰不要重甲压身，外罩青绿宽袍，内有轻甲和汉室纹样，腰间佩剑，整体像仁德之主而不是冲阵猛将。"
-        "面容要有长期流亡、屡败屡起的沧桑，眉眼宽和、悲悯而坚定，像在乱世中仍愿意托住百姓与旧臣。"
-        "悲情氛围来自环境：夷陵败后的江雾、孤舟、残阳、湿冷山城、远处白帝城般的高阁，"
-        "近处有将熄未熄的汉室火光和散落的战旗边角，暗示托孤前的迟暮与自责。"
-        "不要直接画死亡、哭泣、棺椁、印章或任何文字。整体情绪是仁义之君的温暖与迟暮英雄的哀而不伤。"
-        "风格必须贴近游戏主界面：平面 2D 水墨插画、粗墨线轮廓、宣纸底纹、灰褐色云雾、飞白笔触、低饱和淡彩，"
-        "人物像画在纸上，不要 3D、不要厚涂写实、不要照片级皮肤和金属高光。"
-        "参考主界面三人立绘的表现方式：粗黑外轮廓，衣袍用大块墨色和少量青绿色淡彩铺开，"
-        "脸部只用简练线条和少量阴影，不做真实皮肤渲染；背景云层像水墨铺染，不要真实体积雾。"
+        "Liu Bei portrait - MUST match Zhao Yun style exactly. "
+        "STYLE: Clean 2D Chinese gongbi ink painting on xuan paper texture, "
+        "PURE gray-brown monochromatic palette, extremely low saturation, almost no color at all. "
+        "Clear ink brush outlines, simple face lines with minimal shading. "
+        "NO cartoon, NO anime, NO 3D render, NO thick impasto, NO photorealistic skin. "
+        "APPEARANCE: Kind and composed expression, refined classical Chinese gentleman face, "
+        "NOT ugly, NOT weird, NOT cartoonish, handsome in traditional way. "
+        "CLOTHING: Loose robes in gray-black tones (very low saturation), light armor underneath, sword at waist. "
+        "BACKGROUND: ONLY xuan paper texture with pale gray ink wash clouds, nothing else. "
+        "The background contains ONLY clouds and paper texture - no sun, no sky color, no buildings, no mountains, no scenery. "
+        "Background must be pure gray-brown, simpler and lower contrast than character."
     ),
     "关羽": (
         "关羽专属锚点，参考《三国演义》常见外貌描写：身长九尺，髯长二尺，面如重枣，唇若涂脂，"

@@ -52,7 +52,7 @@ except Exception:
 
 
 def _log(msg: str) -> None:
-    """同时写 stdout + ~/.ming_sim/launcher.log，方便 .app 双击模式 debug。"""
+    """同时写 stdout + ~/.sanguo_sim/launcher.log，方便 .app 双击模式 debug。"""
     line = f"[launcher] {msg}"
     print(line, flush=True)
     try:
@@ -284,9 +284,6 @@ def _open_browser_fallback(url: str) -> None:
 
 
 def main() -> None:
-    from ming_sim.paths import migrate_legacy_ming_data
-
-    migrate_legacy_ming_data()
     debug = bool(os.environ.get("MING_DEBUG"))
     use_browser = bool(os.environ.get("MING_USE_BROWSER"))
 

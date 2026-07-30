@@ -3,7 +3,7 @@
 每个 case 程序拨发特定军械（确定性）→ resolve_turn 带 cheat_directive 注入整编意图
 → 真跑 simulator/extractor LLM → 检查落库后该军的 troop_composition。
 
-不靠 AI 崇祯自主玩（不可控），只测「AI 看 army_held_arms 定升级人数」这一环。
+不靠 AI 自主玩（不可控），只测「AI 看 army_held_arms 定升级人数」这一环。
 """
 from __future__ import annotations
 

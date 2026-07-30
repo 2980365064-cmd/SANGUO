@@ -15,7 +15,7 @@ from ming_sim.government import (
 def test_government_stage_uses_world_state_not_calendar_force():
     assert government_stage(208, 7, {}) == "流亡军"
     assert government_stage(209, 1, {"controlled_nodes": ["jiangxia"]}) == "荆州立足"
-    assert government_stage(214, 7, {"controlled_nodes": ["chengdu"]}) == "益州牧"
+    assert government_stage(214, 7, {"controlled_nodes": ["chengdu"]}) == "益州治蜀"
     assert government_stage(219, 7, {"titles": ["汉中王"]}) == "汉中王"
     assert government_stage(221, 4, {"proclaimed_emperor": True}) == "称帝后"
     assert government_stage(223, 1, {"titles": ["汉中王"]}) == "汉中王"
@@ -91,4 +91,3 @@ def test_session_stage_sync_follows_actual_liu_bei_control(board):
     board.conn.execute("UPDATE regions SET controlled_by='liu_bei' WHERE id='jiangxia'")
     session._sync_government_stage()
     assert session.state.stage == "荆州立足"
-

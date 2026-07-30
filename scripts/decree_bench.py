@@ -1,6 +1,6 @@
 """结算链 token 基准：1 回合 = N 轮大臣对话 + M 道诏书 + 推演结算，统计 token。
 
-与 token-benchmark（play_as_emperor 驱动、带玩家崇祯 agent）的区别：
+与 token-benchmark（自动玩家 agent 驱动）的区别：
 - 本脚本**不起玩家 agent**，问话是脚本内置的轮换模板 → 省掉玩家侧 LLM，只测**游戏侧**
   （大臣对话 + 拟诏 + simulator + extractor）真实 token。
 - 直接调 GameSession.chat / add_directive / resolve_turn，比走 CLI pexpect 稳、快、可复现。

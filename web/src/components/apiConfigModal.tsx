@@ -7,6 +7,7 @@ import {
   saveMenuLlmConfig,
 } from "../api";
 import type { LlmConfigPayload, LlmConfigSummary } from "../types";
+import { GameDialog } from "./GameDialog";
 
 type ApiConfigModalProps = {
   mode: "menu" | "game";
@@ -91,13 +92,7 @@ export function ApiConfigModal({ mode, initial, onClose, onSaved }: ApiConfigMod
     }
   };
 
-  return <div className="modal-backdrop api-config-backdrop" onMouseDown={() => { if (!busy) onClose(); }}>
-    <section className="api-config-modal" role="dialog" aria-modal="true" aria-labelledby="api-config-title" onMouseDown={(event) => event.stopPropagation()}>
-      <button className="close-button" type="button" aria-label="关闭 API 配置" onClick={onClose} disabled={busy}><X /></button>
-      <header>
-        <span><Settings2 /></span>
-        <div><small>{mode === "menu" ? "入局前设置" : "当前游戏即时生效"}</small><h2 id="api-config-title">API 与模型配置</h2><p>保存前会测试模型连通性；验证失败不会覆盖当前配置。</p></div>
-      </header>
+  return <GameDialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }} title="API 与模型配置" description={`${mode === "menu" ? "入局前设置" : "当前游戏即时生效"}；保存前会测试模型连通性，验证失败不会覆盖当前配置。`} tone="default">
       <form className="api-config-form" onSubmit={(event) => void submit(event)}>
         <fieldset disabled={busy}>
           <div className="api-config-grid api-config-basic">
@@ -127,6 +122,5 @@ export function ApiConfigModal({ mode, initial, onClose, onSaved }: ApiConfigMod
           <button type="submit" disabled={busy}>{busy ? <><Loader2 className="spin" />正在测试连通性</> : <><KeyRound />测试并保存</>}</button>
         </div>
       </form>
-    </section>
-  </div>;
+  </GameDialog>;
 }

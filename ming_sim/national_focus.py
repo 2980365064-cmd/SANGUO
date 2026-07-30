@@ -6,8 +6,10 @@ import json
 from typing import Dict
 
 from ming_sim.adjudication import (
+    COMMON_FORBIDDEN_TEXT,
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
     validate_ai_proposal,
@@ -23,6 +25,19 @@ KEY_OFFICES = {
     "政治": "civil_chief",
     "军事": "main_commander",
     "经济": "finance_chief",
+}
+
+# ---------------------------------------------------------------------------
+# 自由投资路径边界常量
+# ---------------------------------------------------------------------------
+
+FREE_INVESTMENT_BOUNDS = {
+    "progress_delta": (-5, 15),
+    "resource_cost_modifier": (0.5, 1.5),
+}
+
+INVESTMENT_FORBIDDEN_TEXT = {
+    **COMMON_FORBIDDEN_TEXT,
 }
 
 
@@ -303,13 +318,94 @@ def build_region_investment_adjudication_pack(
     )
 
 
+def _validate_free_region_investment(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由投资提案是否在边界内。
+
+    AI 通过查询工具获取区域数据后，输出自由评估。
+    校验器确保 delta 在安全范围内，且 AI 的声称与盘面事实一致。
+    """
+    # 1. feasibility=impossible → 安全默认（观望）
+    feasibility = str(proposal.get("feasibility", "medium"))
+    if feasibility == "impossible":
+        return {
+            "investment_action": "观望",
+            "investment_category": str(proposal.get("investment_category", "")),
+            "progress_delta": 0,
+            "resource_cost_modifier": 1.0,
+            "feasibility": "impossible",
+            "reasoning": proposal.get("reasoning", []),
+            "narrative": str(proposal.get("narrative", "投资方案不可行，暂且观望。")),
+            "risk_note": str(proposal.get("risk_note", "")),
+        }
+
+    # 1b. 禁止字段检查
+    check_forbidden_fields(proposal)
+
+    # 2. 提取并裁剪 deltas
+    progress_delta = int(proposal.get("progress_delta", 0))
+    resource_cost_modifier = float(proposal.get("resource_cost_modifier", 1.0))
+
+    progress_delta = max(FREE_INVESTMENT_BOUNDS["progress_delta"][0], min(FREE_INVESTMENT_BOUNDS["progress_delta"][1], progress_delta))
+    resource_cost_modifier = max(FREE_INVESTMENT_BOUNDS["resource_cost_modifier"][0], min(FREE_INVESTMENT_BOUNDS["resource_cost_modifier"][1], resource_cost_modifier))
+
+    # 3. 投资类别合法性
+    category = str(proposal.get("investment_category", ""))
+    if category and category not in INVESTMENT_CATEGORIES:
+        raise ValueError(f"投资类别不在允许范围：{category}")
+
+    # 4. 禁止文本检查
+    reasoning_text = " ".join(str(r) for r in proposal.get("reasoning", []))
+    narrative = str(proposal.get("narrative", ""))
+    combined = f"{reasoning_text}\n{narrative}"
+    for marker, message in INVESTMENT_FORBIDDEN_TEXT.items():
+        if marker in combined:
+            raise ValueError(message)
+
+    # 5. 事实一致性检查
+    facts = pack.get("facts", {})
+    region = facts.get("region", {})
+    metrics = facts.get("metrics", {})
+
+    # 声称"民心高涨" → 检查 public_support
+    if "民心高涨" in reasoning_text or "百姓安居" in reasoning_text:
+        public_support = int(region.get("public_support", 50))
+        if public_support < 60:
+            raise ValueError("AI 声称'民心高涨'，但盘面事实不支持（民心<60）。")
+
+    # 声称"资源充裕" → 检查军资
+    if "资源充裕" in reasoning_text or "军资充足" in reasoning_text:
+        junzi = int(metrics.get("军资", 0))
+        if junzi < 30:
+            raise ValueError("AI 声称'资源充裕'，但盘面事实不支持（军资<30）。")
+
+    # 声称"动乱平息" → 检查 unrest
+    if "动乱平息" in reasoning_text or "治安良好" in reasoning_text:
+        unrest = int(region.get("unrest", 0))
+        if unrest > 30:
+            raise ValueError("AI 声称'动乱平息'，但盘面事实不支持（unrest>30）。")
+
+    # 6. 区域不被控制时，progress_delta 不得为正
+    controlled_by = str(region.get("controlled_by", ""))
+    if controlled_by != "liu_bei" and progress_delta > 0:
+        progress_delta = 0
+
+    return {
+        "investment_action": str(proposal.get("investment_action", "自由投资评估")),
+        "outcome": str(proposal.get("outcome") or proposal.get("investment_action", "")),
+        "investment_category": category,
+        "progress_delta": progress_delta,
+        "resource_cost_modifier": round(resource_cost_modifier, 2),
+        "feasibility": feasibility,
+        "reasoning": proposal.get("reasoning", []),
+        "narrative": narrative,
+        "risk_note": str(proposal.get("risk_note", "")),
+    }
+
+
 def run_region_investment_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """区域投资 AI 裁判：统一走自由路径。"""
     try:
-        return validate_ai_proposal(
-            pack,
-            proposal,
-            allowed_change_kinds=["start_investment", "investment_progress", "metric_delta", "region_fiscal"],
-        )
+        return _validate_free_region_investment(pack, proposal)
     except ValueError as error:
         pending = record_pending_adjudication(db, state, pack, str(error), proposal)
         return {"status": "pending_review", "pending_adjudication": pending}

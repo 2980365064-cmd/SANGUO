@@ -1,4 +1,4 @@
-"""多回合围城与救援状态机。行动范围按州块判断。"""
+"""多回合围城与救援状态机。行动范围按城池直连路线判断。"""
 
 from __future__ import annotations
 
@@ -7,13 +7,31 @@ import math
 from typing import Dict, List, Tuple
 
 from ming_sim.adjudication import (
+    COMMON_FORBIDDEN_TEXT,
     adjudication_runtime_from_state,
     build_adjudication_pack,
+    check_forbidden_fields,
     record_pending_adjudication,
     run_adjudication,
     validate_ai_proposal,
 )
-from ming_sim.sanguo_rules import ArmyOrderError, calculate_siege_progress, province_block_between
+
+
+# ---------------------------------------------------------------------------
+# 自由围城路径边界常量
+# ---------------------------------------------------------------------------
+
+FREE_SIEGE_BOUNDS = {
+    "progress_delta": (-10, 20),
+    "casualty_pct": (0, 30),
+}
+
+SIEGE_FORBIDDEN_TEXT = {
+    **COMMON_FORBIDDEN_TEXT,
+    "破城屠城": "不得写屠城",
+    "屠城": "不得写屠城",
+}
+from ming_sim.sanguo_rules import ArmyOrderError, calculate_siege_progress, find_strategic_route, require_city_node
 
 
 def _json_dict(raw: object) -> Dict[str, object]:
@@ -33,10 +51,25 @@ def _json_list(raw: object) -> List[str]:
 
 
 def _route_between(db, source: str, target: str):
+    """查询两城池节点之间的直连路线；不存在返回 None。"""
     try:
-        return province_block_between(db, source, target)
+        return find_strategic_route(db, source, target)
     except ArmyOrderError:
         return None
+
+
+def _city_target(db, raw_target: str):
+    """接受新 city_id，并将旧军令中的郡节点确定性映射至郡治城。"""
+    city = db.conn.execute(
+        "SELECT id, commandery_id, controlled_by, name, fortification, grain_stock FROM administrative_cities WHERE id=?",
+        (raw_target,),
+    ).fetchone()
+    if city is not None:
+        return city
+    return db.conn.execute(
+        "SELECT id, commandery_id, controlled_by, name, fortification, grain_stock FROM administrative_cities WHERE commandery_id=? AND is_commandery_capital=1",
+        (raw_target,),
+    ).fetchone()
 
 
 def validate_siege_target(db, army_id: str, target_node: str) -> Dict[str, str]:
@@ -47,27 +80,31 @@ def validate_siege_target(db, army_id: str, target_node: str) -> Dict[str, str]:
     if army is None:
         raise ArmyOrderError(f"军队不存在或已失效：{army_id}")
     source = str(army["station_node"])
-    route = _route_between(db, source, target_node)
-    if route is None:
-        raise ArmyOrderError(f"{source} 与 {target_node} 不相邻：不属同州或邻州，无法围城。")
-    target = db.conn.execute(
-        "SELECT controlled_by FROM regions WHERE id=?", (target_node,)
-    ).fetchone()
+    require_city_node(source, label="出发节点")
+    target = _city_target(db, target_node)
     if target is None:
-        raise ArmyOrderError(f"目标节点不存在：{target_node}")
+        raise ArmyOrderError(f"目标城池不存在：{target_node}")
+    target_city_id = str(target["id"])
+    require_city_node(target_city_id, label="目标城池")
+    if source == target_city_id:
+        raise ArmyOrderError("不可围攻己方所在城池。")
+    route = _route_between(db, source, target_city_id)
+    if route is None:
+        raise ArmyOrderError(f"{source} 与 {target_city_id} 之间无直连路线，无法围城。")
     defender = str(target["controlled_by"])
     attacker = str(army["owner_power"])
     if defender == attacker:
-        raise ArmyOrderError("不可围攻己方节点。")
+        raise ArmyOrderError("不可围攻己方城池。")
     if int(army["manpower"] or 0) <= 0:
         raise ArmyOrderError("该军已无可战兵力。")
     if db.conn.execute(
-        "SELECT 1 FROM sieges WHERE target_node=? AND status='active' LIMIT 1", (target_node,)
+        "SELECT 1 FROM sieges WHERE target_node=? AND status='active' LIMIT 1", (target_city_id,)
     ).fetchone():
-        raise ArmyOrderError("该节点已有进行中的围城。")
+        raise ArmyOrderError("该城池已有进行中的围城。")
     return {
         "source_node": source,
-        "target_node": target_node,
+        "target_node": target_city_id,
+        "target_commandery_id": str(target["commandery_id"]),
         "attacker_power": attacker,
         "defender_power": defender,
         "route_kind": route.kind,
@@ -97,7 +134,7 @@ def start_siege(db, state: object, army_id: str, target_node: str) -> int:
         VALUES (?, ?, ?, 0, 'active', ?, ?, ?)
         """,
         (
-            target_node,
+            validated["target_node"],
             army_id,
             validated["defender_power"],
             turn,
@@ -152,6 +189,7 @@ def _siege_scores(db, siege_id: int) -> Tuple[int, int, Dict[str, List[str]]]:
     if int(attacker["starvation_turns"] or 0) > 0:
         factors["attacker"].append(f"断粮{int(attacker['starvation_turns'])}月")
 
+    target_commandery_id = str(details.get("target_commandery_id") or "")
     defenders = db.conn.execute(
         "SELECT * FROM armies WHERE station_node=? AND owner_power=? AND active=1",
         (target_node, defender_power),
@@ -181,15 +219,16 @@ def _siege_scores(db, siege_id: int) -> Tuple[int, int, Dict[str, List[str]]]:
     defender_score = max(5.0, defender_manpower / 1000)
     defender_score *= 0.5 + defender_quality / 100
     defender_score *= 0.5 + defender_leadership / 100
-    region = db.conn.execute("SELECT fiscal FROM regions WHERE id=?", (target_node,)).fetchone()
+    city = _city_target(db, target_node)
+    region = db.conn.execute("SELECT fiscal FROM regions WHERE id=?", (city["commandery_id"],)).fetchone() if city else None
     fiscal = _json_dict(region["fiscal"] if region else "{}")
-    fortification = max(0, min(100, int(fiscal.get("fortification") or 0)))
+    fortification = max(0, min(100, int(city["fortification"] if city is not None else fiscal.get("fortification") or 0)))
     defender_score *= 0.75 + fortification / 100
     factors["defender"].append(f"城防{fortification}")
     if "守城" in defender_traits:
         defender_score *= 1.15
         factors["defender"].append("守城特性 +15%")
-    grain_stock = max(0, int(fiscal.get("grain_stock") or fiscal.get("granary") or 0))
+    grain_stock = max(0, int(city["grain_stock"] if city is not None else fiscal.get("grain_stock") or fiscal.get("granary") or 0))
     if grain_stock <= 0:
         defender_score *= 0.75
         factors["defender"].append("城内断粮 -25%")
@@ -225,15 +264,17 @@ def build_siege_adjudication_pack(db, state: object, siege_id: int) -> Dict[str,
         raise ValueError(f"围城不存在：{siege_id}")
     details = _json_dict(row["details"])
     target_node = str(row["target_node"])
+    city = _city_target(db, target_node)
     region = db.conn.execute(
         "SELECT name, controlled_by, public_support, unrest, fiscal FROM regions WHERE id=?",
-        (target_node,),
-    ).fetchone()
+        (city["commandery_id"],),
+    ).fetchone() if city is not None else None
     fiscal = _json_dict(region["fiscal"] if region else "{}")
     attacker = db.conn.execute(
         "SELECT id, name, commander, owner_power, manpower, morale, training, equipment, discipline, supply, starvation_turns, station_node FROM armies WHERE id=?",
         (str(row["attacker_army_id"]),),
     ).fetchone()
+    target_commandery_id = str(details.get("target_commandery_id") or "")
     defenders = db.conn.execute(
         "SELECT id, name, commander, owner_power, manpower, morale, training, equipment, discipline, supply FROM armies WHERE station_node=? AND owner_power=? AND active=1 ORDER BY id",
         (target_node, str(row["defender_power"])),
@@ -259,7 +300,7 @@ def build_siege_adjudication_pack(db, state: object, siege_id: int) -> Dict[str,
             "siege": _siege_payload(row),
             "target_region": {
                 "id": target_node,
-                "name": str(region["name"] if region else target_node),
+                "name": str(city["name"] if city is not None else (region["name"] if region else target_node)),
                 "controlled_by": str(region["controlled_by"] if region else ""),
                 "public_support": int(region["public_support"] or 0) if region else 0,
                 "unrest": int(region["unrest"] or 0) if region else 0,
@@ -272,7 +313,7 @@ def build_siege_adjudication_pack(db, state: object, siege_id: int) -> Dict[str,
         },
         rules={
             "progress_rule": "calculate_siege_progress(old_progress, attacker_score, defender_score)",
-            "territory_rule": "仅 progress>=100 且 status=conquered 后才允许改变 regions.controlled_by。",
+            "territory_rule": "仅 progress>=100 且 status=conquered 后才允许改变城权；郡权、州权由城权逐层推导。",
             "relief_rule": "救援军必须属于守方且在目标城或相邻节点。",
         },
         allowed_outcomes=allowed,
@@ -287,17 +328,102 @@ def build_siege_adjudication_pack(db, state: object, siege_id: int) -> Dict[str,
             "projected_progress": projected,
             "factors": factors,
         },
-        source_tables=["sieges", "armies", "regions", "strategic_routes", "characters"],
+        source_tables=["sieges", "armies", "regions", "administrative_cities", "administrative_provinces", "strategic_routes", "characters"],
     )
 
 
+def _validate_free_siege(pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """校验 AI 的自由围城提案是否在边界内。
+
+    AI 通过查询工具获取围城数据后，输出自由评估。
+    校验器确保 delta 在安全范围内，且 AI 的声称与盘面事实一致。
+    """
+    # 1. feasibility=impossible → 安全默认（继续围城）
+    feasibility = str(proposal.get("feasibility", "medium"))
+    if feasibility == "impossible":
+        return {
+            "siege_action": "继续围城",
+            "progress_delta": 0,
+            "casualty_pct": 0,
+            "feasibility": "impossible",
+            "reasoning": proposal.get("reasoning", []),
+            "narrative": str(proposal.get("narrative", "围城方案不可行，继续围困。")),
+            "risk_note": str(proposal.get("risk_note", "")),
+        }
+
+    # 1b. 禁止字段检查
+    check_forbidden_fields(proposal)
+
+    # 2. 提取并裁剪 deltas
+    progress_delta = int(proposal.get("progress_delta", 0))
+    casualty_pct = int(proposal.get("casualty_pct", 0))
+
+    progress_delta = max(FREE_SIEGE_BOUNDS["progress_delta"][0], min(FREE_SIEGE_BOUNDS["progress_delta"][1], progress_delta))
+    casualty_pct = max(FREE_SIEGE_BOUNDS["casualty_pct"][0], min(FREE_SIEGE_BOUNDS["casualty_pct"][1], casualty_pct))
+
+    # 3. 禁止文本检查
+    reasoning_text = " ".join(str(r) for r in proposal.get("reasoning", []))
+    narrative = str(proposal.get("narrative", ""))
+    combined = f"{reasoning_text}\n{narrative}"
+    for marker, message in SIEGE_FORBIDDEN_TEXT.items():
+        if marker in combined:
+            raise ValueError(message)
+
+    # 4. 事实一致性检查
+    facts = pack.get("facts", {})
+    audit = pack.get("audit", {})
+    defenders = facts.get("defenders", [])
+    target_region = facts.get("target_region", {})
+
+    # 声称"守军士气低落" → 检查守军 morale
+    if "士气低落" in reasoning_text or "军心涣散" in reasoning_text:
+        any_low_morale = False
+        for d in defenders:
+            if int(d.get("morale", 50)) < 40:
+                any_low_morale = True
+                break
+        if not any_low_morale:
+            raise ValueError("AI 声称'守军士气低落'，但盘面事实不支持（守军士气均≥40）。")
+
+    # 声称"城防薄弱" → 检查 fortification
+    if "城防薄弱" in reasoning_text or "城墙残破" in reasoning_text:
+        fortification = int(target_region.get("fortification", 100))
+        if fortification >= 60:
+            raise ValueError("AI 声称'城防薄弱'，但盘面事实不支持（城防≥60）。")
+
+    # 声称"民心向背" → 检查 public_support
+    if "民心向背" in reasoning_text or "百姓拥戴" in reasoning_text:
+        public_support = int(target_region.get("public_support", 50))
+        if public_support < 40:
+            raise ValueError("AI 声称'民心向背'，但盘面事实不支持（民心<40）。")
+
+    # 5.  projected_progress 校验：如果 projected < 100，不能声称即将破城
+    projected = int(audit.get("projected_progress", 0))
+    if projected < 100 and ("即将破城" in reasoning_text or "城破在即" in reasoning_text):
+        raise ValueError("AI 声称'即将破城'，但 projected_progress < 100。")
+
+    # 6. outcome 合法性校验（保留与白名单兼容的约束）
+    outcome = str(proposal.get("outcome") or "")
+    allowed_outcomes = pack.get("allowed_outcomes", [])
+    if outcome and allowed_outcomes and outcome not in allowed_outcomes:
+        raise ValueError(f"围城裁决结果不在允许范围：{outcome}")
+
+    return {
+        "siege_action": str(proposal.get("siege_action", "自由围城评估")),
+        "outcome": outcome,
+        "progress_delta": progress_delta,
+        "casualty_pct": casualty_pct,
+        "feasibility": feasibility,
+        "reasoning": proposal.get("reasoning", []),
+        "narrative": narrative,
+        "risk_note": str(proposal.get("risk_note", "")),
+    }
+
+
 def run_siege_ai_judge(db, state: object, pack: Dict[str, object], proposal: Dict[str, object]) -> Dict[str, object]:
+    """围城 AI 裁判：统一走自由路径。"""
     try:
-        return validate_ai_proposal(
-            pack,
-            proposal,
-            allowed_change_kinds=["siege_progress", "siege_status", "army_status", "region_control"],
-        )
+        return _validate_free_siege(pack, proposal)
     except ValueError as error:
         pending = record_pending_adjudication(db, state, pack, str(error), proposal)
         return {"status": "pending_review", "pending_adjudication": pending}
@@ -398,20 +524,22 @@ def advance_siege(db, state: object, siege_id: int) -> Dict[str, object]:
         status = "conquered"
         attacker_power = str(details.get("attacker_power") or attacker["owner_power"])
         target_node = str(row["target_node"])
+        # 围城仅直接写城权；郡、州控制权从城权逐层推导，避免旁路领土写入。
         db.conn.execute(
-            "UPDATE regions SET controlled_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            "UPDATE administrative_cities SET controlled_by=?, siege_status='失守', updated_at=CURRENT_TIMESTAMP WHERE id=?",
             (attacker_power, target_node),
         )
+        db.recompute_administrative_control()
         target_name_row = db.conn.execute(
-            "SELECT name FROM strategic_nodes WHERE id=?", (target_node,)
+            "SELECT name FROM administrative_cities WHERE id=?", (target_node,)
         ).fetchone()
         db.conn.execute(
             "UPDATE armies SET station_node=?, station=?, status='驻守' WHERE id=?",
-            (target_node, str(target_name_row["name"] if target_name_row else target_node), attacker["id"]),
+                (target_node, str(target_name_row["name"] if target_name_row else target_node), attacker["id"]),
         )
         db.conn.execute(
             "UPDATE armies SET status='失城溃退' WHERE station_node=? AND owner_power=? AND active=1",
-            (target_node, str(row["defender_power"])),
+                (target_node, str(row["defender_power"])),
         )
         opened_passes = [
             str(edge["note"] or "关隘")

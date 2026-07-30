@@ -45,7 +45,7 @@ def choose_minister(session: GameSession) -> Optional[Character]:
         name for name in characters
         if session.db.get_character_status(name)[0] not in ("offstage", "candidate")
         and getattr(characters[name], "status", "active") != "candidate"
-        and getattr(characters[name], "power_id", "ming") == "ming"
+        and getattr(characters[name], "power_id", "liu_bei") == "liu_bei"
     ]
     print("\n可召见大臣：")
     for idx, name in enumerate(names, 1):
@@ -409,8 +409,8 @@ def run_cli(
         import os
         os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         session = GameSession(db_path, llm_config, start_ym=start_ym)
-        print("《明末力挽狂澜》文字 MVP")
-        print(f"你是刚刚登基的崇祯。每回合一个{TURN_UNIT}：看奏报、召见大臣、下圣旨、听回奏。")
+        print("《三国·乱世雄起》文字版")
+        print(f"你是刚刚起兵的刘备。每回合一个{TURN_UNIT}：看奏报、召见大臣、下圣旨、听回奏。")
         print(f"手动玩法：quit/退朝 = 结束本{TURN_UNIT}进入下一{TURN_UNIT}；exit/退出游戏 = 退出程序。")
         if (llm_config.advanced_model or "").strip():
             adv_url = (llm_config.advanced_base_url or "").strip() or base_url

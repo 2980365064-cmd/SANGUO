@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""明末力挽狂澜 文字 MVP —— CLI 入口。
+"""三国·乱世雄起 —— CLI 入口。
 
 游戏内核已模块化进 ming_sim/ 包。本文件只做 argparse + 启动 CLI 驱动。
 CLI 与 Web（web_app.py）共用 ming_sim.session.GameSession 流转层。
@@ -14,7 +14,7 @@ from ming_sim.cli.terminal import run_cli
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ming Salvage Sim text MVP")
+    parser = argparse.ArgumentParser(description="三国·乱世雄起 CLI")
     parser.add_argument("--seed", type=int, default=int(os.environ.get("MING_SIM_SEED", "7")),
                         help="random seed（影响事件抽样）")
     parser.add_argument(

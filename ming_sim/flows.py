@@ -171,7 +171,7 @@ def compute_budget_lines(db: GameDB, state: GameState) -> Dict[str, Dict[str, li
     cfg = db.get_fiscal_config()
     gk_tax, nk_huang, _ = calc_province_fiscal(state, db)
     army_total = db.conn.execute(
-        "SELECT SUM(maintenance_per_turn) FROM armies WHERE owner_power='ming' AND active = 1"
+        "SELECT SUM(maintenance_per_turn) FROM armies WHERE owner_power='liu_bei' AND active = 1"
     ).fetchone()[0] or 0
 
     budget: Dict[str, Dict[str, list]] = {
@@ -299,7 +299,7 @@ def _auto_pay_arrears_by_priority(
         return 0
     rows = db.conn.execute(
         "SELECT id, name, arrears FROM armies "
-        "WHERE owner_power='ming' AND maintenance_per_turn>0 AND arrears>0"
+        "WHERE owner_power='liu_bei' AND maintenance_per_turn>0 AND arrears>0"
     ).fetchall()
     army_map = {str(r["id"]): r for r in rows}
     ordered = [army_map[k] for k in ARMY_SALARY_PRIORITY if k in army_map]

@@ -33,7 +33,12 @@ from ming_sim.models import (
     Region,
     SocialClass,
 )
-from ming_sim.sanguo_rules import StrategicRouteCatalog, load_strategic_routes
+from ming_sim.sanguo_rules import (
+    CityStrategicCatalog,
+    CityStrategicEdge,
+    CityStrategicNode,
+    load_city_strategic_catalog,
+)
 
 
 # --- 单项加载器（保留原签名，便于复用与单测）---
@@ -194,7 +199,52 @@ def load_region_content() -> Dict[str, Region]:
     return regions
 
 
-def load_army_content() -> Dict[str, Army]:
+def load_administrative_units() -> Dict[str, object]:
+    """建安十三年州—郡—城静态目录。
+
+    目录是城池事实的唯一名册：提供隶属、开局存在性和战略身份。
+    战略节点和路线由 strategic 子结构提供，独立加载并严格校验。
+    """
+    data = require_dict(load_json_asset("administrative_units.json"), "administrative_units.json")
+    provinces = require_list(data.get("provinces"), "administrative_units.json.provinces")
+    if not provinces:
+        raise SystemExit("administrative_units.json 必须至少定义一个州。")
+    cities = require_list(data.get("cities"), "administrative_units.json.cities")
+    if not cities:
+        raise SystemExit("administrative_units.json 必须至少定义一座城池。")
+    normalized_cities = []
+    city_ids = set()
+    for index, raw in enumerate(cities, 1):
+        item = require_dict(raw, f"administrative_units.json.cities[{index}]")
+        for field in ("id", "name", "commandery_id", "province_id", "role"):
+            str_field(item, field, f"administrative_units.json.cities[{index}]")
+        city_id = str(item["id"])
+        if not city_id.startswith("city:"):
+            raise SystemExit(f"administrative_units.json.cities[{index}] id 必须以 city: 开头：{city_id}")
+        if city_id in city_ids:
+            raise SystemExit(f"administrative_units.json 城池 id 重复：{city_id}")
+        city_ids.add(city_id)
+        share = float(item.get("stock_share", 0))
+        if share < 0 or share > 1:
+            raise SystemExit(f"administrative_units.json.cities[{index}].stock_share 必须在 0..1 之间")
+        normalized_cities.append(dict(item))
+    commandery_labels = require_dict(
+        data.get("commandery_labels", {}),
+        "administrative_units.json.commandery_labels",
+    )
+    for commandery_id, value in commandery_labels.items():
+        label = require_dict(value, f"administrative_units.json.commandery_labels.{commandery_id}")
+        str_field(label, "name", f"administrative_units.json.commandery_labels.{commandery_id}")
+    return {
+        "version": str(data.get("version") or ""),
+        "provinces": [require_dict(item, "administrative_units.json.provinces[]") for item in provinces],
+        "cities": normalized_cities,
+        "commandery_labels": {str(key): dict(value) for key, value in commandery_labels.items()},
+        "strategic": data.get("strategic"),
+    }
+
+
+def load_army_content(valid_city_ids: Set[str] | None = None) -> Dict[str, Army]:
     data = require_dict(load_json_asset("armies.json"), "armies.json")
     troop_cost = load_troop_cost()
     armies: Dict[str, Army] = {}
@@ -202,7 +252,13 @@ def load_army_content() -> Dict[str, Army]:
         item = require_dict(raw, f"armies.json.armies[{idx}]")
         army_id = str_field(item, "id", f"armies.json.armies[{idx}]")
         owner_power = str_field(item, "owner_power", f"armies.json.armies[{idx}]")
-        if owner_power == "ming":
+        station_node = str_field(item, "station_node", f"armies.json.armies[{idx}]")
+        if valid_city_ids is not None and station_node not in valid_city_ids:
+            raise SystemExit(
+                f"armies.json.armies[{idx}] ({army_id}) station_node '{station_node}' "
+                f"不属于 72 城战略节点。"
+            )
+        if owner_power == "liu_bei":
             troop_composition = normalize_troop_composition(
                 item.get("troop_composition"),
                 fallback_troop_type=str(item.get("troop_type") or ""),
@@ -227,7 +283,7 @@ def load_army_content() -> Dict[str, Army]:
             troop_composition=troop_composition,
             manpower=manpower,
             maintenance_per_turn=troop_maintenance_total(troop_composition, troop_cost)
-            if troop_composition and owner_power == "ming"
+            if troop_composition and owner_power == "liu_bei"
             else int_field(item, "maintenance_per_turn", f"armies.json.armies[{idx}]"),
             supply=int_field(item, "supply", f"armies.json.armies[{idx}]"),
             supply_turns=int_field(item, "supply_turns", f"armies.json.armies[{idx}]"),
@@ -811,12 +867,14 @@ class GameContent:
     preset_technologies: Dict[str, PresetTechnology] = field(default_factory=dict)
     event_by_id: Dict[str, Event] = field(default_factory=dict)
     regions: Dict[str, Region] = field(default_factory=dict)
+    administrative_units: Dict[str, object] = field(default_factory=dict)
     armies: Dict[str, Army] = field(default_factory=dict)
     buildings: Dict[str, Building] = field(default_factory=dict)
     faction_metrics: Tuple[str, ...] = ()
     powers: Dict[str, Power] = field(default_factory=dict)
     classes: Dict[str, SocialClass] = field(default_factory=dict)
-    routes: StrategicRouteCatalog | None = None
+    routes: CityStrategicCatalog | None = None
+    city_strategic_catalog: CityStrategicCatalog | None = None
     character_traits: Dict[str, Dict[str, object]] = field(default_factory=dict)
     opening_relations: Dict[str, List[Dict[str, object]]] = field(default_factory=dict)
     sanguo_offices: Dict[str, Dict[str, object]] = field(default_factory=dict)
@@ -862,11 +920,13 @@ class GameContent:
         preset_departments = load_preset_departments()
         preset_technologies = load_preset_technologies()
         regions = load_region_content()
-        armies = load_army_content()
+        administrative_units = load_administrative_units()
+        city_catalog = load_city_strategic_catalog(administrative_units)
+        valid_city_ids = {node.city_id for node in city_catalog.nodes}
+        armies = load_army_content(valid_city_ids=valid_city_ids)
         buildings = load_building_content()
         powers = load_powers()
         classes = load_class_content()
-        routes = load_strategic_routes()
         character_traits = load_character_traits()
         opening_relations = load_opening_relations()
         sanguo_offices = load_sanguo_offices()
@@ -887,12 +947,14 @@ class GameContent:
             preset_technologies=preset_technologies,
             event_by_id={ev.id: ev for ev in (*events, *seed_events)},
             regions=regions,
+            administrative_units=administrative_units,
             armies=armies,
             buildings=buildings,
             faction_metrics=tuple(factions.keys()),
             powers=powers,
             classes=classes,
-            routes=routes,
+            routes=city_catalog,
+            city_strategic_catalog=city_catalog,
             character_traits=character_traits,
             opening_relations=opening_relations,
             sanguo_offices=sanguo_offices,

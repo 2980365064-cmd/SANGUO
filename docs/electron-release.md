@@ -32,7 +32,7 @@ npm run dist:mac
 Output:
 
 ```text
-web/release/mac-arm64/MingSalvageSim.app
+web/release/mac-arm64/SanguoLiubei.app
 ```
 
 ## Build Windows unpacked app

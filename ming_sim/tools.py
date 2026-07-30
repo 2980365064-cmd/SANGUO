@@ -1118,9 +1118,9 @@ def build_extractor_tools(context: CourtContext):
                             "补至八万/现有八万"须先按盘面换算差额，不能填目标值/现状值
                             owner_power 值可写中文势力名；禁止写 arrears/cohesion
         power_updates       别的势力三项简单属性 {power_id: {"威望":N,"实力":N,"经济":N}}
-                            只写非大明势力；三项均为整数增量；不写立场/近动/状态
+                            只写非己方势力；三项均为整数增量；不写立场/近动/状态
         world_advance       外交态度 KV；key 为势力名或 power_id，value 为简短态度字符串
-                            如 {"后金":"敌对","蒙古":"摇摆","朝鲜":"倾明"}；无内容填 {}
+                            如 {"曹操":"敌对","孙权":"摇摆","刘璋":"友善"}；无内容填 {}
         issue_advances      既有局势推进列表
                             每项：{issue_id(integer),delta_bar,stage_text,narrative,可选inertia_delta}
                             delta_bar=本月该 issue 的明确变化量，必须非 0（不含自然漂移inertia，系统自动算）
