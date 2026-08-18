@@ -91,6 +91,11 @@ export type AdministrativeDetail = {
   fortification?: number;
   garrison_capacity?: number;
   siege_status?: string;
+  available_grain?: number;
+  stationed_manpower?: number;
+  summary?: string;
+  risk_notes?: string[];
+  recent_history?: Array<{ turn: number; kind: string; text: string }>;
   stationed_armies?: Army[];
 };
 
@@ -141,6 +146,8 @@ export type Army = {
   owner_power: string;
   station_node: string;
   commander: string;
+  deputy_commander?: string;
+  military_adjutant?: string;
   controller: string;
   theater: string;
   troop_type: string;
@@ -164,6 +171,7 @@ export type Army = {
   specialties: string[];
   status: string;
   current_order: ArmyOrder | null;
+  military_record?: { rank: string; merit: number; recent_merits: Array<{ delta: number; source: string }> };
 };
 
 export type RegionDetail = {

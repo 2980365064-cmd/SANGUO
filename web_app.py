@@ -1560,6 +1560,8 @@ class WebGame:
                 "owner_power": str(row["owner_power"]),
                 "station_node": str(row["station_node"]),
                 "commander": str(row["commander"]),
+                "deputy_commander": str(row["deputy_commander"] or ""),
+                "military_adjutant": str(row["military_adjutant"] or ""),
                 "controller": str(row["controller"]),
                 "theater": str(row["theater"]),
                 "troop_type": str(row["troop_type"]),
@@ -1583,8 +1585,19 @@ class WebGame:
                 "specialties": self._decode_json(row["specialties"], []),
                 "status": str(row["status"]),
                 "current_order": current_orders.get(army_id),
+                "military_record": self._army_military_record(army_id, str(row["commander"])),
             })
         return payloads
+
+    def _army_military_record(self, army_id: str, commander: str) -> Dict[str, Any]:
+        record = self.db.conn.execute(
+            "SELECT rank, merit FROM character_military_records WHERE character_name=?", (commander,)
+        ).fetchone()
+        recent = self.db.conn.execute(
+            "SELECT merit_delta, source_type FROM military_merit_logs WHERE army_id=? ORDER BY id DESC LIMIT 5", (army_id,)
+        ).fetchall()
+        return {"rank": str(record["rank"] if record else "裨将"), "merit": int(record["merit"] or 0) if record else 0,
+                "recent_merits": [{"delta": int(row["merit_delta"]), "source": str(row["source_type"])} for row in recent]}
 
     def sanguo_diplomacy_payload(self) -> Dict[str, Any]:
         relations = []

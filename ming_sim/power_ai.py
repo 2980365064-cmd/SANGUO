@@ -225,13 +225,22 @@ def available_power_actions(db, state: object, power_id: str) -> list[Dict[str, 
                 defender_manpower = sum(int(item["manpower"] or 0) for item in group)
                 ratio = manpower / max(1, defender_manpower)
                 attack_score = 35 + min(30, ratio * 12) + (supply - 40) * 0.15 + (morale - 50) * 0.15
+                # 与实际战役同源的编制预估，避免外势 AI 只按总人数冒进。
+                try:
+                    from ming_sim.battle import preview_battle
+                    preview = preview_battle(db, [army_id], defender_ids, target)
+                    composition_range = preview.get("win_probability_range", [50, 50])
+                    composition_signal = (float(composition_range[0]) + float(composition_range[1])) / 2 - 50
+                    attack_score += composition_signal * 0.28
+                except (ValueError, KeyError, TypeError):
+                    composition_range = [50, 50]
                 if route_kind in {"江河", "山道", "关隘"}:
                     attack_score -= 12
                 actions.append(_base_action(
                     power_id=power_id, action_type="attack", army_id=army_id,
                     target_node=target, target_power=enemy_power, defender_ids=defender_ids,
                     score=attack_score,
-                    reasons=[f"与{enemy_power}处于战争", f"兵力比{ratio:.2f}", f"经{route_kind}作战", f"军心{morale}/携粮{supply}"],
+                    reasons=[f"与{enemy_power}处于战争", f"兵力比{ratio:.2f}", f"编制战果预估{composition_range[0]}-{composition_range[1]}%", f"经{route_kind}作战", f"军心{morale}/携粮{supply}"],
                     intelligence=intelligence,
                 ))
 

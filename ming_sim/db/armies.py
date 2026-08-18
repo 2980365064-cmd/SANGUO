@@ -19,6 +19,7 @@ from ming_sim.constants import (
     FISCAL_SCORE_FIELDS, REGION_FIELD_ALIASES, REGION_SCORE_FIELDS, REGION_TEXT_FIELDS, TURN_UNIT,
 )
 from ming_sim.content import GameContent, canon_troop_name, normalize_troop_composition
+from ming_sim.military import RANK_REQUIREMENTS, RANKS, eligible_for_role, normalize_composition
 from ming_sim.matching import match_army_id_from_text, match_region_id_from_text
 from ming_sim.models import Army, Event, GameState, monthly_amount, period_label
 from ming_sim.token_stats import tlog
@@ -30,6 +31,89 @@ from ming_sim.db._helpers import (
 
 
 class _ArmiesMixin:
+    def execute_military_reform(self, state: object, army_id: str, payload: Dict[str, object]) -> Dict[str, object]:
+        """月度军政硬规则入口：所有变更均由已登记军令调用。"""
+        action = str(payload.get("action") or "").strip()
+        army = self.conn.execute("SELECT * FROM armies WHERE id=? AND active=1", (army_id,)).fetchone()
+        if army is None:
+            raise ValueError("军队不存在或已失效")
+        if str(army["status"] or "") in {"围城", "战胜整备", "战败撤退"}:
+            raise ValueError("当前军队状态不可改编")
+        turn = int(getattr(state, "turn", 0))
+        if action == "rename":
+            name = str(payload.get("name") or "").strip()[:40]
+            if not name:
+                raise ValueError("改名需指定新番号")
+            self.conn.execute("UPDATE armies SET name=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (name, army_id))
+            self.log_army_rule_change(state, army_id, "name", army["name"], name, "月度军政：改名", actor="军府")
+            return {"action": action, "army_id": army_id, "name": name}
+        if action == "appoint":
+            role = str(payload.get("role") or "").strip()
+            character = str(payload.get("character") or "").strip()
+            column = {"主将": "commander", "副将": "deputy_commander", "军司马": "military_adjutant"}.get(role)
+            record = self.conn.execute("SELECT rank, merit FROM character_military_records WHERE character_name=?", (character,)).fetchone()
+            if not column or record is None:
+                raise ValueError("军职或人物军籍不存在")
+            ok, reason = eligible_for_role(str(record["rank"]), int(record["merit"]), role, normalize_composition(json.loads(str(army["troop_composition"] or "{}"))))
+            if not ok:
+                raise ValueError(reason)
+            old = str(army[column] or "")
+            self.conn.execute(f"UPDATE armies SET {column}=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (character, army_id))
+            self.log_army_rule_change(state, army_id, column, old, character, f"月度军政：任命{role}", actor="军府")
+            return {"action": action, "role": role, "character": character}
+        if action == "promote":
+            character, rank = str(payload.get("character") or ""), str(payload.get("rank") or "")
+            record = self.conn.execute("SELECT merit FROM character_military_records WHERE character_name=?", (character,)).fetchone()
+            if rank not in RANKS or record is None or int(record["merit"] or 0) < RANK_REQUIREMENTS[rank]:
+                raise ValueError("军衔或战功资格不足")
+            self.conn.execute("UPDATE character_military_records SET rank=?, updated_turn=? WHERE character_name=?", (rank, turn, character))
+            return {"action": action, "character": character, "rank": rank}
+        if action == "transfer":
+            target_id = str(payload.get("target_army_id") or "")
+            target = self.conn.execute("SELECT * FROM armies WHERE id=? AND active=1", (target_id,)).fetchone()
+            composition = normalize_composition(payload.get("composition"))
+            source_comp = normalize_composition(json.loads(str(army["troop_composition"] or "{}")))
+            if target is None or str(target["owner_power"]) != str(army["owner_power"]) or str(target["station_node"]) != str(army["station_node"]):
+                raise ValueError("调配双方须为同势力同城现役军")
+            if not composition or any(amount > source_comp.get(kind, 0) for kind, amount in composition.items()):
+                raise ValueError("调配兵种数量超出来源编制")
+            source_next = {kind: source_comp.get(kind, 0) - composition.get(kind, 0) for kind in source_comp}
+            source_next = {kind: amount for kind, amount in source_next.items() if amount}
+            if sum(source_next.values()) < 1000:
+                raise ValueError("调配后来源军不得少于千人")
+            target_next = normalize_composition(json.loads(str(target["troop_composition"] or "{}")))
+            for kind, amount in composition.items(): target_next[kind] = target_next.get(kind, 0) + amount
+            for row, comp in ((army, source_next), (target, target_next)):
+                self.conn.execute("UPDATE armies SET troop_composition=?, troop_type=?, manpower=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (json.dumps(comp, ensure_ascii=False), self._composition_text(comp), sum(comp.values()), row["id"]))
+                self.log_army_rule_change(state, str(row["id"]), "troop_composition", row["troop_composition"], comp, "月度军政：兵种调配", actor="军府")
+            return {"action": action, "source_army_id": army_id, "target_army_id": target_id, "composition": composition}
+        if action == "split":
+            new_id, new_name = str(payload.get("new_army_id") or "").strip(), str(payload.get("new_name") or "").strip()[:40]
+            commander = str(payload.get("commander") or "").strip()
+            composition, source_comp = normalize_composition(payload.get("composition")), normalize_composition(json.loads(str(army["troop_composition"] or "{}")))
+            if not new_id or not new_name or not commander or sum(composition.values()) < 1000:
+                raise ValueError("拆分须指定新军 ID、番号、主将及至少千人编制")
+            if any(amount > source_comp.get(kind, 0) for kind, amount in composition.items()): raise ValueError("拆分编制超出母军")
+            source_next = {kind: source_comp.get(kind, 0) - composition.get(kind, 0) for kind in source_comp}
+            source_next = {kind: amount for kind, amount in source_next.items() if amount}
+            if sum(source_next.values()) < 1000: raise ValueError("母军拆分后不得少于千人")
+            record = self.conn.execute("SELECT rank, merit FROM character_military_records WHERE character_name=?", (commander,)).fetchone()
+            if record is None or not eligible_for_role(str(record["rank"]), int(record["merit"]), "主将", composition)[0]: raise ValueError("新军主将军衔或战功资格不足")
+            self.conn.execute("UPDATE armies SET troop_composition=?, troop_type=?, manpower=? WHERE id=?", (json.dumps(source_next, ensure_ascii=False), self._composition_text(source_next), sum(source_next.values()), army_id))
+            self.conn.execute("""INSERT INTO armies (id,name,station,station_node,theater,commander,controller,troop_type,troop_composition,manpower,maintenance_per_turn,supply,morale,training,equipment,arrears,mobility,loyalty,status,owner_power) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (new_id,new_name,army["station"],army["station_node"],army["theater"],commander,army["controller"],self._composition_text(composition),json.dumps(composition,ensure_ascii=False),sum(composition.values()),self.content.troop_maintenance_total(composition),army["supply"],army["morale"],army["training"],army["equipment"],0,army["mobility"],army["loyalty"],"整编",army["owner_power"]))
+            self.conn.execute("INSERT INTO army_lineage (turn,parent_army_id,child_army_id,action,details_json) VALUES (?,?,?,?,?)", (turn,army_id,new_id,"split",json.dumps(composition,ensure_ascii=False)))
+            return {"action": action, "army_id": army_id, "new_army_id": new_id, "composition": composition}
+        if action == "merge":
+            source_id = str(payload.get("source_army_id") or "")
+            source = self.conn.execute("SELECT * FROM armies WHERE id=? AND active=1", (source_id,)).fetchone()
+            if source is None or str(source["owner_power"]) != str(army["owner_power"]) or str(source["station_node"]) != str(army["station_node"]): raise ValueError("合并双方须为同势力同城现役军")
+            merged = normalize_composition(json.loads(str(army["troop_composition"] or "{}")))
+            for kind, amount in normalize_composition(json.loads(str(source["troop_composition"] or "{}"))).items(): merged[kind] = merged.get(kind, 0) + amount
+            self.conn.execute("UPDATE armies SET troop_composition=?, troop_type=?, manpower=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (json.dumps(merged,ensure_ascii=False),self._composition_text(merged),sum(merged.values()),army_id))
+            self.conn.execute("UPDATE armies SET active=0, status='已并编' WHERE id=?", (source_id,))
+            self.conn.execute("INSERT INTO army_lineage (turn,parent_army_id,child_army_id,action,details_json) VALUES (?,?,?,?,?)", (turn,source_id,army_id,"merge",json.dumps(merged,ensure_ascii=False)))
+            return {"action": action, "army_id": army_id, "merged_army_id": source_id, "composition": merged}
+        raise ValueError("未知军政动作")
     def _is_player_army_power(self, power_id: object) -> bool:
         return str(power_id or "") in {"liu_bei"}
 

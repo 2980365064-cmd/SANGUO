@@ -14,7 +14,7 @@ from typing import Dict, List, Set, Tuple
 from ming_sim.assets import load_json_asset, require_dict, require_list, str_field
 
 
-PRIMARY_ORDERS = {"移动", "驻守", "围城", "突袭", "补给", "撤退"}
+PRIMARY_ORDERS = {"移动", "驻守", "围城", "突袭", "补给", "撤退", "军政"}
 DANGEROUS_ROUTES = {"江河", "山道"}
 # 首版所有边均为普通路；保留扩展类型供未来路线编辑使用
 ROUTE_KINDS = {"普通路", "江河", "山道", "关隘"}
@@ -431,7 +431,7 @@ def resolve_army_orders_for_turn(db, turn: int) -> List[Dict[str, object]]:
     rows = db.conn.execute(
         """
         SELECT id FROM army_orders
-        WHERE turn=? AND status='issued' AND order_type IN ('移动', '撤退', '驻守')
+        WHERE turn=? AND status='issued' AND order_type IN ('移动', '撤退', '驻守', '军政')
         ORDER BY id
         """,
         (int(turn),),
@@ -441,7 +441,15 @@ def resolve_army_orders_for_turn(db, turn: int) -> List[Dict[str, object]]:
     for row in rows:
         order_id = int(row["id"])
         try:
-            results.append(resolve_army_order(db, state, order_id))
+            order = db.conn.execute("SELECT army_id, order_type, payload FROM army_orders WHERE id=?", (order_id,)).fetchone()
+            if order is not None and str(order["order_type"]) == "军政":
+                military_state = type("MilitaryTurn", (), {"turn": int(turn), "year": 208, "period": 1})()
+                outcome = db.execute_military_reform(military_state, str(order["army_id"]), json.loads(str(order["payload"] or "{}")))
+                db.conn.execute("UPDATE army_orders SET status='resolved', result=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (json.dumps(outcome, ensure_ascii=False), order_id))
+                db.conn.commit()
+                results.append(outcome)
+            else:
+                results.append(resolve_army_order(db, state, order_id))
         except ArmyOrderError as error:
             result = {"status": "rejected", "reason": str(error)}
             db.conn.execute(

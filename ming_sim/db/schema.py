@@ -331,6 +331,8 @@ class _SchemaMixin:
                 station_node TEXT NOT NULL DEFAULT '',
                 theater TEXT NOT NULL,
                 commander TEXT NOT NULL,
+                deputy_commander TEXT NOT NULL DEFAULT '',
+                military_adjutant TEXT NOT NULL DEFAULT '',
                 controller TEXT NOT NULL,
                 troop_type TEXT NOT NULL,
                 troop_composition TEXT NOT NULL DEFAULT '{}',
@@ -376,6 +378,37 @@ class _SchemaMixin:
                 actor TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(army_id) REFERENCES armies(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS character_military_records (
+                character_name TEXT PRIMARY KEY,
+                rank TEXT NOT NULL DEFAULT '裨将',
+                merit INTEGER NOT NULL DEFAULT 0,
+                updated_turn INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(character_name) REFERENCES characters(name)
+            );
+
+            CREATE TABLE IF NOT EXISTS military_merit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                character_name TEXT NOT NULL,
+                army_id TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                source_ref TEXT NOT NULL,
+                merit_delta INTEGER NOT NULL,
+                details_json TEXT NOT NULL DEFAULT '{}',
+                UNIQUE(character_name, source_ref),
+                FOREIGN KEY(character_name) REFERENCES characters(name),
+                FOREIGN KEY(army_id) REFERENCES armies(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS army_lineage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turn INTEGER NOT NULL,
+                parent_army_id TEXT NOT NULL,
+                child_army_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                details_json TEXT NOT NULL DEFAULT '{}'
             );
 
             CREATE TABLE IF NOT EXISTS buildings (
@@ -1568,6 +1601,8 @@ class _SchemaMixin:
         }.items():
             self.ensure_column("powers", column, definition)
         self.ensure_column("armies", "owner_power", "TEXT NOT NULL DEFAULT 'liu_bei'")
+        self.ensure_column("armies", "deputy_commander", "TEXT NOT NULL DEFAULT ''")
+        self.ensure_column("armies", "military_adjutant", "TEXT NOT NULL DEFAULT ''")
         self.ensure_column("armies", "station_node", "TEXT NOT NULL DEFAULT ''")
         self.ensure_column("armies", "supply_turns", "INTEGER NOT NULL DEFAULT 0")
         self.ensure_column("armies", "troop_composition", "TEXT NOT NULL DEFAULT '{}'")
@@ -1586,6 +1621,22 @@ class _SchemaMixin:
         self.ensure_column("characters", "location", "TEXT NOT NULL DEFAULT ''")
         self.ensure_column("characters", "origin", "TEXT NOT NULL DEFAULT 'preset'")
         self.ensure_column("characters", "archived", "INTEGER NOT NULL DEFAULT 0")
+        self.conn.execute(
+            """
+            INSERT OR IGNORE INTO character_military_records (character_name, rank, merit, updated_turn)
+            SELECT name, '裨将', 0, 0 FROM characters
+            """
+        )
+        # v8 军府迁移：旧四类编制只做确定性名称归并，不改人数、补给或军械。
+        from ming_sim.military import normalize_composition
+        for row in self.conn.execute("SELECT id, troop_composition FROM armies").fetchall():
+            try:
+                old_comp = json.loads(str(row["troop_composition"] or "{}"))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                old_comp = {}
+            new_comp = normalize_composition(old_comp)
+            if new_comp and new_comp != old_comp:
+                self.conn.execute("UPDATE armies SET troop_composition=?, troop_type=?, manpower=? WHERE id=?", (json.dumps(new_comp, ensure_ascii=False), "、".join(new_comp), sum(new_comp.values()), row["id"]))
         self.ensure_column("reaction_events", "applied_effects", "TEXT NOT NULL DEFAULT '[]'")
         # 第二阶段区域系统迁移：效果已应用标记 + 候选快照
         self.ensure_column("regional_incidents", "effects_applied_at", "INTEGER NOT NULL DEFAULT 0")

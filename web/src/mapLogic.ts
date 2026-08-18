@@ -182,6 +182,15 @@ export type CityTerritoryBlock = {
   labelY: number;
 };
 
+/** 同属且边界相连的一片诸侯疆域；仅用于天下舆图的读图题签。 */
+export type InfluenceRegion = {
+  controller: string;
+  cityIds: string[];
+  labelCityId: string;
+  labelX: number;
+  labelY: number;
+};
+
 type MapPoint = { x: number; y: number };
 
 // 已人工校对的益州东部门户：白帝在峡江东口，鱼复在其西侧腹地。
@@ -545,6 +554,162 @@ export function getCityTerritoryBlocks(
   });
 }
 
+function pointInPolygon(point: MapPoint, polygon: MapPoint[]) {
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const current = polygon[index];
+    const before = polygon[previous];
+    const crosses =
+      (current.y > point.y) !== (before.y > point.y) &&
+      point.x < ((before.x - current.x) * (point.y - current.y)) / (before.y - current.y) + current.x;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+/** 题签锚点必须落在真实城池辖区内，避免写在疆界或纸面空白上。 */
+export function isPointInCityTerritory(
+  point: MapPoint,
+  territoryPath: string,
+) {
+  return pathToPolygons(territoryPath).some((polygon) => pointInPolygon(point, polygon));
+}
+
+function territoryArea(territoryPath: string) {
+  return pathToPolygons(territoryPath).reduce(
+    (sum, polygon) => sum + Math.abs(polygonArea(polygon)),
+    0,
+  );
+}
+
+function interiorPoint(block: CityTerritoryBlock): MapPoint {
+  const anchor = { x: block.labelX, y: block.labelY };
+  if (isPointInCityTerritory(anchor, block.d)) return anchor;
+  for (const polygon of pathToPolygons(block.d)) {
+    if (polygon.length < 3) continue;
+    const centroid = polygon.reduce(
+      (sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }),
+      { x: 0, y: 0 },
+    );
+    centroid.x /= polygon.length;
+    centroid.y /= polygon.length;
+    if (pointInPolygon(centroid, polygon)) return centroid;
+    for (let index = 1; index < polygon.length - 1; index += 1) {
+      const point = {
+        x: (polygon[0].x + polygon[index].x + polygon[index + 1].x) / 3,
+        y: (polygon[0].y + polygon[index].y + polygon[index + 1].y) / 3,
+      };
+      if (pointInPolygon(point, polygon)) return point;
+    }
+  }
+  return anchor;
+}
+
+function cross(a: MapPoint, b: MapPoint, point: MapPoint) {
+  return (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
+}
+
+/**
+ * 两块辖区只有共享一段可见边界才算连通；角点相触不把飞地错误合并。
+ * 城池辖区本身来自同一套静态手绘边界，因此这里不引入新的地理近似。
+ */
+function sharedBoundaryLength(left: MapPoint[], right: MapPoint[]) {
+  const tolerance = 0.75;
+  let shared = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    const a = left[index];
+    const b = left[(index + 1) % left.length];
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length < tolerance) continue;
+    for (let otherIndex = 0; otherIndex < right.length; otherIndex += 1) {
+      const c = right[otherIndex];
+      const d = right[(otherIndex + 1) % right.length];
+      if (Math.abs(cross(a, b, c)) / length > tolerance || Math.abs(cross(a, b, d)) / length > tolerance) continue;
+      const unitX = (b.x - a.x) / length;
+      const unitY = (b.y - a.y) / length;
+      const projectionC = (c.x - a.x) * unitX + (c.y - a.y) * unitY;
+      const projectionD = (d.x - a.x) * unitX + (d.y - a.y) * unitY;
+      const start = Math.max(0, Math.min(projectionC, projectionD));
+      const end = Math.min(length, Math.max(projectionC, projectionD));
+      shared += Math.max(0, end - start);
+    }
+  }
+  return shared;
+}
+
+function nearParallelBoundaryLength(left: MapPoint[], right: MapPoint[]) {
+  const tolerance = 12;
+  let shared = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    const a = left[index];
+    const b = left[(index + 1) % left.length];
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length < 3) continue;
+    const midpoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const matches = right.some((c, otherIndex) => {
+      const d = right[(otherIndex + 1) % right.length];
+      const otherLength = Math.hypot(d.x - c.x, d.y - c.y);
+      if (otherLength < 3) return false;
+      const parallel = Math.abs(((b.x - a.x) * (d.x - c.x) + (b.y - a.y) * (d.y - c.y)) / (length * otherLength));
+      if (parallel < 0.92) return false;
+      const projection = Math.max(0, Math.min(1, ((midpoint.x - c.x) * (d.x - c.x) + (midpoint.y - c.y) * (d.y - c.y)) / (otherLength * otherLength)));
+      const nearest = { x: c.x + (d.x - c.x) * projection, y: c.y + (d.y - c.y) * projection };
+      return Math.hypot(midpoint.x - nearest.x, midpoint.y - nearest.y) <= tolerance;
+    });
+    if (matches) shared += length;
+  }
+  return shared;
+}
+
+function territoriesShareBoundary(left: CityTerritoryBlock, right: CityTerritoryBlock) {
+  const leftPolygons = pathToPolygons(left.d);
+  const rightPolygons = pathToPolygons(right.d);
+  return leftPolygons.some((polygon) =>
+    rightPolygons.some((other) =>
+      sharedBoundaryLength(polygon, other) >= 3 || nearParallelBoundaryLength(polygon, other) >= 8,
+    ),
+  );
+}
+
+/**
+ * 以城池辖区的真实共边关系求出势力连续区域。题签锚定在该区域面积最大的
+ * 城池辖区腹地，故势力分裂时每片领地都有名称，且不会落在边界之外。
+ */
+export function getInfluenceRegions(blocks: CityTerritoryBlock[]): InfluenceRegion[] {
+  const parent = blocks.map((_, index) => index);
+  const find = (index: number): number => {
+    if (parent[index] !== index) parent[index] = find(parent[index]);
+    return parent[index];
+  };
+  const merge = (left: number, right: number) => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot !== rightRoot) parent[rightRoot] = leftRoot;
+  };
+  for (let left = 0; left < blocks.length; left += 1) {
+    for (let right = left + 1; right < blocks.length; right += 1) {
+      if (blocks[left].city.controller === blocks[right].city.controller && territoriesShareBoundary(blocks[left], blocks[right])) {
+        merge(left, right);
+      }
+    }
+  }
+  const groups = new Map<number, CityTerritoryBlock[]>();
+  blocks.forEach((block, index) => groups.set(find(index), [...(groups.get(find(index)) || []), block]));
+  return [...groups.values()]
+    .map((group) => {
+      const labelBlock = [...group].sort((left, right) => territoryArea(right.d) - territoryArea(left.d) || left.city.id.localeCompare(right.city.id))[0];
+      const label = interiorPoint(labelBlock);
+      return {
+        controller: labelBlock.city.controller,
+        cityIds: group.map((block) => block.city.id).sort(),
+        labelCityId: labelBlock.city.id,
+        labelX: label.x,
+        labelY: label.y,
+      };
+    })
+    .sort((left, right) => left.controller.localeCompare(right.controller) || left.labelCityId.localeCompare(right.labelCityId));
+}
+
 function pathToPoints(path: string) {
   return (path.match(/[ML] -?\d+ -?\d+/g) || []).map((item) => {
     const [, x, y] = item.split(" ");
@@ -677,6 +842,7 @@ export function getSharedCityBoundaryPath(
       .join(" ")
   );
 }
+
 
 /**
  * 单个郡在悬停/选中时使用的描边。它和底层共享郡界走同一条逐段曲线，

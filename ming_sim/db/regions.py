@@ -30,6 +30,33 @@ from ming_sim.db._helpers import (
 
 
 class _RegionsMixin:
+    def _administrative_history(self, scope: str, entity_ids: List[str], turn: int) -> List[Dict[str, object]]:
+        """地方档案只读取已确认日志；不把情报或 AI 文本当成地方事实。"""
+        if not entity_ids:
+            return []
+        placeholders = ",".join("?" for _ in entity_ids)
+        since = max(0, int(turn) - 2)
+        rows = self.conn.execute(
+            f"SELECT turn, scope, entity_id, field, old_value, new_value, reason FROM administrative_logs WHERE entity_id IN ({placeholders}) AND turn>=? ORDER BY turn DESC,id DESC LIMIT 12",
+            (*entity_ids, since),
+        ).fetchall()
+        labels = {"controlled_by":"控制权", "grain_stock":"仓粮", "siege_status":"围城", "transport":"转运", "military_pressure":"军压", "public_support":"民心"}
+        history = [{"turn": int(row["turn"]), "kind": str(row["field"]), "text": f"{labels.get(str(row['field']), str(row['field']))}：{row['old_value']} → {row['new_value']}（{row['reason']}）"} for row in rows]
+        return history
+
+    @staticmethod
+    def _risk_notes(*, support: int = 100, unrest: int = 0, pressure: int = 0, grain: int = 9999,
+                    siege: str = "", armies: List[Dict[str, object]] | None = None, capacity: int = 99) -> List[str]:
+        notes: List[str] = []
+        if siege and siege != "未围": notes.append(f"{siege}，城防事务须优先核验")
+        if support < 40: notes.append("民心低落，宜先安抚并核减苛扰")
+        if unrest >= 60: notes.append("动乱偏高，地方秩序已成风险")
+        if pressure >= 65: notes.append("军压持续，宜查驻军与粮道")
+        if grain <= 0: notes.append("仓粮见底，补给不能久持")
+        if armies and len(armies) > capacity: notes.append("驻军超过城池容量，补给与秩序承压")
+        if armies and any(int(a.get("supply") or 100) < 35 or int(a.get("morale") or 100) < 40 for a in armies): notes.append("有驻军补给或士气偏低")
+        return notes[:3]
+
     def seed_administrative_units(self) -> None:
         """按建安十三年名册播种行政城池；绝不覆盖既有动态盘面。"""
         directory = self.content.administrative_units or {}
@@ -155,11 +182,15 @@ class _RegionsMixin:
         return changes
 
     def administrative_detail(self, scope: str, entity_id: str) -> Dict[str, object]:
+        turn_row = self.conn.execute("SELECT turn FROM game_state WHERE id=1").fetchone()
+        turn = int(turn_row["turn"] or 0) if turn_row else 0
         if scope == "city":
             row = self.conn.execute("SELECT * FROM administrative_cities WHERE id=?", (entity_id,)).fetchone()
             if row is None: raise ValueError("城池不存在")
             armies = self.conn.execute("SELECT * FROM armies WHERE station_node IN (?, ?) AND active=1 ORDER BY id", (row["id"], row["commandery_id"])).fetchall()
-            return {"scope": "city", "id": row["id"], "name": row["name"], "commandery_id": row["commandery_id"], "province_id": row["province_id"], "controlled_by": row["controlled_by"], "strategic_role": row["strategic_role"], "order_score": row["order_score"], "grain_stock": row["grain_stock"], "market_capacity": row["market_capacity"], "fortification": row["fortification"], "garrison_capacity": row["garrison_capacity"], "siege_status": row["siege_status"], "status": row["status"], "stationed_armies": [dict(a) for a in armies]}
+            army_items = [dict(a) for a in armies]
+            risks = self._risk_notes(support=int(row["order_score"] or 0), grain=int(row["grain_stock"] or 0), siege=str(row["siege_status"]), armies=army_items, capacity=int(row["garrison_capacity"] or 1))
+            return {"scope": "city", "id": row["id"], "name": row["name"], "commandery_id": row["commandery_id"], "province_id": row["province_id"], "controlled_by": row["controlled_by"], "strategic_role": row["strategic_role"], "order_score": row["order_score"], "grain_stock": row["grain_stock"], "market_capacity": row["market_capacity"], "fortification": row["fortification"], "garrison_capacity": row["garrison_capacity"], "siege_status": row["siege_status"], "status": row["status"], "stationed_armies": army_items, "stationed_manpower": sum(int(a.get("manpower") or 0) for a in army_items), "risk_notes": risks, "summary": risks[0] if risks else "城防、仓廪与市易均可维持。", "recent_history": self._administrative_history("city", [str(row["id"])], turn)}
         if scope == "province":
             province = self.conn.execute("SELECT * FROM administrative_provinces WHERE id=?", (entity_id,)).fetchone()
             if province is None: raise ValueError("州不存在")
@@ -168,13 +199,18 @@ class _RegionsMixin:
             tally: Dict[str, int] = {}
             for commandery in commanderies: tally[str(commandery["controlled_by"])] = tally.get(str(commandery["controlled_by"]), 0) + 1
             controller = sorted(tally, key=lambda key: (-tally[key], key))[0] if tally else ""
-            return {"scope":"province", "id":province["id"], "name":province["name"], "controlled_by":controller, "transport":province["transport"], "mobilization":province["mobilization"], "public_support":province["public_support"], "military_pressure":province["military_pressure"], "security_coordination":province["security_coordination"], "status":province["status"], "commandery_count":len(commanderies), "city_count":len(cities), "population":sum(int(r["population"] or 0) for r in commanderies), "tax_per_turn":sum(int(r["tax_per_turn"] or 0) for r in commanderies), "commanderies":[{"id":r["id"],"name":r["name"],"controlled_by":r["controlled_by"]} for r in commanderies]}
+            commandery_items = [{"id":r["id"],"name":r["name"],"controlled_by":r["controlled_by"],"public_support":r["public_support"],"unrest":r["unrest"],"military_pressure":r["military_pressure"],"risk": self._risk_notes(support=int(r["public_support"] or 0), unrest=int(r["unrest"] or 0), pressure=int(r["military_pressure"] or 0))} for r in commanderies]
+            risks = self._risk_notes(support=int(province["public_support"] or 0), pressure=int(province["military_pressure"] or 0))
+            return {"scope":"province", "id":province["id"], "name":province["name"], "controlled_by":controller, "transport":province["transport"], "mobilization":province["mobilization"], "public_support":province["public_support"], "military_pressure":province["military_pressure"], "security_coordination":province["security_coordination"], "status":province["status"], "commandery_count":len(commanderies), "city_count":len(cities), "population":sum(int(r["population"] or 0) for r in commanderies), "tax_per_turn":sum(int(r["tax_per_turn"] or 0) for r in commanderies), "commanderies":sorted(commandery_items, key=lambda item: (-len(item["risk"]), str(item["name"]))), "risk_notes":risks, "summary":risks[0] if risks else "州域转运、征发与治安协同尚可。", "recent_history":self._administrative_history("province", [str(province["id"])] + [str(r["id"]) for r in commanderies], turn)}
         row = self.conn.execute("SELECT * FROM regions WHERE id=?", (entity_id,)).fetchone()
         if row is None: raise ValueError("郡不存在")
         fiscal = json.loads(str(row["fiscal"] or "{}"))
         cities = self.conn.execute("SELECT id,name,controlled_by,fortification,grain_stock,is_commandery_capital,strategic_role,siege_status FROM administrative_cities WHERE commandery_id=? ORDER BY is_commandery_capital DESC,name", (entity_id,)).fetchall()
         capital = next((dict(city) for city in cities if int(city["is_commandery_capital"] or 0)), None)
-        return {"scope":"commandery", "id":row["id"], "name":row["name"], "province_id":row["kind"], "controlled_by":row["controlled_by"], "population":row["population"], "public_support":row["public_support"], "unrest":row["unrest"], "military_pressure":row["military_pressure"], "gentry_resistance":row["gentry_resistance"], "tax_per_turn":row["tax_per_turn"], "fiscal":fiscal, "status":row["status"], "city":capital, "cities":[dict(city) for city in cities], "city_count":len(cities)}
+        city_items = [dict(city) for city in cities]
+        grain = self.region_grain_stock(str(row["id"]))
+        risks = self._risk_notes(support=int(row["public_support"] or 0), unrest=int(row["unrest"] or 0), pressure=int(row["military_pressure"] or 0), grain=grain)
+        return {"scope":"commandery", "id":row["id"], "name":row["name"], "province_id":row["kind"], "controlled_by":row["controlled_by"], "population":row["population"], "public_support":row["public_support"], "unrest":row["unrest"], "military_pressure":row["military_pressure"], "gentry_resistance":row["gentry_resistance"], "tax_per_turn":row["tax_per_turn"], "fiscal":fiscal, "available_grain":grain, "status":row["status"], "city":capital, "cities":city_items, "city_count":len(cities), "risk_notes":risks, "summary":risks[0] if risks else "民政、赋役与城防暂可维持。", "recent_history":self._administrative_history("commandery", [str(row["id"])] + [str(city["id"]) for city in cities], turn)}
     def region_grain_stock(self, region_id: str) -> int:
         row = self.conn.execute("SELECT fiscal FROM regions WHERE id=?", (region_id,)).fetchone()
         if row is None:

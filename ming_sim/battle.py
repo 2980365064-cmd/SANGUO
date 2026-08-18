@@ -18,6 +18,7 @@ from ming_sim.adjudication import (
 from ming_sim.national_focus import national_focus_modifier
 from ming_sim.sanguo_rules import find_strategic_route, require_city_node
 from ming_sim.world_simulation import battle_environment
+from ming_sim.military import composition_multiplier, morale_delta, normalize_composition, proportional_losses
 
 
 TACTIC_RULES = {
@@ -122,7 +123,7 @@ def _terrain_multiplier(side: str, kind: str) -> float:
     return {"江河": 0.85, "山道": 0.85, "关隘": 0.75}.get(kind, 1.0)
 
 
-def _army_score(db, army, node_id: str, side: str, *, audit: bool, turn: int) -> Tuple[float, Dict[str, object]]:
+def _army_score(db, army, node_id: str, side: str, *, audit: bool, turn: int, enemy_composition: Dict[str, int] | None = None) -> Tuple[float, Dict[str, object]]:
     kind = _route_kind(db, str(army["station_node"]), node_id)
     commander = _character(db, str(army["commander"]))
     leadership = int(getattr(commander, "leadership", 50))
@@ -169,6 +170,18 @@ def _army_score(db, army, node_id: str, side: str, *, audit: bool, turn: int) ->
         if kind == "普通路" and "骑" in str(army["troop_type"]):
             focus_pct += national_focus_modifier(db, "plain_cavalry_pct")
     focus_multiplier = max(0.5, 1 + focus_pct / 100)
+    composition = normalize_composition(json.loads(str(army["troop_composition"] or "{}")))
+    enemy_composition = enemy_composition or {}
+    composition_multiplier_value, composition_notes = composition_multiplier(composition, enemy_composition, kind)
+    offices = db.conn.execute(
+        "SELECT rank, merit FROM character_military_records WHERE character_name=?",
+        (str(army["commander"]),),
+    ).fetchone()
+    merit = int(offices["merit"] or 0) if offices else 0
+    rank = str(offices["rank"] or "裨将") if offices else "裨将"
+    deputy_bonus = 0.03 if str(army["deputy_commander"] or "") else 0.0
+    adjutant_bonus = max(0.0, (int(army["discipline"] or 0) - 50) / 1000) if str(army["military_adjutant"] or "") else 0.0
+    office_multiplier = 1 + deputy_bonus + adjutant_bonus
     score = max(1.0, int(army["manpower"] or 0))
     for multiplier in (
         quality_multiplier,
@@ -179,6 +192,8 @@ def _army_score(db, army, node_id: str, side: str, *, audit: bool, turn: int) ->
         terrain_multiplier,
         trait_multiplier,
         focus_multiplier,
+        composition_multiplier_value,
+        office_multiplier,
     ):
         score *= multiplier
     breakdown = {
@@ -209,6 +224,12 @@ def _army_score(db, army, node_id: str, side: str, *, audit: bool, turn: int) ->
             for item in trait_modifiers
         ],
         "route_kind": kind,
+        "troop_composition": composition,
+        "composition_multiplier": round(composition_multiplier_value, 3),
+        "composition_notes": composition_notes,
+        "commander_rank": rank,
+        "commander_merit": merit,
+        "office_multiplier": round(office_multiplier, 3),
         "score": round(score, 2),
     }
     return score, breakdown
@@ -232,14 +253,16 @@ def _battle_calculation(
     for defender in defenders:
         if str(defender["station_node"]) != node_id:
             raise ValueError(f"守军 {defender['id']} 不在战役节点 {node_id}。")
-    attacker_breakdown = [
-        _army_score(db, army, node_id, "attacker", audit=audit, turn=turn)
-        for army in attackers
-    ]
-    defender_breakdown = [
-        _army_score(db, army, node_id, "defender", audit=audit, turn=turn)
-        for army in defenders
-    ]
+    attacker_composition: Dict[str, int] = {}
+    defender_composition: Dict[str, int] = {}
+    for army in attackers:
+        for troop, amount in normalize_composition(json.loads(str(army["troop_composition"] or "{}"))).items():
+            attacker_composition[troop] = attacker_composition.get(troop, 0) + amount
+    for army in defenders:
+        for troop, amount in normalize_composition(json.loads(str(army["troop_composition"] or "{}"))).items():
+            defender_composition[troop] = defender_composition.get(troop, 0) + amount
+    attacker_breakdown = [_army_score(db, army, node_id, "attacker", audit=audit, turn=turn, enemy_composition=defender_composition) for army in attackers]
+    defender_breakdown = [_army_score(db, army, node_id, "defender", audit=audit, turn=turn, enemy_composition=attacker_composition) for army in defenders]
     attacker_score = sum(item[0] for item in attacker_breakdown)
     defender_score = sum(item[0] for item in defender_breakdown)
     hard_probability = round(
@@ -738,20 +761,29 @@ def _apply_army_outcome(db, state, army, casualty_rate: float, won: bool) -> Dic
     old_fatigue = int(army["fatigue"] or 0)
     casualties = min(old_manpower, round(old_manpower * casualty_rate))
     new_manpower = old_manpower - casualties
-    new_morale = max(0, min(100, old_morale + (3 if won else -10)))
+    morale_change, morale_reasons = morale_delta(
+        casualty_rate=casualty_rate, won=won, discipline=int(army["discipline"] or 50),
+        has_deputy=bool(army["deputy_commander"]), has_adjutant=bool(army["military_adjutant"]),
+    )
+    new_morale = max(0, min(100, old_morale + morale_change))
     new_fatigue = max(0, min(100, old_fatigue + (8 if won else 15)))
     status = "战胜整备" if won else "战败撤退"
+    original_composition = normalize_composition(json.loads(str(army["troop_composition"] or "{}")))
+    remaining_composition = proportional_losses(original_composition, casualties)
     db.conn.execute(
-        "UPDATE armies SET manpower=?, morale=?, fatigue=?, status=? WHERE id=?",
-        (new_manpower, new_morale, new_fatigue, status, army["id"]),
+        "UPDATE armies SET manpower=?, troop_composition=?, troop_type=?, morale=?, fatigue=?, status=? WHERE id=?",
+        (new_manpower, json.dumps(remaining_composition, ensure_ascii=False), "、".join(remaining_composition), new_morale, new_fatigue, status, army["id"]),
     )
-    reason = "结构化战役结算"
+    reason = "结构化战役结算：" + "、".join(morale_reasons)
     db.log_army_rule_change(state, str(army["id"]), "manpower", old_manpower, new_manpower, reason, actor="战役系统")
     db.log_army_rule_change(state, str(army["id"]), "morale", old_morale, new_morale, reason, actor="战役系统")
     db.log_army_rule_change(state, str(army["id"]), "fatigue", old_fatigue, new_fatigue, reason, actor="战役系统")
+    db.log_army_rule_change(state, str(army["id"]), "troop_composition", original_composition, remaining_composition, reason, actor="战役系统")
     return {
         "army_id": str(army["id"]),
         "casualties": casualties,
+        "troop_composition_before": original_composition,
+        "troop_composition_after": remaining_composition,
         "manpower_before": old_manpower,
         "manpower_after": new_manpower,
         "manpower_delta": new_manpower - old_manpower,
@@ -763,6 +795,32 @@ def _apply_army_outcome(db, state, army, casualty_rate: float, won: bool) -> Dic
         "fatigue_delta": new_fatigue - old_fatigue,
         "status": status,
     }
+
+
+def _award_battle_merit(db, state, armies, *, won: bool, source_ref: str) -> list[Dict[str, object]]:
+    """战功完全来自已经结算的战役事实；UNIQUE 守卫保证重放不重复累加。"""
+    awarded = []
+    for army in armies:
+        commander = str(army["commander"] or "")
+        if not commander:
+            continue
+        delta = 12 if won else 3
+        if int(army["morale"] or 0) >= 70:
+            delta += 2
+        try:
+            cur = db.conn.execute(
+                "INSERT INTO military_merit_logs (turn, character_name, army_id, source_type, source_ref, merit_delta, details_json) VALUES (?, ?, ?, 'battle', ?, ?, ?)",
+                (int(getattr(state, "turn", 0)), commander, str(army["id"]), source_ref, delta, json.dumps({"won": won}, ensure_ascii=False)),
+            )
+        except Exception:
+            continue
+        if cur.rowcount:
+            db.conn.execute(
+                "INSERT OR IGNORE INTO character_military_records (character_name) VALUES (?)", (commander,)
+            )
+            db.conn.execute("UPDATE character_military_records SET merit=merit+?, updated_turn=? WHERE character_name=?", (delta, int(getattr(state, "turn", 0)), commander))
+            awarded.append({"character": commander, "army_id": str(army["id"]), "merit_delta": delta})
+    return awarded
 
 
 def _commander_fates(db, losing_armies: Sequence[object], margin: float, node_id: str) -> List[Dict[str, str]]:
@@ -848,6 +906,8 @@ def resolve_battle(
         changes.append(_apply_army_outcome(db, state, army, winner_rate if attacker_won else loser_rate, attacker_won))
     for army in defenders:
         changes.append(_apply_army_outcome(db, state, army, loser_rate if attacker_won else winner_rate, not attacker_won))
+    merit_awards = _award_battle_merit(db, state, attackers, won=attacker_won, source_ref=f"battle:{turn}:{battle_subject_id}")
+    merit_awards += _award_battle_merit(db, state, defenders, won=not attacker_won, source_ref=f"battle:{turn}:{battle_subject_id}")
     margin = abs(roll - final_probability)
     fates = _commander_fates(db, defenders if attacker_won else attackers, margin, node_id)
     result: Dict[str, object] = {
@@ -872,6 +932,7 @@ def resolve_battle(
         "commander_fates": fates,
         "audit": {
             "army_changes": changes,
+            "merit_awards": merit_awards,
             "attribute_log_context": "battle_command",
             "random_rule": "1-100 <= final_probability 时攻方获胜",
             "environment": environment,

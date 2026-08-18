@@ -17,6 +17,7 @@ from ming_sim.adjudication import (
     validate_ai_proposal,
 )
 from ming_sim.national_focus import national_focus_modifier
+from ming_sim.military import morale_delta
 
 
 # ---------------------------------------------------------------------------
@@ -372,8 +373,6 @@ def settle_army_supply(db, state: object, army_id: str) -> Dict[str, object]:
     combat_multiplier = 1.0 if starvation == 0 else old_multiplier
     fatigue_delta = 0
     deserted = 0
-    if starvation >= 1:
-        morale = max(0, morale - 8)
     if starvation >= 2:
         fatigue_delta = 12
         fatigue = min(100, fatigue + fatigue_delta)
@@ -381,6 +380,15 @@ def settle_army_supply(db, state: object, army_id: str) -> Dict[str, object]:
         deserted = max(1, round(manpower * 0.02))
         manpower = max(0, manpower - deserted)
         combat_multiplier = 0.65
+
+    morale_change, morale_reasons = morale_delta(
+        supply_source=source, starvation_turns=starvation, arrears=int(army["arrears"] or 0),
+        maintenance=int(army["maintenance_per_turn"] or 0), fatigue=old_fatigue,
+        discipline=int(army["discipline"] or 50), has_deputy=bool(army["deputy_commander"]),
+        has_adjutant=bool(army["military_adjutant"]),
+    )
+    morale = max(0, min(100, old_morale + morale_change))
+    reason = "、".join(morale_reasons) or ("郡仓供粮" if source_node else "消耗携粮")
 
     db.conn.execute(
         """
@@ -401,7 +409,6 @@ def settle_army_supply(db, state: object, army_id: str) -> Dict[str, object]:
             army_id,
         ),
     )
-    reason = f"第{starvation}月断粮" if starvation else ("郡仓供粮" if source_node else "消耗携粮")
     _log_if_changed(db, state, army_id, "supply", old_supply, new_supply, reason)
     _log_if_changed(db, state, army_id, "morale", old_morale, morale, reason)
     _log_if_changed(db, state, army_id, "fatigue", old_fatigue, fatigue, reason)

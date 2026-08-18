@@ -128,6 +128,11 @@ class _StrategyMixin:
                 )
             except ValueError as error:
                 raise ArmyOrderError(str(error)) from error
+        elif order_type == "军政":
+            if str(payload.get("action") or "") not in {"rename", "appoint", "promote", "transfer", "split", "merge"}:
+                raise ArmyOrderError("军政军令缺少合法动作。")
+            if self.conn.execute("SELECT 1 FROM armies WHERE id=? AND active=1", (army_id,)).fetchone() is None:
+                raise ArmyOrderError("军政军令的主军不存在。")
         try:
             cursor = self.conn.execute(
                 """

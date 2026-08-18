@@ -1,14 +1,15 @@
 {
-  "version": 7,
-  "note": "208 开局四类战略兵种，仅用于通用军需接口。",
+  "version": 8,
+  "note": "208 军府七类战略兵种；旧档步卒确定性归并轻步。",
   "unit": "军资/千人/月",
-  "default_tier": "步卒",
+  "default_tier": "轻步",
   "tiers": [
     {
-      "tier": "步卒",
+      "tier": "轻步",
       "category": "步兵",
       "per_kilo": 0.1,
       "keywords": [
+        "轻步",
         "步卒",
         "步兵",
         "守军"
@@ -17,6 +18,15 @@
         "长矛",
         "刀盾"
       ],
+      "upgrades": [],
+      "requires_tech": ""
+    },
+    {
+      "tier": "重步",
+      "category": "步兵",
+      "per_kilo": 0.15,
+      "keywords": ["重步", "刀盾", "甲士"],
+      "equipment": ["长矛", "刀盾", "甲胄"],
       "upgrades": [],
       "requires_tech": ""
     },
@@ -52,6 +62,15 @@
       "requires_tech": ""
     },
     {
+      "tier": "突骑",
+      "category": "骑兵",
+      "per_kilo": 0.23,
+      "keywords": ["突骑", "精骑", "铁骑"],
+      "equipment": ["战马", "甲胄", "长矛"],
+      "upgrades": [],
+      "requires_tech": ""
+    },
+    {
       "tier": "水军",
       "category": "水军",
       "per_kilo": 0.16,
@@ -64,6 +83,15 @@
         "战船",
         "弓弩"
       ],
+      "upgrades": [],
+      "requires_tech": ""
+    },
+    {
+      "tier": "工兵",
+      "category": "工事",
+      "per_kilo": 0.14,
+      "keywords": ["工兵", "攻具", "营造"],
+      "equipment": ["长矛", "刀盾"],
       "upgrades": [],
       "requires_tech": ""
     }

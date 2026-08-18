@@ -13,6 +13,7 @@ import {
   STATIC_MAP_LABEL_POLICY,
   clampMapZoom,
   getCityTerritoryBlocks,
+  getInfluenceRegions,
   getCommanderyBoundaryBlocks,
   getTownBlocks,
   getProvinceBlocks,
@@ -50,6 +51,7 @@ export function StrategicMap({
     string | null
   >(null);
   const [selectedCity, setSelectedCity] = React.useState<string | null>(null);
+  const [hoveredCity, setHoveredCity] = React.useState<string | null>(null);
   const [infoTarget, setInfoTarget] = React.useState<{
     scope: AdministrativeScope;
     entityId: string;
@@ -76,6 +78,22 @@ export function StrategicMap({
     () => getCityTerritoryBlocks(state.map.cities || [], commanderyBlocks),
     [state.map.cities, commanderyBlocks],
   );
+  const influenceRegions = React.useMemo(
+    () => getInfluenceRegions(cityBlocks),
+    [cityBlocks],
+  );
+  // 手绘行政块之间保留了部分地理留白；势力图层以每方最大连续读图区放一枚题签，
+  // 防止小块辖区的重复题签掩盖疆域本身。
+  const influenceLabels = React.useMemo(() => {
+    const primaryByPower = new Map<string, (typeof influenceRegions)[number]>();
+    influenceRegions.forEach((region) => {
+      const current = primaryByPower.get(region.controller);
+      if (!current || region.cityIds.length > current.cityIds.length || (
+        region.cityIds.length === current.cityIds.length && region.labelCityId.localeCompare(current.labelCityId) < 0
+      )) primaryByPower.set(region.controller, region);
+    });
+    return [...primaryByPower.values()];
+  }, [influenceRegions]);
   const sharedCommanderyBoundaryPath = React.useMemo(
     () => getSharedCityBoundaryPath(commanderyBlocks),
     [commanderyBlocks],
@@ -115,6 +133,7 @@ export function StrategicMap({
   const switchLayer = (layer: MapLayer) => {
     setMapLayer(layer);
     setTooltip(null);
+    setHoveredCity(null);
     if (layer === "province") {
       setSelectedCommandery(null);
       setSelectedCity(null);
@@ -259,7 +278,8 @@ export function StrategicMap({
           transform={`translate(${960 + pan.x} ${540 + pan.y}) scale(${zoom}) translate(-960 -540)`}
         >
           <image
-            href="/底图_expanded-v2.png?v=20260727-seamless-map"
+            className="map-base-image"
+            href="/底图_expanded-v2.png?v=20260806-map-alignment"
             x="-320"
             y="-180"
             width="2560"
@@ -370,16 +390,17 @@ export function StrategicMap({
             <g
               className={`city-territories ${mapLayer === "influence" ? "city-influence-layer" : "city-node-layer"}`}
             >
-              <path
+              {mapLayer === "city" && <path
                 className="city-commandery-boundaries"
                 d={sharedCommanderyBoundaryPath}
                 aria-hidden="true"
-              />
-              <g
-                className="historical-town-reference"
-                aria-label="历史城镇地理参照"
-              >
-                {historicalTownBlocks.map((town) => (
+              />}
+              {mapLayer === "city" && (
+                <g
+                  className="historical-town-reference"
+                  aria-label="历史城镇地理参照"
+                >
+                  {historicalTownBlocks.map((town) => (
                   <g
                     key={town.city}
                     transform={`translate(${town.cx} ${town.cy})`}
@@ -394,8 +415,9 @@ export function StrategicMap({
                       {town.townName}
                     </text>
                   </g>
-                ))}
-              </g>
+                  ))}
+                </g>
+              )}
               {cityBlocks.map((block) => {
                 const city = block.city;
                 const armies = cityArmies(city.id, city.commandery_id);
@@ -411,14 +433,21 @@ export function StrategicMap({
                       setSelectedCommandery(null);
                       openNodeInfo(city.commandery_id, "city", city.id);
                     }}
-                    onMouseMove={(event) =>
+                    onMouseMove={(event) => {
+                      if (mapLayer === "influence") {
+                        setHoveredCity(city.id);
+                        return;
+                      }
                       setTooltip({
                         x: event.clientX,
                         y: event.clientY,
                         text: `${city.name} · ${city.strategic_role} · ${armies.length}支军队`,
-                      })
-                    }
-                    onMouseLeave={() => setTooltip(null)}
+                      });
+                    }}
+                    onMouseLeave={() => {
+                      setTooltip(null);
+                      setHoveredCity(null);
+                    }}
                     role="button"
                     tabIndex={0}
                     aria-label={`${city.name}，${city.strategic_role}`}
@@ -427,21 +456,27 @@ export function StrategicMap({
                       className={`city-territory ${city.siege_status === "围城中" ? "under-siege" : ""}`}
                       d={block.d}
                       fill={
-                        city.siege_status === "围城中"
+                        mapLayer !== "influence" && city.siege_status === "围城中"
                           ? "url(#siege-hatch)"
                           : POWER_COLORS[city.controller] || "#655c4b"
                       }
                     />
-                    <path
+                    {mapLayer === "city" && <path
                       className="city-territory-boundary"
                       d={block.boundaryD}
-                    />
-                    <path
+                    />}
+                    {mapLayer === "city" && <path
                       className="city-highlight-boundary"
                       d={cityBoundaryNetworkPath}
                       clipPath={`url(#${cityClipId(city.id)})`}
-                    />
-                    <circle
+                    />}
+                    {mapLayer === "influence" && city.id === hoveredCity && <path
+                      className="influence-city-curved-boundary"
+                      d={sharedCommanderyBoundaryPath}
+                      clipPath={`url(#${cityClipId(city.id)})`}
+                      aria-hidden="true"
+                    />}
+                    {mapLayer === "city" && <><circle
                       className="city-node-hit-area"
                       cx={block.cx}
                       cy={block.cy}
@@ -496,19 +531,33 @@ export function StrategicMap({
                         </text>
                       </g>
                     )}
-                    {showCityLabels &&
-                      (mapLayer === "city" || city.is_commandery_capital) && (
-                        <text
-                          className="city-label"
-                          x={block.labelX}
-                          y={block.labelY + 16}
-                        >
-                          {city.name}
-                        </text>
-                      )}
+                    </>}
+                    {showCityLabels && (mapLayer === "city" || city.id === hoveredCity) && (
+                      <text
+                        className={`city-label ${mapLayer === "influence" ? "influence-city-label" : ""}`}
+                        x={block.labelX}
+                        y={block.labelY + 16}
+                      >
+                        {city.name}
+                      </text>
+                    )}
                   </g>
                 );
               })}
+              {mapLayer === "influence" && (
+                <g className="influence-region-labels" aria-label="诸侯疆域题签">
+                  {influenceLabels.map((region) => (
+                    <text
+                      key={`${region.controller}-${region.labelCityId}`}
+                      className="influence-region-label"
+                      x={region.labelX}
+                      y={region.labelY}
+                    >
+                      {powerLabel(region.controller)}
+                    </text>
+                  ))}
+                </g>
+              )}
             </g>
           )}
         </g>
