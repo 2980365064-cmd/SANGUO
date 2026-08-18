@@ -1,0 +1,35 @@
+/* ========================================
+   Components - Buttons
+   ======================================== */
+
+/* Seal Button - 朱印风格按钮 */
+.seal-button,
+.menu-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid #5d4324;
+  padding: 13px 24px;
+  background: linear-gradient(#6f3d2c, #51261f);
+  color: #f2dfb7;
+  box-shadow: inset 0 0 0 2px #a77f47, 0 3px 8px #0004;
+}
+
+.seal-button.secondary,
+.menu-actions button.secondary {
+  background: linear-gradient(#4e5747, #303a31);
+  border-color: #334438;
+}
+
+.seal-button svg,
+.menu-actions svg {
+  width: 18px;
+}
+
+/* Primary button */
+.primary {
+  border-color: rgba(218, 178, 89, 0.62);
+  background: linear-gradient(90deg, rgba(var(--ink-seal-rgb), 0.72), rgba(var(--ink-line-rgb), 0.46));
+  color: #f3dfaa;
+}

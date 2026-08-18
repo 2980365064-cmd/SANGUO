@@ -1,0 +1,48 @@
+/* ========================================
+   Components - Panels
+   ======================================== */
+
+/* Paper Panel - 宣纸风格面板 */
+.paper-panel {
+  background: linear-gradient(#dacdab, #c8b78e);
+  border: 1px solid #806b47;
+  box-shadow: 0 10px 26px rgba(26, 24, 18, 0.22), inset 0 0 55px rgba(var(--ink-line-rgb), 0.32);
+}
+
+/* Ink Frame Panel - 9-slice 边框面板 */
+.ink-frame-panel {
+  background: var(--ink-paper);
+  border: 12px solid;
+  border-image: var(--ink-frame-panel) 12 stretch;
+  position: relative;
+}
+
+.ink-frame-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-paper);
+  opacity: 0.08;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* Right Dock Panel */
+.right-panel {
+  position: fixed;
+  right: 0;
+  top: 80px;
+  bottom: 80px;
+  width: min(1000px, 90vw);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ink-line);
+}

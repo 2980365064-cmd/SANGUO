@@ -1,0 +1,2412 @@
+{
+  "version": "jianan-13-map-polish-v1",
+  "commandery_labels": {
+    "yongan": {
+      "name": "鱼复/白帝",
+      "status": "鱼复/白帝为建安十三年巴东郡治；永安为后世改名。"
+    },
+    "zitong": {
+      "name": "阆中/巴西郡",
+      "status": "阆中为建安十三年巴西郡治；运行 id zitong 仅保留旧档兼容。"
+    },
+    "qielan": {
+      "name": "且兰（牂牁属城）",
+      "status": "且兰为建安十三年牂牁郡属城，不单独设郡。"
+    },
+    "shangyong": {
+      "name": "上庸（汉中属城）",
+      "status": "208 年上庸只作为汉中方向的县级城池显示，不单独设郡。"
+    },
+    "jingnan": {
+      "name": "长沙",
+      "status": "运行 id jingnan 仅保留旧档兼容；建安十三年不得以荆南合并长沙、武陵、零陵、桂阳四郡。"
+    },
+    "danyang": {
+      "name": "丹阳",
+      "status": "建安十三年扬州丹阳郡，郡治宛陵；秣陵、芜湖皆属丹阳。"
+    },
+    "jiujiang": {
+      "name": "九江",
+      "status": "建安十三年扬州九江郡；合肥属九江，不得误并为庐江。"
+    },
+    "yuzhang": {
+      "name": "豫章",
+      "status": "建安十三年扬州豫章郡，郡治南昌；柴桑为属城。"
+    },
+    "xiapi": {
+      "name": "下邳",
+      "status": "徐州可玩图仅保留下邳、彭城、广陵三城。"
+    },
+    "pengcheng": {
+      "name": "彭城",
+      "status": "徐州可玩图仅保留下邳、彭城、广陵三城。"
+    },
+    "qiaoxian": {
+      "name": "沛国",
+      "status": "建安十三年此处为沛国，治相；谯郡为建安十八年后析置，不能提前写入 208 年。"
+    },
+    "changan": {
+      "name": "京兆尹/长安",
+      "status": "司隶可玩舆图以长安块承载京兆尹；左冯翊、右扶风保留在七郡史实层，不凭空新增失真的地图辖区。"
+    },
+    "luoyang": {
+      "name": "河南尹/洛阳",
+      "status": "司隶可玩舆图以洛阳块承载河南尹；河内、河东保留在七郡史实层，不凭空新增失真的地图辖区。"
+    },
+    "tongguan": {
+      "name": "弘农",
+      "status": "弘农为司隶既有不规则辖区；函谷关为辖内关隘，不作为独立城池或分界。"
+    },
+    "ye": {
+      "name": "魏郡/邺",
+      "status": "冀州可玩图以邺城块承载魏郡；钜鹿、赵国等保留在九郡国史实层，不凭空新增失真的地图辖区。"
+    },
+    "changshan": {
+      "name": "常山国",
+      "status": "冀州可玩图沿用常山块；中山国与其他冀州郡国保留在九郡国史实层。"
+    },
+    "nanpi": {
+      "name": "勃海郡/南皮",
+      "status": "南皮为后汉勃海郡治；既有南皮、渤海两块合并为同一勃海辖区，浮阳不作为独立城池。"
+    },
+    "taiyuan": {
+      "name": "太原郡/晋阳",
+      "status": "并州可玩图沿用太原曲折辖区；晋阳为郡治兼州治，石艾仅为辖内北道关隘。"
+    },
+    "shangdang": {
+      "name": "上党郡/长子",
+      "status": "上党郡治为长子；壶关为辖内关隘，不得误作郡治或独立城池。"
+    },
+    "jiuyuan": {
+      "name": "五原郡/九原",
+      "status": "五原郡治九原；现有北部大界分出云中、西河、雁门后，仍保留充足边塞可玩面积。"
+    },
+    "yunzhong": {
+      "name": "云中郡",
+      "status": "云中郡治云中；灵帝末边患后名义建制尚存，地图以大块边郡呈现。"
+    },
+    "xihe": {
+      "name": "西河郡/离石",
+      "status": "西河郡治离石，复用现有北部西南曲折疆界。"
+    },
+    "yanmen": {
+      "name": "雁门郡/阴馆",
+      "status": "雁门郡治阴馆，复用太原北部曲折疆界。"
+    },
+    "wuwei": {
+      "name": "武威郡/姑臧",
+      "status": "凉州可玩图以姑臧承载武威郡，兼为河西走廊东段要冲。"
+    },
+    "zhangye": {
+      "name": "张掖郡",
+      "status": "张掖郡治张掖；走廊西段已从旧张掖大块分出酒泉、敦煌。"
+    },
+    "jiuquan": {
+      "name": "酒泉郡/禄福",
+      "status": "酒泉郡治禄福，复用河西走廊中段曲折辖区。"
+    },
+    "dunhuang": {
+      "name": "敦煌郡",
+      "status": "敦煌郡治敦煌，复用河西走廊最西段曲折辖区。"
+    },
+    "tianshui": {
+      "name": "汉阳郡/冀",
+      "status": "建安十三年沿用汉阳郡名，治冀；运行 id tianshui 仅保留旧档兼容。"
+    },
+    "longxi": {
+      "name": "陇西郡/狄道",
+      "status": "陇西郡治狄道，复用现有陇西曲折辖区。"
+    },
+    "ji": {
+      "name": "广阳郡/蓟",
+      "status": "广阳郡治蓟，兼为幽州州治；居庸为辖内关隘。"
+    },
+    "zhuojun": {
+      "name": "涿郡/涿",
+      "status": "涿郡治涿。"
+    },
+    "yuyang": {
+      "name": "渔阳郡",
+      "status": "渔阳郡治渔阳，复用右北平西侧曲折辖区。"
+    },
+    "youbeiping": {
+      "name": "右北平郡/土垠",
+      "status": "右北平郡治土垠；无终为辖内关隘。"
+    },
+    "liaoxi": {
+      "name": "辽西郡/阳乐",
+      "status": "辽西郡治阳乐，复用辽东西侧曲折辖区。"
+    },
+    "liaodong": {
+      "name": "辽东郡/襄平",
+      "status": "辽东郡治襄平。"
+    }
+  },
+  "provinces": [
+    {
+      "id": "交州",
+      "name": "交州",
+      "transport": 42,
+      "mobilization": 38,
+      "public_support": 52,
+      "military_pressure": 34,
+      "security_coordination": 44,
+      "status": "岭海遥远，舟楫与郡县联络为先。"
+    },
+    {
+      "id": "兖州",
+      "name": "兖州",
+      "transport": 67,
+      "mobilization": 72,
+      "public_support": 49,
+      "military_pressure": 68,
+      "security_coordination": 61,
+      "status": "中原粮道交错，守备与征发并重。"
+    },
+    {
+      "id": "冀州",
+      "name": "冀州",
+      "transport": 72,
+      "mobilization": 78,
+      "public_support": 52,
+      "military_pressure": 63,
+      "security_coordination": 66,
+      "status": "河北腹地，州郡转运与兵源充足。"
+    },
+    {
+      "id": "凉州",
+      "name": "凉州",
+      "transport": 45,
+      "mobilization": 64,
+      "public_support": 46,
+      "military_pressure": 76,
+      "security_coordination": 49,
+      "status": "边郡绵长，关塞与羌胡警讯牵动全州。"
+    },
+    {
+      "id": "司隶",
+      "name": "司隶",
+      "transport": 76,
+      "mobilization": 74,
+      "public_support": 50,
+      "military_pressure": 70,
+      "security_coordination": 71,
+      "status": "两京之间，政令、关隘与粮道相互牵制。"
+    },
+    {
+      "id": "并州",
+      "name": "并州",
+      "transport": 48,
+      "mobilization": 61,
+      "public_support": 47,
+      "military_pressure": 79,
+      "security_coordination": 52,
+      "status": "北境骑战频仍，郡治须先保道路与塞防。"
+    },
+    {
+      "id": "幽州",
+      "name": "幽州",
+      "transport": 50,
+      "mobilization": 66,
+      "public_support": 48,
+      "military_pressure": 76,
+      "security_coordination": 54,
+      "status": "边塞辽远，部族、海路与郡兵并存。"
+    },
+    {
+      "id": "徐州",
+      "name": "徐州",
+      "transport": 65,
+      "mobilization": 58,
+      "public_support": 50,
+      "military_pressure": 59,
+      "security_coordination": 56,
+      "status": "淮泗水陆相接，城池与漕运同等紧要。"
+    },
+    {
+      "id": "扬州",
+      "name": "扬州",
+      "transport": 73,
+      "mobilization": 62,
+      "public_support": 54,
+      "military_pressure": 56,
+      "security_coordination": 64,
+      "status": "江淮水网纵横，舟师调度决定州域响应。"
+    },
+    {
+      "id": "益州",
+      "name": "益州",
+      "transport": 52,
+      "mobilization": 67,
+      "public_support": 55,
+      "military_pressure": 58,
+      "security_coordination": 59,
+      "status": "沃野与险道并存，入蜀诸道须分段统筹。"
+    },
+    {
+      "id": "荆州",
+      "name": "荆州",
+      "transport": 70,
+      "mobilization": 69,
+      "public_support": 51,
+      "military_pressure": 71,
+      "security_coordination": 63,
+      "status": "江汉枢纽，南北军路与水运均可牵动全局。"
+    },
+    {
+      "id": "豫州",
+      "name": "豫州",
+      "transport": 68,
+      "mobilization": 71,
+      "public_support": 49,
+      "military_pressure": 67,
+      "security_coordination": 60,
+      "status": "中原门户，屯驻、转运与民政压力交织。"
+    },
+    {
+      "id": "青州",
+      "name": "青州",
+      "transport": 58,
+      "mobilization": 53,
+      "public_support": 50,
+      "military_pressure": 55,
+      "security_coordination": 51,
+      "status": "山东沿海，郡县安定与海陆商路相系。"
+    }
+  ],
+  "cities": [
+    {
+      "id": "city:changan",
+      "name": "长安",
+      "commandery_id": "changan",
+      "province_id": "司隶",
+      "capital": true,
+      "role": "京畿治所",
+      "stock_share": 0.45,
+      "source_note": "后汉京兆尹治所"
+    },
+    {
+      "id": "city:luoyang",
+      "name": "洛阳",
+      "commandery_id": "luoyang",
+      "province_id": "司隶",
+      "capital": true,
+      "role": "京畿治所",
+      "stock_share": 0.45,
+      "source_note": "后汉河南尹治所"
+    },
+    {
+      "id": "city:tongguan",
+      "name": "弘农",
+      "commandery_id": "tongguan",
+      "province_id": "司隶",
+      "capital": true,
+      "role": "关隘治所",
+      "stock_share": 0.55,
+      "source_note": "后汉弘农郡"
+    },
+    {
+      "id": "city:ye",
+      "name": "邺",
+      "commandery_id": "ye",
+      "province_id": "冀州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.45,
+      "source_note": "魏郡治所"
+    },
+    {
+      "id": "city:changshan",
+      "name": "常山",
+      "commandery_id": "changshan",
+      "province_id": "冀州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "常山国治"
+    },
+    {
+      "id": "city:nanpi",
+      "name": "南皮",
+      "commandery_id": "nanpi",
+      "province_id": "冀州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.55,
+      "source_note": "后汉勃海郡治南皮"
+    },
+    {
+      "id": "city:chenliu",
+      "name": "陈留",
+      "commandery_id": "chenliu",
+      "province_id": "兖州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.45,
+      "source_note": "陈留郡治"
+    },
+    {
+      "id": "city:dongjun",
+      "name": "濮阳",
+      "commandery_id": "dongjun",
+      "province_id": "兖州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "东郡重镇"
+    },
+    {
+      "id": "city:xuchang",
+      "name": "许昌",
+      "commandery_id": "xuchang",
+      "province_id": "豫州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.45,
+      "source_note": "颍川郡许县，建安都城"
+    },
+    {
+      "id": "city:runan",
+      "name": "平舆",
+      "commandery_id": "runan",
+      "province_id": "豫州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.46,
+      "source_note": "汝南郡治平舆"
+    },
+    {
+      "id": "city:qiaoxian",
+      "name": "相",
+      "commandery_id": "qiaoxian",
+      "province_id": "豫州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "沛国治相县；运行 id qiaoxian 仅保留旧档兼容"
+    },
+    {
+      "id": "city:xiapi",
+      "name": "下邳",
+      "commandery_id": "xiapi",
+      "province_id": "徐州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "下邳国治"
+    },
+    {
+      "id": "city:guangling",
+      "name": "广陵",
+      "commandery_id": "guangling",
+      "province_id": "徐州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "广陵郡治"
+    },
+    {
+      "id": "city:pengcheng",
+      "name": "彭城",
+      "commandery_id": "pengcheng",
+      "province_id": "徐州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.55,
+      "source_note": "彭城国治"
+    },
+    {
+      "id": "city:linzi",
+      "name": "临淄",
+      "commandery_id": "linzi",
+      "province_id": "青州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.48,
+      "source_note": "齐国临淄"
+    },
+    {
+      "id": "city:ju",
+      "name": "莒",
+      "commandery_id": "linzi",
+      "province_id": "青州",
+      "role": "普通城",
+      "stock_share": 0.15,
+      "source_note": "齐鲁东部城邑"
+    },
+    {
+      "id": "city:dongpingling",
+      "name": "东平陵",
+      "commandery_id": "linzi",
+      "province_id": "青州",
+      "role": "郡属城",
+      "stock_share": 0.16,
+      "source_note": "济南国治东平陵；青州两郡简化后归临淄"
+    },
+    {
+      "id": "city:linji",
+      "name": "临济",
+      "commandery_id": "beihai",
+      "province_id": "青州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "乐安国治临济；青州简化后为北海块主城"
+    },
+    {
+      "id": "city:ji",
+      "name": "蓟",
+      "commandery_id": "ji",
+      "province_id": "幽州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.48,
+      "source_note": "广阳郡蓟县"
+    },
+    {
+      "id": "city:zhuojun",
+      "name": "涿",
+      "commandery_id": "zhuojun",
+      "province_id": "幽州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "涿郡治涿县"
+    },
+    {
+      "id": "city:youbeiping",
+      "name": "土垠",
+      "commandery_id": "youbeiping",
+      "province_id": "幽州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "右北平郡治"
+    },
+    {
+      "id": "city:liaodong",
+      "name": "襄平",
+      "commandery_id": "liaodong",
+      "province_id": "幽州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.55,
+      "source_note": "辽东郡治襄平"
+    },
+    {
+      "id": "city:yuyang",
+      "name": "渔阳",
+      "commandery_id": "yuyang",
+      "province_id": "幽州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "渔阳郡治渔阳"
+    },
+    {
+      "id": "city:liaoxi",
+      "name": "阳乐",
+      "commandery_id": "liaoxi",
+      "province_id": "幽州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "辽西郡治阳乐"
+    },
+    {
+      "id": "city:taiyuan",
+      "name": "晋阳",
+      "commandery_id": "taiyuan",
+      "province_id": "并州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.48,
+      "source_note": "太原郡治晋阳"
+    },
+    {
+      "id": "city:shangdang",
+      "name": "长子",
+      "commandery_id": "shangdang",
+      "province_id": "并州",
+      "capital": true,
+      "role": "郡治",
+      "stock_share": 0.5,
+      "source_note": "上党郡治长子；壶关为辖内关隘"
+    },
+    {
+      "id": "city:jiuyuan",
+      "name": "九原",
+      "commandery_id": "jiuyuan",
+      "province_id": "并州",
+      "capital": true,
+      "role": "边塞治所",
+      "stock_share": 0.55,
+      "source_note": "五原郡九原"
+    },
+    {
+      "id": "city:yunzhong",
+      "name": "云中",
+      "commandery_id": "yunzhong",
+      "province_id": "并州",
+      "capital": true,
+      "role": "边郡治所",
+      "stock_share": 0.48,
+      "source_note": "云中郡治云中"
+    },
+    {
+      "id": "city:xihe",
+      "name": "离石",
+      "commandery_id": "xihe",
+      "province_id": "并州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "西河郡治离石"
+    },
+    {
+      "id": "city:yanmen",
+      "name": "阴馆",
+      "commandery_id": "yanmen",
+      "province_id": "并州",
+      "capital": true,
+      "role": "边郡治所",
+      "stock_share": 0.48,
+      "source_note": "雁门郡治阴馆"
+    },
+    {
+      "id": "city:wuwei",
+      "name": "姑臧",
+      "commandery_id": "wuwei",
+      "province_id": "凉州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.48,
+      "source_note": "武威郡治姑臧"
+    },
+    {
+      "id": "city:zhangye",
+      "name": "张掖",
+      "commandery_id": "zhangye",
+      "province_id": "凉州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "张掖郡治"
+    },
+    {
+      "id": "city:tianshui",
+      "name": "冀",
+      "commandery_id": "tianshui",
+      "province_id": "凉州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "天水郡治冀县"
+    },
+    {
+      "id": "city:longxi",
+      "name": "狄道",
+      "commandery_id": "longxi",
+      "province_id": "凉州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "陇西郡治狄道"
+    },
+    {
+      "id": "city:jiuquan",
+      "name": "禄福",
+      "commandery_id": "jiuquan",
+      "province_id": "凉州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "酒泉郡治禄福"
+    },
+    {
+      "id": "city:dunhuang",
+      "name": "敦煌",
+      "commandery_id": "dunhuang",
+      "province_id": "凉州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "敦煌郡治敦煌"
+    },
+    {
+      "id": "city:xiangyang",
+      "name": "襄阳",
+      "commandery_id": "jiangling",
+      "province_id": "荆州",
+      "role": "普通城",
+      "stock_share": 0.18,
+      "source_note": "208年八月襄阳仍属南郡，为汉水北岸军政要冲"
+    },
+    {
+      "id": "city:fancheng",
+      "name": "樊城",
+      "commandery_id": "jiangling",
+      "province_id": "荆州",
+      "role": "关隘",
+      "stock_share": 0.18,
+      "source_note": "汉水北岸对城"
+    },
+    {
+      "id": "city:wancheng",
+      "name": "宛",
+      "commandery_id": "wancheng",
+      "province_id": "荆州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "南阳郡宛县"
+    },
+    {
+      "id": "city:xinye",
+      "name": "新野",
+      "commandery_id": "wancheng",
+      "province_id": "荆州",
+      "role": "普通城",
+      "stock_share": 0.16,
+      "source_note": "南阳北道节点"
+    },
+    {
+      "id": "city:jiangling",
+      "name": "江陵",
+      "commandery_id": "jiangling",
+      "province_id": "荆州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.45,
+      "source_note": "南郡江陵"
+    },
+    {
+      "id": "city:yiling",
+      "name": "夷陵",
+      "commandery_id": "jiangling",
+      "province_id": "荆州",
+      "role": "普通城",
+      "stock_share": 0.18,
+      "source_note": "208年八月夷陵仍属南郡，为峡江东口要地"
+    },
+    {
+      "id": "city:jiangxia",
+      "name": "西陵",
+      "commandery_id": "jiangxia",
+      "province_id": "荆州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.45,
+      "source_note": "江夏郡治西陵"
+    },
+    {
+      "id": "city:jingnan",
+      "name": "长沙",
+      "commandery_id": "jingnan",
+      "province_id": "荆州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.4,
+      "source_note": "长沙郡治临湘；运行 id jingnan 仅为旧档兼容"
+    },
+    {
+      "id": "city:wuling",
+      "name": "武陵",
+      "commandery_id": "wuling",
+      "province_id": "荆州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.46,
+      "source_note": "武陵郡治临沅"
+    },
+    {
+      "id": "city:jianye",
+      "name": "秣陵",
+      "commandery_id": "danyang",
+      "province_id": "扬州",
+      "role": "江东重镇",
+      "stock_share": 0.2,
+      "source_note": "丹阳郡秣陵"
+    },
+    {
+      "id": "city:wuhu",
+      "name": "芜湖",
+      "commandery_id": "danyang",
+      "province_id": "扬州",
+      "role": "港埠",
+      "stock_share": 0.16,
+      "source_note": "丹阳水路城邑"
+    },
+    {
+      "id": "city:wanling",
+      "name": "宛陵",
+      "commandery_id": "danyang",
+      "province_id": "扬州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.34,
+      "source_note": "丹阳郡治宛陵；补回扬州中部郡治，秣陵、芜湖同属丹阳"
+    },
+    {
+      "id": "city:wu",
+      "name": "吴",
+      "commandery_id": "wu",
+      "province_id": "扬州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "吴郡治所"
+    },
+    {
+      "id": "city:qu-e",
+      "name": "曲阿",
+      "commandery_id": "wu",
+      "province_id": "扬州",
+      "role": "港埠",
+      "stock_share": 0.16,
+      "source_note": "太湖东岸城邑"
+    },
+    {
+      "id": "city:chaisang",
+      "name": "柴桑",
+      "commandery_id": "yuzhang",
+      "province_id": "扬州",
+      "role": "江口港埠",
+      "stock_share": 0.18,
+      "source_note": "豫章郡柴桑县，非独立郡治"
+    },
+    {
+      "id": "city:nanchang",
+      "name": "南昌",
+      "commandery_id": "yuzhang",
+      "province_id": "扬州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.18,
+      "source_note": "豫章郡治南昌"
+    },
+    {
+      "id": "city:hefei",
+      "name": "合肥",
+      "commandery_id": "jiujiang",
+      "province_id": "扬州",
+      "role": "淮南要冲",
+      "stock_share": 0.18,
+      "source_note": "九江郡属县合肥，不得误作庐江郡治"
+    },
+    {
+      "id": "city:shouchun",
+      "name": "寿春",
+      "commandery_id": "jiujiang",
+      "province_id": "扬州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "九江郡治寿春；合肥为其属县要冲"
+    },
+    {
+      "id": "city:kuaiji",
+      "name": "山阴",
+      "commandery_id": "kuaiji",
+      "province_id": "扬州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "会稽郡治山阴"
+    },
+    {
+      "id": "city:chengdu",
+      "name": "成都",
+      "commandery_id": "chengdu",
+      "province_id": "益州",
+      "capital": true,
+      "role": "州治",
+      "stock_share": 0.45,
+      "source_note": "蜀郡成都"
+    },
+    {
+      "id": "city:hanzhong",
+      "name": "南郑",
+      "commandery_id": "hanzhong",
+      "province_id": "益州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "汉中郡治南郑"
+    },
+    {
+      "id": "city:jiangzhou",
+      "name": "江州",
+      "commandery_id": "jiangzhou",
+      "province_id": "益州",
+      "capital": true,
+      "role": "港埠治所",
+      "stock_share": 0.48,
+      "source_note": "巴郡江州"
+    },
+    {
+      "id": "city:langzhong",
+      "name": "阆中",
+      "commandery_id": "zitong",
+      "province_id": "益州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "建安六年刘璋分巴郡置巴西郡，郡治阆中；运行 id zitong 仅为旧档兼容"
+    },
+    {
+      "id": "city:yongan",
+      "name": "鱼复",
+      "commandery_id": "yongan",
+      "province_id": "益州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.45,
+      "source_note": "建安十三年巴东郡治鱼复，白帝城所在；永安为章武二年后名"
+    },
+    {
+      "id": "city:baidi",
+      "name": "白帝",
+      "commandery_id": "yongan",
+      "province_id": "益州",
+      "role": "关隘",
+      "stock_share": 0.18,
+      "source_note": "鱼复县白帝城"
+    },
+    {
+      "id": "city:shangyong",
+      "name": "上庸",
+      "commandery_id": "hanzhong",
+      "province_id": "益州",
+      "role": "山道城",
+      "stock_share": 0.15,
+      "source_note": "建安十三年上庸仅作汉中方向县级城池，不设独立上庸郡"
+    },
+    {
+      "id": "city:yelang",
+      "name": "夜郎",
+      "commandery_id": "yelang",
+      "province_id": "益州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.55,
+      "source_note": "牂牁郡夜郎县"
+    },
+    {
+      "id": "city:qielan",
+      "name": "且兰",
+      "commandery_id": "yelang",
+      "province_id": "益州",
+      "role": "关隘",
+      "stock_share": 0.18,
+      "source_note": "牂牁郡且兰城"
+    },
+    {
+      "id": "city:jiaozhi",
+      "name": "羸娄",
+      "commandery_id": "jiaozhi",
+      "province_id": "交州",
+      "role": "普通城",
+      "stock_share": 0.16,
+      "source_note": "交趾郡属城羸娄"
+    },
+    {
+      "id": "city:longbian",
+      "name": "龙编",
+      "commandery_id": "jiaozhi",
+      "province_id": "交州",
+      "capital": true,
+      "role": "州治兼郡治",
+      "stock_share": 0.48,
+      "source_note": "208年交州与交趾郡治龙编"
+    },
+    {
+      "id": "city:nanhai",
+      "name": "番禺",
+      "commandery_id": "nanhai",
+      "province_id": "交州",
+      "capital": true,
+      "role": "港埠治所",
+      "stock_share": 0.45,
+      "source_note": "南海郡治番禺"
+    },
+    {
+      "id": "city:guangxin",
+      "name": "广信",
+      "commandery_id": "cangwu",
+      "province_id": "交州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.48,
+      "source_note": "苍梧郡治广信"
+    },
+    {
+      "id": "city:wuzhou",
+      "name": "猛陵",
+      "commandery_id": "cangwu",
+      "province_id": "交州",
+      "role": "水路城",
+      "stock_share": 0.15,
+      "source_note": "苍梧郡浔水城邑"
+    },
+    {
+      "id": "city:bushan",
+      "name": "布山",
+      "commandery_id": "yulin",
+      "province_id": "交州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.5,
+      "source_note": "郁林郡治布山"
+    },
+    {
+      "id": "city:hepu",
+      "name": "合浦",
+      "commandery_id": "hepu",
+      "province_id": "交州",
+      "capital": true,
+      "role": "港埠治所",
+      "stock_share": 0.48,
+      "source_note": "合浦郡治合浦"
+    },
+    {
+      "id": "city:xupu",
+      "name": "胥浦",
+      "commandery_id": "jiuzhen",
+      "province_id": "交州",
+      "capital": true,
+      "role": "郡治城",
+      "stock_share": 0.52,
+      "source_note": "九真郡治胥浦"
+    }
+  ],
+  "strategic": {
+    "topology_version": "city-network-v1",
+    "nodes": [
+      {
+        "city_id": "city:changan",
+        "x": 1037,
+        "y": 454
+      },
+      {
+        "city_id": "city:luoyang",
+        "x": 1171,
+        "y": 454
+      },
+      {
+        "city_id": "city:tongguan",
+        "x": 1114,
+        "y": 454
+      },
+      {
+        "city_id": "city:ye",
+        "x": 1248,
+        "y": 346
+      },
+      {
+        "city_id": "city:changshan",
+        "x": 1172,
+        "y": 334
+      },
+      {
+        "city_id": "city:nanpi",
+        "x": 1273,
+        "y": 354
+      },
+      {
+        "city_id": "city:chenliu",
+        "x": 1188,
+        "y": 500
+      },
+      {
+        "city_id": "city:dongjun",
+        "x": 1232,
+        "y": 458
+      },
+      {
+        "city_id": "city:xuchang",
+        "x": 1126,
+        "y": 560
+      },
+      {
+        "city_id": "city:runan",
+        "x": 1190,
+        "y": 586
+      },
+      {
+        "city_id": "city:qiaoxian",
+        "x": 1264,
+        "y": 550
+      },
+      {
+        "city_id": "city:xiapi",
+        "x": 1370,
+        "y": 552
+      },
+      {
+        "city_id": "city:guangling",
+        "x": 1425,
+        "y": 592
+      },
+      {
+        "city_id": "city:pengcheng",
+        "x": 1320,
+        "y": 516
+      },
+      {
+        "city_id": "city:linzi",
+        "x": 1352,
+        "y": 424
+      },
+      {
+        "city_id": "city:ju",
+        "x": 1318,
+        "y": 466
+      },
+      {
+        "city_id": "city:dongpingling",
+        "x": 1295,
+        "y": 420
+      },
+      {
+        "city_id": "city:linji",
+        "x": 1462,
+        "y": 406
+      },
+      {
+        "city_id": "city:ji",
+        "x": 1310,
+        "y": 265
+      },
+      {
+        "city_id": "city:zhuojun",
+        "x": 1250,
+        "y": 306
+      },
+      {
+        "city_id": "city:youbeiping",
+        "x": 1460,
+        "y": 210
+      },
+      {
+        "city_id": "city:liaodong",
+        "x": 1530,
+        "y": 250
+      },
+      {
+        "city_id": "city:yuyang",
+        "x": 1400,
+        "y": 235
+      },
+      {
+        "city_id": "city:liaoxi",
+        "x": 1480,
+        "y": 285
+      },
+      {
+        "city_id": "city:taiyuan",
+        "x": 1080,
+        "y": 380
+      },
+      {
+        "city_id": "city:shangdang",
+        "x": 1085,
+        "y": 430
+      },
+      {
+        "city_id": "city:jiuyuan",
+        "x": 930,
+        "y": 275
+      },
+      {
+        "city_id": "city:yunzhong",
+        "x": 984,
+        "y": 382
+      },
+      {
+        "city_id": "city:xihe",
+        "x": 928,
+        "y": 398
+      },
+      {
+        "city_id": "city:yanmen",
+        "x": 1060,
+        "y": 301
+      },
+      {
+        "city_id": "city:wuwei",
+        "x": 645,
+        "y": 356
+      },
+      {
+        "city_id": "city:zhangye",
+        "x": 570,
+        "y": 225
+      },
+      {
+        "city_id": "city:tianshui",
+        "x": 840,
+        "y": 445
+      },
+      {
+        "city_id": "city:longxi",
+        "x": 710,
+        "y": 488
+      },
+      {
+        "city_id": "city:jiuquan",
+        "x": 470,
+        "y": 248
+      },
+      {
+        "city_id": "city:dunhuang",
+        "x": 330,
+        "y": 248
+      },
+      {
+        "city_id": "city:xiangyang",
+        "x": 1126,
+        "y": 643
+      },
+      {
+        "city_id": "city:fancheng",
+        "x": 1148,
+        "y": 630
+      },
+      {
+        "city_id": "city:wancheng",
+        "x": 1072,
+        "y": 606
+      },
+      {
+        "city_id": "city:xinye",
+        "x": 1099,
+        "y": 624
+      },
+      {
+        "city_id": "city:jiangling",
+        "x": 1048,
+        "y": 738
+      },
+      {
+        "city_id": "city:yiling",
+        "x": 955,
+        "y": 726
+      },
+      {
+        "city_id": "city:jiangxia",
+        "x": 1136,
+        "y": 730
+      },
+      {
+        "city_id": "city:jingnan",
+        "x": 1116,
+        "y": 846
+      },
+      {
+        "city_id": "city:wuling",
+        "x": 1010,
+        "y": 838
+      },
+      {
+        "city_id": "city:jianye",
+        "x": 1390,
+        "y": 668
+      },
+      {
+        "city_id": "city:wuhu",
+        "x": 1350,
+        "y": 640
+      },
+      {
+        "city_id": "city:wanling",
+        "x": 1330,
+        "y": 700
+      },
+      {
+        "city_id": "city:wu",
+        "x": 1440,
+        "y": 710
+      },
+      {
+        "city_id": "city:qu-e",
+        "x": 1420,
+        "y": 755
+      },
+      {
+        "city_id": "city:chaisang",
+        "x": 1218,
+        "y": 755
+      },
+      {
+        "city_id": "city:nanchang",
+        "x": 1305,
+        "y": 800
+      },
+      {
+        "city_id": "city:hefei",
+        "x": 1282,
+        "y": 620
+      },
+      {
+        "city_id": "city:shouchun",
+        "x": 1238,
+        "y": 625
+      },
+      {
+        "city_id": "city:kuaiji",
+        "x": 1370,
+        "y": 820
+      },
+      {
+        "city_id": "city:chengdu",
+        "x": 922,
+        "y": 594
+      },
+      {
+        "city_id": "city:hanzhong",
+        "x": 998,
+        "y": 540
+      },
+      {
+        "city_id": "city:jiangzhou",
+        "x": 998,
+        "y": 702
+      },
+      {
+        "city_id": "city:langzhong",
+        "x": 748,
+        "y": 607
+      },
+      {
+        "city_id": "city:yongan",
+        "x": 888,
+        "y": 675
+      },
+      {
+        "city_id": "city:baidi",
+        "x": 927,
+        "y": 655
+      },
+      {
+        "city_id": "city:shangyong",
+        "x": 963,
+        "y": 617
+      },
+      {
+        "city_id": "city:yelang",
+        "x": 675,
+        "y": 882
+      },
+      {
+        "city_id": "city:qielan",
+        "x": 792,
+        "y": 812
+      },
+      {
+        "city_id": "city:jiaozhi",
+        "x": 850,
+        "y": 900
+      },
+      {
+        "city_id": "city:longbian",
+        "x": 780,
+        "y": 945
+      },
+      {
+        "city_id": "city:nanhai",
+        "x": 1183,
+        "y": 894
+      },
+      {
+        "city_id": "city:guangxin",
+        "x": 1035,
+        "y": 890
+      },
+      {
+        "city_id": "city:wuzhou",
+        "x": 1080,
+        "y": 920
+      },
+      {
+        "city_id": "city:bushan",
+        "x": 930,
+        "y": 904
+      },
+      {
+        "city_id": "city:hepu",
+        "x": 990,
+        "y": 958
+      },
+      {
+        "city_id": "city:xupu",
+        "x": 800,
+        "y": 994
+      }
+    ],
+    "edges": [
+      {
+        "source": "city:baidi",
+        "target": "city:chengdu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:baidi",
+        "target": "city:jiangzhou",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:baidi",
+        "target": "city:shangyong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:baidi",
+        "target": "city:yiling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:baidi",
+        "target": "city:yongan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:bushan",
+        "target": "city:guangxin",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:bushan",
+        "target": "city:hepu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:bushan",
+        "target": "city:jiaozhi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:bushan",
+        "target": "city:wuling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:jiangxia",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:jingnan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:nanchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:nanhai",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:runan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:shouchun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chaisang",
+        "target": "city:wanling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changan",
+        "target": "city:hanzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changan",
+        "target": "city:shangdang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changan",
+        "target": "city:taiyuan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changan",
+        "target": "city:tongguan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changan",
+        "target": "city:yunzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changshan",
+        "target": "city:shangdang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changshan",
+        "target": "city:taiyuan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changshan",
+        "target": "city:yanmen",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changshan",
+        "target": "city:ye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:changshan",
+        "target": "city:zhuojun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chengdu",
+        "target": "city:hanzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chengdu",
+        "target": "city:langzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chengdu",
+        "target": "city:shangyong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chengdu",
+        "target": "city:tianshui",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chengdu",
+        "target": "city:yongan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chenliu",
+        "target": "city:dongjun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chenliu",
+        "target": "city:luoyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chenliu",
+        "target": "city:qiaoxian",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chenliu",
+        "target": "city:runan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:chenliu",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongjun",
+        "target": "city:dongpingling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongjun",
+        "target": "city:ju",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongjun",
+        "target": "city:luoyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongjun",
+        "target": "city:shangdang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongjun",
+        "target": "city:ye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongpingling",
+        "target": "city:ju",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongpingling",
+        "target": "city:linji",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongpingling",
+        "target": "city:linzi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongpingling",
+        "target": "city:nanpi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dongpingling",
+        "target": "city:ye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:dunhuang",
+        "target": "city:jiuquan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:fancheng",
+        "target": "city:jiangxia",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:fancheng",
+        "target": "city:runan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:fancheng",
+        "target": "city:xiangyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:fancheng",
+        "target": "city:xinye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:fancheng",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangling",
+        "target": "city:jianye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangling",
+        "target": "city:wu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangling",
+        "target": "city:wuhu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangling",
+        "target": "city:xiapi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangxin",
+        "target": "city:hepu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangxin",
+        "target": "city:jiangling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangxin",
+        "target": "city:jingnan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangxin",
+        "target": "city:wuling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:guangxin",
+        "target": "city:wuzhou",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hanzhong",
+        "target": "city:shangyong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hanzhong",
+        "target": "city:tongguan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hanzhong",
+        "target": "city:wancheng",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hanzhong",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hanzhong",
+        "target": "city:yunzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hefei",
+        "target": "city:pengcheng",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hefei",
+        "target": "city:qiaoxian",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hefei",
+        "target": "city:runan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hefei",
+        "target": "city:shouchun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hefei",
+        "target": "city:wanling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hefei",
+        "target": "city:wuhu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hepu",
+        "target": "city:jiaozhi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hepu",
+        "target": "city:wuzhou",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:hepu",
+        "target": "city:xupu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ji",
+        "target": "city:nanpi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ji",
+        "target": "city:ye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ji",
+        "target": "city:youbeiping",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ji",
+        "target": "city:yuyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ji",
+        "target": "city:zhuojun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangling",
+        "target": "city:jiangxia",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangling",
+        "target": "city:jiangzhou",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangling",
+        "target": "city:jingnan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangling",
+        "target": "city:wuling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangling",
+        "target": "city:xiangyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangling",
+        "target": "city:yiling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangxia",
+        "target": "city:jingnan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangxia",
+        "target": "city:runan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangxia",
+        "target": "city:xiangyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangzhou",
+        "target": "city:shangyong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangzhou",
+        "target": "city:wancheng",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangzhou",
+        "target": "city:xiangyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiangzhou",
+        "target": "city:yiling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jianye",
+        "target": "city:kuaiji",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jianye",
+        "target": "city:qu-e",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jianye",
+        "target": "city:wanling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jianye",
+        "target": "city:wu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jianye",
+        "target": "city:wuhu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiaozhi",
+        "target": "city:longbian",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiaozhi",
+        "target": "city:qielan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiaozhi",
+        "target": "city:wuling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiaozhi",
+        "target": "city:xupu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jingnan",
+        "target": "city:nanhai",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jingnan",
+        "target": "city:wuzhou",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiuquan",
+        "target": "city:zhangye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiuyuan",
+        "target": "city:taiyuan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiuyuan",
+        "target": "city:xihe",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiuyuan",
+        "target": "city:yanmen",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:jiuyuan",
+        "target": "city:yunzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ju",
+        "target": "city:linji",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ju",
+        "target": "city:linzi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ju",
+        "target": "city:pengcheng",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ju",
+        "target": "city:qiaoxian",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ju",
+        "target": "city:xiapi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:kuaiji",
+        "target": "city:nanchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:kuaiji",
+        "target": "city:qu-e",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:kuaiji",
+        "target": "city:wanling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:langzhong",
+        "target": "city:longxi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:langzhong",
+        "target": "city:yongan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:liaodong",
+        "target": "city:liaoxi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:liaodong",
+        "target": "city:linji",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:liaodong",
+        "target": "city:youbeiping",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:liaoxi",
+        "target": "city:linji",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:liaoxi",
+        "target": "city:youbeiping",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:liaoxi",
+        "target": "city:yuyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:linji",
+        "target": "city:linzi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:linji",
+        "target": "city:nanpi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:linji",
+        "target": "city:xiapi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:linji",
+        "target": "city:yuyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:longbian",
+        "target": "city:qielan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:longbian",
+        "target": "city:xupu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:longbian",
+        "target": "city:yelang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:longxi",
+        "target": "city:tianshui",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:longxi",
+        "target": "city:wuwei",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:luoyang",
+        "target": "city:shangdang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:luoyang",
+        "target": "city:tongguan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:luoyang",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:nanchang",
+        "target": "city:nanhai",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:nanchang",
+        "target": "city:wanling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:nanhai",
+        "target": "city:wuzhou",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:nanpi",
+        "target": "city:ye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:nanpi",
+        "target": "city:yuyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:pengcheng",
+        "target": "city:qiaoxian",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:pengcheng",
+        "target": "city:wuhu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:pengcheng",
+        "target": "city:xiapi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:qiaoxian",
+        "target": "city:runan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:qielan",
+        "target": "city:yelang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:qielan",
+        "target": "city:yiling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:qielan",
+        "target": "city:yongan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:qu-e",
+        "target": "city:wu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:runan",
+        "target": "city:shouchun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:runan",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:shangdang",
+        "target": "city:taiyuan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:shangdang",
+        "target": "city:tongguan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:shangdang",
+        "target": "city:ye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:shangyong",
+        "target": "city:wancheng",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:shouchun",
+        "target": "city:wanling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:taiyuan",
+        "target": "city:yanmen",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:taiyuan",
+        "target": "city:yunzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:tianshui",
+        "target": "city:xihe",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:tianshui",
+        "target": "city:yunzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:tongguan",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wancheng",
+        "target": "city:xiangyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wancheng",
+        "target": "city:xinye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wancheng",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wanling",
+        "target": "city:wuhu",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wuhu",
+        "target": "city:xiapi",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wuling",
+        "target": "city:yiling",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:wuwei",
+        "target": "city:zhangye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:xiangyang",
+        "target": "city:xinye",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:xihe",
+        "target": "city:yunzhong",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:xinye",
+        "target": "city:xuchang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:xupu",
+        "target": "city:yelang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:yanmen",
+        "target": "city:zhuojun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:ye",
+        "target": "city:zhuojun",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:yiling",
+        "target": "city:yongan",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      },
+      {
+        "source": "city:youbeiping",
+        "target": "city:yuyang",
+        "kind": "普通路",
+        "note": "地图锚点邻接"
+      }
+    ]
+  }
+}

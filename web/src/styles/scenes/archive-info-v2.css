@@ -1,0 +1,35 @@
+/* 第二阶段第三组：五种信息页是不同档案，不是同一套白色卡片。 */
+.info-page-city { --info-page-bg: var(--archive-scene-city-ledger-v2); }
+.info-page-character { --info-page-bg: var(--archive-scene-character-biography-v2); }
+.info-page-army { --info-page-bg: var(--archive-scene-army-register-v2); }
+.info-page-diplomacy { --info-page-bg: var(--archive-scene-diplomacy-correspondence-v2); }
+.info-page-event { --info-page-bg: var(--archive-scene-event-memorial-v2); }
+
+.info-page {
+  background-image: var(--info-page-bg) !important;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 16px 34px rgba(38,49,55,.18), inset 0 0 0 1px rgba(79,112,117,.13);
+}
+.info-page::before { display:none !important; }
+.info-page .app-frame-header { background:linear-gradient(90deg,rgba(247,242,231,.9),rgba(247,242,231,.26) 70%,transparent); border-bottom-color:rgba(79,112,117,.28)!important; }
+.info-page .info-body { gap:0; padding:24px 29px 28px; }
+.info-page .info-list,
+.info-page .info-body > .paper-panel-ui,
+.info-page .info-detail { padding:0; background:transparent!important; border:0!important; border-radius:0; box-shadow:none!important; }
+.info-page .info-list { padding-right:21px; border-right:1px solid rgba(79,112,117,.26)!important; }
+.info-page .info-body > .paper-panel-ui:not(.info-list),
+.info-page .info-detail { padding-left:25px; }
+.info-page .info-card { padding:13px 4px; background:transparent!important; border-bottom:1px solid rgba(79,112,117,.2)!important; }
+.info-page .info-card:hover,.info-page .info-card.selected { background:linear-gradient(90deg,rgba(79,112,117,.1),transparent)!important; box-shadow:inset 3px 0 var(--ui-cyan)!important; }
+.info-page .info-detail dl { border:0; }
+.info-page .info-detail dt,.info-page .info-detail dd { border-bottom:1px solid rgba(79,112,117,.2); }
+.army-register-verdict{margin:0 0 15px;padding:9px 12px;border-block:1px solid rgba(138,42,32,.32);color:#7d3027;letter-spacing:.08em;background:linear-gradient(90deg,rgba(138,42,32,.06),transparent)}
+.army-register-composition{margin:0 0 15px;padding:12px 0;border-bottom:1px solid rgba(79,112,117,.25)}
+.army-register-composition h3{margin:0 0 8px;font-size:12px;letter-spacing:.16em;color:#536f73}.army-register-composition ol{list-style:none;margin:0;padding:0;columns:2;column-gap:22px}.army-register-composition li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dotted rgba(79,112,117,.22);break-inside:avoid;font-size:13px}.army-register-composition b{font-weight:600;color:#303b3d}.army-register-note{margin:13px 0 0;color:#6c7777;font-size:12px;line-height:1.7}
+.info-page .info-page-event .info-card,.info-page-event .info-card { cursor:pointer; }
+.info-page-event .option-btn { border-radius:0; background:linear-gradient(90deg,rgba(154,64,55,.1),transparent); border-left:2px solid var(--ui-vermilion); }
+.info-page-diplomacy .info-body { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+.info-page-diplomacy .info-body > .paper-panel-ui + .paper-panel-ui { padding-left:20px; border-left:1px solid rgba(79,112,117,.25)!important; }
+@media(max-width:1024px){.info-page .info-body{padding:20px}.info-page-diplomacy .info-body{gap:14px}.info-page-diplomacy .info-body > .paper-panel-ui + .paper-panel-ui{padding-left:14px}}
+@media(max-width:760px){.info-page .info-body,.info-page-diplomacy .info-body{grid-template-columns:1fr}.info-page .info-list{padding-right:0;padding-bottom:17px;border-right:0!important;border-bottom:1px solid rgba(79,112,117,.26)!important}.info-page .info-body > .paper-panel-ui:not(.info-list),.info-page .info-detail,.info-page-diplomacy .info-body > .paper-panel-ui + .paper-panel-ui{padding:17px 0 0;border-left:0!important}.info-page-diplomacy .info-body > .paper-panel-ui + .paper-panel-ui{border-top:1px solid rgba(79,112,117,.25)!important}}

@@ -1,0 +1,7 @@
+/* 审阅与颁令：一批方略只保留一个最终朱砂确认入口。 */
+.review-decree { width: min(980px, calc(100vw - 72px)); margin: 18px auto; padding: 22px; color: var(--ui-ink); background: rgba(247, 242, 231, .9); border: 1px solid var(--ui-line-strong); box-shadow: var(--ui-shadow); }
+.review-decree > header, .batch-review, .batch-info, .draft-selection { padding-bottom: 16px; border-bottom: 1px solid var(--ui-line); }
+.draft-select-list, .batch-items { display: grid; gap: 8px; }
+.draft-select-item { display: flex; gap: 10px; padding: 12px; cursor: pointer; }
+.draft-select-item.selected { border-left: 3px solid var(--ui-vermilion); }
+.batch-actions, .decree-actions, .selection-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }

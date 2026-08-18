@@ -1,0 +1,11 @@
+/* 文书表单统一使用浅纸底与墨线焦点，不使用浏览器默认控件外观。 */
+.form-group { display: grid; gap: 6px; }
+.form-group label { color: var(--ui-ink-soft); font-size: var(--ui-note); letter-spacing: .08em; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; box-sizing: border-box; padding: 9px 11px; color: var(--ui-ink);
+  background: rgba(255, 252, 244, .86); border: 1px solid var(--ui-line-strong); border-radius: 0;
+}
+.form-group textarea { min-height: 96px; resize: vertical; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: 2px solid color-mix(in srgb, var(--ui-cyan) 55%, transparent); outline-offset: 2px;
+}

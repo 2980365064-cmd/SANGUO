@@ -1,0 +1,16 @@
+<h2>「审阅与颁令」应怎样让玩家确认本月裁断？</h2>
+<p class="subtitle">两种形态都遵守：结构化行动决定规则结果；文书正文仅负责表达；只有通过校验的草案才能颁令。</p>
+
+<div class="cards">
+  <div class="card" data-choice="full-review" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">军府方略 · 审阅与颁令</div><div class="mockup-body" style="display:grid;grid-template-columns:.75fr 1.55fr;min-height:330px"><div style="padding:10px;border-right:1px solid #bba77c"><span class="label">本月方略簿</span><p style="color:#8a2a20"><b>外交　联孙抗曹</b><br/><small>已校验</small></p><p>军事　整备水军<br/><small>待补承办军</small></p><p>内政　安抚江夏<br/><small>已校验</small></p><hr/><p>密令　密访刘琦<br/><small>高风险 · 折叠</small></p></div><div style="padding:10px"><span class="label">外交方略 · 结构化行动</span><h3>遣鲁肃使江东，议联孙抗曹</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div class="placeholder">执行者　鲁肃</div><div class="placeholder">对象　孙权</div><div class="placeholder">目标　结盟</div><div class="placeholder">条件　共同拒曹</div></div><p><b>白话说明</b>：请鲁肃陈明唇亡齿寒之势，许以互不侵荆之约。</p><p><b>正式文书</b>：〈未润色〉　<button class="mock-button">生成军府文书</button></p><hr/><p><b>校验</b>　✓ 使臣可用　✓ 条款合法　△ 对方接受取决于月度裁决</p><button class="mock-button">保存草案</button> <button class="mock-button">颁令（3 项可提交）</button></div></div></div></div>
+    <div class="card-body"><h3>B1 · 完整审阅页</h3><p>推荐。左侧在同一页切换所有草案，右侧逐条编辑与看校验；底部或页首统一颁令。适合复杂军政回合，减少来回跳转。</p></div>
+  </div>
+
+  <div class="card" data-choice="step-wizard" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">军府方略 · 提交前核阅（2 / 4）</div><div class="mockup-body" style="min-height:330px;padding:12px"><div style="display:flex;justify-content:space-around;border-bottom:1px solid #bba77c;padding:8px"><b>1 汇总</b><b>2 军事</b><b>3 外交</b><b>4 提交</b></div><span class="label">外交方略</span><h3>遣鲁肃使江东，议联孙抗曹</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div class="placeholder">执行者　鲁肃</div><div class="placeholder">对象　孙权</div><div class="placeholder">目标　结盟</div><div class="placeholder">条件　共同拒曹</div></div><p>白话说明与文书切换</p><hr/><button class="mock-button">上一步</button><button class="mock-button">下一类方略</button></div></div></div>
+    <div class="card-body"><h3>B2 · 分步核阅向导</h3><p>新手不易漏项，提交仪式感强；但草案数量多时效率低，也会削弱玩家对“本月全盘方略”的整体把握。</p></div>
+  </div>
+</div>
+
+<div class="section"><p><b>密令在两种方案中的共同处理：</b>仅对具备知情权限的玩家显示完整结构化字段；在提交总览只显示风险等级与“已完成授权边界校验”。</p></div>

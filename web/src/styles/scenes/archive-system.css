@@ -1,0 +1,1344 @@
+/*
+ * 浅水墨军府档案系统（最终场景覆盖层）
+ * 视觉顺序：场景帧景 → 文书题签 → 纪事/账簿 → 印记操作。
+ * 只承接既有组件与交互，不承载玩法状态。
+ */
+
+:root {
+  --archive-paper: #f7f2e7;
+  --archive-paper-shadow: #e6ddcb;
+  --archive-ink: #263137;
+  --archive-ink-soft: #607177;
+  --archive-cyan: #4f7075;
+  --archive-vermilion: #9a4037;
+  --archive-wood: #a98e68;
+  --archive-rule: rgba(38, 49, 55, .28);
+  --archive-hairline: rgba(38, 49, 55, .14);
+  --archive-shadow: 0 16px 40px rgba(36, 45, 45, .16);
+}
+
+/* 所有有限工作窗都是档案，不再是悬浮的产品卡片。 */
+.persistent-world-content .scene-shell,
+.game-dialog-surface,
+.monthly-report-panel,
+.floating-panel {
+  background-color: var(--archive-paper);
+  border-color: var(--archive-rule);
+  box-shadow: var(--archive-shadow);
+}
+
+.persistent-world-content .scene-shell {
+  border-top: 0;
+  background-image:
+    linear-gradient(90deg, rgba(247,242,231,.97) 0%, rgba(247,242,231,.88) 12%, rgba(247,242,231,.82) 88%, rgba(230,221,203,.92) 100%),
+    var(--ink-tex-paper-revival);
+}
+
+.persistent-world-content .scene-shell::before,
+.game-dialog-surface::after,
+.monthly-report-panel::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  border-block: 1px solid var(--archive-hairline);
+  opacity: .85;
+}
+
+.app-frame-header,
+.metric-bar,
+.map-header,
+.secret-header,
+.directive-book > header,
+.monthly-summary > header,
+.council-page > header {
+  position: relative;
+  background: linear-gradient(90deg, rgba(247,242,231,.96), rgba(235,229,215,.78), rgba(247,242,231,.96));
+  border-bottom-color: var(--archive-rule);
+  box-shadow: none;
+}
+
+.app-frame-header::after,
+.metric-bar::after,
+.directive-book > header::after,
+.monthly-summary > header::after {
+  content: '';
+  position: absolute;
+  right: 28px;
+  bottom: -1px;
+  width: 92px;
+  border-bottom: 2px solid var(--archive-vermilion);
+  opacity: .72;
+}
+
+.app-frame-title small,
+.section-heading small,
+.map-info-kicker {
+  color: var(--archive-vermilion);
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+
+.paper-panel-ui,
+.overview-card,
+.situation-book,
+.council-topic,
+.council-transcript,
+.directive-guidance,
+.draft-list,
+.summary-content,
+.list-row,
+.draft-select-item,
+.event-item {
+  background: linear-gradient(90deg, rgba(247,242,231,.82), rgba(239,233,220,.58), rgba(247,242,231,.8)) !important;
+  border-color: var(--archive-rule) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.paper-panel-ui,
+.overview-card,
+.council-topic,
+.council-transcript,
+.directive-guidance,
+.draft-list,
+.summary-content {
+  position: relative;
+}
+
+.paper-panel-ui::before,
+.overview-card::before,
+.council-topic::before,
+.council-transcript::before,
+.directive-guidance::before,
+.draft-list::before,
+.summary-content::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  border-left: 1px solid rgba(169,142,104,.22);
+  border-right: 1px solid rgba(169,142,104,.14);
+}
+
+.section-heading {
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--archive-rule);
+}
+
+.section-heading h2,
+.app-frame-title h1,
+.map-info-hero-title {
+  color: var(--archive-ink);
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-weight: 700;
+}
+
+.action-seal,
+.seal-button,
+.draft-btn,
+.investment-actions button {
+  border-radius: 0 !important;
+  border-color: var(--archive-rule) !important;
+  box-shadow: inset 0 0 0 1px rgba(247,242,231,.42);
+}
+
+.action-seal-secondary,
+.action-seal-ghost,
+.investment-actions button {
+  background: linear-gradient(90deg, rgba(247,242,231,.9), rgba(221,230,227,.64)) !important;
+  color: var(--archive-cyan) !important;
+}
+
+.action-seal-primary,
+.action-seal-danger,
+.primary,
+.draft-btn.primary {
+  background: linear-gradient(90deg, #9a4037, #7c302b) !important;
+  border-color: #7c302b !important;
+}
+
+/* 州郡档案：连续卷轴而非卡片叠层。 */
+.game-dialog-map-drawer {
+  width: min(452px, calc(100vw - 48px));
+  border: 0;
+  border-left: 1px solid var(--archive-rule);
+  box-shadow: -16px 18px 42px rgba(36,45,45,.22);
+}
+
+.game-dialog-map-drawer::before {
+  inset: 0;
+  filter: saturate(.72) contrast(.95);
+}
+
+.game-dialog-map-drawer::after {
+  inset: 10px 8px;
+  border: 1px solid rgba(38,49,55,.16);
+}
+
+.game-dialog-map-drawer > header {
+  top: 13px;
+  right: 14px;
+}
+
+.game-dialog-map-drawer > header button {
+  width: 32px;
+  height: 40px;
+  border: 1px solid var(--archive-rule);
+  border-radius: 0;
+  background: rgba(247,242,231,.78);
+  color: var(--archive-ink);
+}
+
+.game-dialog-map-drawer > header button:hover {
+  background: var(--archive-vermilion);
+  color: #fff8ec;
+}
+
+.map-info-drawer-inner {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+.map-info-hero {
+  min-height: 174px;
+  padding: 22px 28px 19px;
+  align-items: flex-end;
+}
+
+.map-info-hero::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 18px;
+  width: 34px;
+  height: 4px;
+  background: var(--archive-vermilion);
+  box-shadow: 40px 0 0 rgba(38,49,55,.34);
+}
+
+.map-info-hero::after {
+  height: 106px;
+  background: linear-gradient(transparent, rgba(247,242,231,.94) 72%, rgba(247,242,231,.98));
+}
+
+.map-info-kicker {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 11px;
+}
+
+.map-info-hero-title {
+  font-size: clamp(30px, 3vw, 38px);
+  letter-spacing: .24em;
+  line-height: 1;
+}
+
+.map-info-hero-sub {
+  margin-top: 9px;
+  color: var(--archive-ink-soft);
+  letter-spacing: .05em;
+}
+.map-info-hero-judgement{max-width:34rem;margin:15px 0 0;padding:9px 0 0 14px;border-left:3px solid var(--archive-vermilion);color:var(--archive-ink-soft);font-family:"Source Han Serif","Noto Serif SC",serif;line-height:1.75;letter-spacing:.04em}
+.map-info-grand-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0 0 18px;border-block:1px solid var(--archive-hairline)}.map-info-grand-totals>div{padding:12px 8px;border-right:1px solid var(--archive-hairline)}.map-info-grand-totals>div:last-child{border-right:0}.map-info-grand-totals dt{font-size:11px;color:var(--archive-ink-soft);letter-spacing:.12em}.map-info-grand-totals dd{margin:5px 0 0;color:var(--archive-ink);font:700 24px/1 "Source Han Serif","Noto Serif SC",serif}.map-info-subrolls article,.map-info-city-directory article{position:relative;padding-block:11px;background:transparent;border-inline:0;border-top:1px solid var(--archive-hairline)}.map-info-subrolls article:last-child,.map-info-city-directory article:last-child{border-bottom:1px solid var(--archive-hairline)}.map-info-ledger-note{margin:12px 0 0;color:var(--archive-ink-soft);font-size:12px;line-height:1.75}.map-info-marginalia{background:linear-gradient(90deg,rgba(154,64,55,.055),transparent)}.map-info-marginalia ol,.map-info-chronicle ol{margin:0;padding:0;list-style:none}.map-info-marginalia li{position:relative;padding:7px 0 7px 18px;color:#7b372e;line-height:1.65}.map-info-marginalia li::before{content:'注';position:absolute;left:0;top:8px;font-size:10px;font-weight:700}.map-info-marginalia small{display:block;margin-top:10px;color:var(--archive-ink-soft)}.map-info-chronicle li{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:9px 0;border-top:1px dashed var(--archive-hairline);line-height:1.6}.map-info-chronicle time{color:var(--archive-vermilion);font-size:11px;letter-spacing:.06em}
+@media(max-width:640px){.map-info-grand-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.map-info-grand-totals>div:nth-child(2){border-right:0}.map-info-grand-totals>div:nth-child(-n+2){border-bottom:1px solid var(--archive-hairline)}.map-info-hero-judgement{font-size:13px}.map-info-chronicle li{grid-template-columns:58px 1fr}}
+
+.map-info-power-dot {
+  width: 7px;
+  height: 22px;
+  border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(247,242,231,.7);
+}
+
+.map-info-scroll {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 28px 26px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: linear-gradient(90deg, rgba(247,242,231,.94), rgba(247,242,231,.83) 76%, rgba(230,221,203,.86));
+}
+
+.map-info-scroll::-webkit-scrollbar { width: 5px; }
+.map-info-scroll::-webkit-scrollbar-thumb { background: rgba(79,112,117,.42); }
+
+.map-info-record {
+  position: relative;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--archive-rule);
+}
+
+.map-info-record::before {
+  content: '';
+  position: absolute;
+  top: 21px;
+  left: -14px;
+  height: 18px;
+  border-left: 2px solid var(--archive-cyan);
+  opacity: .72;
+}
+
+.map-info-record:last-child { border-bottom: 0; }
+.map-info-record .section-heading { margin-bottom: 13px; }
+.map-info-record .section-heading h2 { font-size: 17px; }
+
+.map-info-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--archive-hairline);
+}
+
+.map-info-stats > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--archive-hairline);
+}
+
+.map-info-stats > div:nth-child(odd) { margin-right: 17px; }
+.map-info-stats dt,
+.map-info-ledger dt { color: var(--archive-ink-soft); font-size: 12px; }
+.map-info-stats dd,
+.map-info-ledger dd { margin: 0; color: var(--archive-ink); font-size: 18px; font-weight: 700; }
+.map-info-stats small,
+.map-info-ledger small { margin-left: 3px; color: var(--archive-ink-soft); font-size: 11px; font-weight: 400; }
+
+.map-info-status {
+  margin: 13px 0 0;
+  padding: 9px 11px;
+  border-left: 2px solid var(--archive-vermilion);
+  background: rgba(154,64,55,.06);
+  color: var(--archive-ink-soft);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.map-info-ledger {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 15px;
+  margin: 0;
+}
+
+.map-info-ledger > div {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--archive-hairline);
+}
+
+.map-info-ledger dt { margin-bottom: 2px; }
+.map-info-ledger dd { font-size: 16px; }
+
+.investment-current {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--archive-cyan);
+  background: rgba(79,112,117,.08);
+  color: var(--archive-ink);
+}
+
+.investment-actions { gap: 8px; }
+.investment-actions button { align-items: flex-start; padding: 11px 12px; text-align: left; }
+.investment-actions button span { font-weight: 700; letter-spacing: .08em; }
+.investment-actions button small { color: var(--archive-ink-soft); line-height: 1.45; }
+
+.map-info-armies { gap: 0; }
+.map-info-armies article {
+  padding: 11px 2px;
+  border: 0;
+  border-bottom: 1px dashed var(--archive-hairline);
+  background: transparent;
+}
+
+.map-info-armies article:last-child { border-bottom: 0; }
+.map-info-armies i { width: 3px; height: 38px; }
+.map-info-armies strong { color: var(--archive-ink); letter-spacing: .04em; }
+.map-info-armies small { margin-top: 3px; color: var(--archive-ink-soft); }
+.empty-note { margin: 15px 0 0; padding-left: 12px; border-left: 2px solid var(--archive-wood); color: var(--archive-ink-soft); }
+
+/* 局势、方略、月报采用不同的文书节奏，避免同一张卡片复制到底。 */
+.situation-hub-body { gap: 26px; }
+.situation-main { border-right: 1px solid var(--archive-hairline); }
+.situation-side-chronicle { padding-left: 8px; }
+.overview-card:first-child { border-top: 0; border-left: 3px solid var(--archive-cyan); }
+.overview-card:not(:first-child) { background: transparent !important; border-inline: 0 !important; }
+.council-body:not(:has(.council-suggestions)) { grid-template-columns: minmax(0, 1fr); }
+.council-main { padding: 20px 24px; }
+.council-main .minister-selection { width: 100%; max-width: none; margin: 0; }
+.directive-book .draft-card,
+.monthly-summary .report-item,
+.history-book .history-entry { border-radius: 0 !important; box-shadow: none !important; }
+.directive-book .draft-card { border-left: 2px solid var(--archive-cyan) !important; }
+.directive-book .draft-card.selected { border-left: 4px solid var(--archive-vermilion) !important; }
+.monthly-summary .report-item { border-left: 2px solid var(--archive-wood); background: transparent !important; }
+
+/* 窄桌面不压扁档案正文。 */
+@media (max-width: 1024px) {
+  .game-dialog-map-drawer { right: 14px; width: min(420px, calc(100vw - 160px)); }
+  .map-info-scroll { padding-inline: 22px; }
+  .map-info-hero { padding-inline: 22px; }
+  .persistent-world-content .scene-shell { inset-inline: 28px; }
+}
+
+@media (max-width: 760px) {
+  .game-dialog-map-drawer { right: 10px; top: 70px; width: calc(100vw - 20px); height: calc(100vh - 82px); max-height: none; }
+  .map-info-hero { min-height: 152px; }
+  .map-info-stats { grid-template-columns: 1fr; }
+  .map-info-stats > div:nth-child(odd) { margin-right: 0; }
+  .map-info-ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 州郡档案终稿：以簿册封皮、木边与干净内页取代单层纸片。 */
+.game-dialog-map-drawer {
+  width: min(510px, calc(100vw - 42px));
+  height: min(840px, calc(100vh - 72px));
+  max-height: none;
+  padding: clamp(34px, 5vw, 48px) clamp(34px, 5vw, 47px) clamp(37px, 5vw, 50px);
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+  background: var(--archive-county-dossier) center / 100% 100% no-repeat !important;
+  box-shadow: -22px 26px 58px rgba(21, 29, 29, .34), 0 3px 1px rgba(255, 250, 234, .36) inset;
+}
+
+.game-dialog-map-drawer::before,
+.game-dialog-map-drawer::after {
+  display: none;
+}
+
+.game-dialog-map-drawer .game-dialog-content {
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.game-dialog-map-drawer .game-dialog-header {
+  top: clamp(39px, 5vw, 50px);
+  right: clamp(39px, 5vw, 52px);
+  z-index: 5;
+}
+
+.game-dialog-map-drawer .game-dialog-header button {
+  width: 27px;
+  height: 27px;
+  border: 1px solid rgba(83, 56, 35, .74);
+  border-radius: 1px;
+  color: #f1e5c8;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.16), transparent 36%),
+    linear-gradient(145deg, #6b4c31, #39291f 62%, #7d5b37);
+  box-shadow: 0 1px 0 rgba(255, 240, 197, .38) inset, 0 2px 4px rgba(26, 18, 12, .23);
+}
+
+.game-dialog-map-drawer .game-dialog-header button:hover {
+  color: #fff7df;
+  background: linear-gradient(145deg, #86603b, #4a3323 62%, #987246);
+}
+
+.map-info-drawer-inner {
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 16%, rgba(255,255,249,.5), transparent 47%),
+    linear-gradient(90deg, rgba(138, 109, 67, .08), transparent 9%, transparent 91%, rgba(138, 109, 67, .08)),
+    var(--ink-tex-paper-revival) center / 330px auto repeat,
+    #f7f1e4;
+}
+
+.map-info-hero {
+  min-height: 174px;
+  padding: 32px 31px 24px;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.map-info-hero::before,
+.map-info-hero::after { display: none; }
+
+.map-info-kicker {
+  color: #963e34;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .25em;
+}
+
+.map-info-title-deck {
+  align-items: flex-end;
+  gap: 11px;
+  margin-top: 8px;
+}
+
+.map-info-city-seal {
+  width: 27px;
+  height: 27px;
+  margin: 0 0 6px 1px;
+  border: 1px solid rgba(135, 49, 40, .76);
+  border-radius: 1px;
+  color: #9a4037;
+  background: rgba(248, 235, 210, .36);
+  box-shadow: 0 0 0 2px rgba(154,64,55,.08) inset;
+  font-size: 15px;
+}
+
+.map-info-hero-title {
+  color: #222b2d;
+  font-size: clamp(39px, 5.2vw, 51px);
+  font-weight: 800;
+  line-height: .94;
+  letter-spacing: .09em;
+  text-shadow: 0 1px 0 rgba(255,255,255,.42);
+}
+
+.map-info-hero-subtitle {
+  margin: 13px 0 0 40px;
+  color: rgba(38,49,55,.68);
+  font-size: 12px;
+  letter-spacing: .09em;
+}
+
+.map-info-scroll {
+  padding: 0 31px 28px;
+  scrollbar-width: thin;
+  scrollbar-color: #7d5c3b transparent;
+}
+
+.map-info-scroll::-webkit-scrollbar { width: 6px; }
+.map-info-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid rgba(74, 49, 30, .45);
+  border-radius: 5px;
+  background: linear-gradient(90deg, #aa8b64, #62452e, #a3835c);
+}
+
+.map-info-record {
+  padding: 17px 0 20px;
+  border-bottom: 0;
+}
+
+.map-info-record + .map-info-record {
+  margin-top: 2px;
+  border-top: 1px solid rgba(102, 77, 48, .16);
+}
+
+.map-info-record .section-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 15px;
+}
+
+.map-info-record .section-heading small {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: #994238;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.map-info-record .section-heading h2 {
+  position: relative;
+  margin: 0;
+  padding: 7px 12px 8px;
+  overflow: hidden;
+  color: #f8efdd;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), transparent 45%),
+    linear-gradient(90deg, #765338, #9f7c52 13%, #62432d 54%, #8a6743);
+  box-shadow: 0 1px 0 rgba(255,240,206,.32) inset, 0 -1px 0 rgba(47,29,19,.38) inset;
+}
+
+.map-info-record .section-heading h2::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  right: 5px;
+  width: 1px;
+  background: rgba(255,235,195,.25);
+}
+
+.map-info-overview-body { gap: 28px; }
+
+.map-info-census {
+  min-height: 132px;
+  padding: 14px 4px 14px 0;
+  background: transparent;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 2px solid rgba(79,112,117,.48);
+}
+
+.map-info-census::after { content: none; }
+.map-info-census dt { font-size: 11px; letter-spacing: .12em; }
+.map-info-census dd { font-size: 34px; letter-spacing: -.03em; }
+.map-info-census dd small { font-size: 11px; }
+.map-info-census p { margin-top: 7px; color: rgba(38,49,55,.6); font-size: 10px; }
+
+.map-info-state-list { gap: 13px; }
+.map-info-state { padding: 1px 0 8px; border-bottom: 0; }
+.map-info-state dt { font-size: 11px; }
+.map-info-state dd { font-size: 21px; }
+.map-info-meter {
+  height: 5px;
+  margin-top: 4px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, rgba(57,48,39,.2), rgba(255,255,255,.48));
+  box-shadow: 0 1px 1px rgba(66,48,31,.18) inset;
+}
+.map-info-meter::before {
+  background: linear-gradient(180deg, #7d9a9a, #3f676c);
+  box-shadow: 0 1px 0 rgba(255,255,255,.34) inset;
+}
+.map-info-state-unrest .map-info-meter::before { background: linear-gradient(180deg, #bd6a59, #8e362f); }
+.map-info-state-pressure .map-info-meter::before { background: linear-gradient(180deg, #b59664, #876239); }
+
+.map-info-status {
+  grid-template-columns: 78px 1fr;
+  gap: 10px;
+  margin-top: 21px;
+  padding: 10px 11px 9px;
+  border: 1px solid rgba(154,64,55,.31);
+  background: linear-gradient(110deg, rgba(154,64,55,.08), rgba(255,250,239,.13));
+}
+.map-info-status span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #963e34;
+  font-size: 10px;
+}
+.map-info-status span::before {
+  content: '注';
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-size: 10px;
+  line-height: 1;
+}
+.map-info-status p { color: rgba(72,48,40,.76); font-size: 11px; line-height: 1.7; }
+
+.map-info-ledger { gap: 10px 24px; }
+.map-info-ledger > div { min-height: 68px; padding: 11px 0 10px; border-bottom: 1px solid rgba(95,84,65,.13); }
+.map-info-ledger dd { font-size: 23px; }
+
+@media (max-width: 1024px) {
+  .game-dialog-map-drawer { width: min(492px, calc(100vw - 32px)); padding-inline: 38px; }
+  .map-info-hero, .map-info-scroll { padding-inline: 27px; }
+}
+
+@media (max-width: 760px) {
+  .game-dialog-map-drawer { height: calc(100vh - 32px); padding: 32px 31px 36px; }
+  .map-info-hero, .map-info-scroll { padding-inline: 22px; }
+  .map-info-hero-title { font-size: 38px; }
+}
+
+/* 城镇奏报：一件可阅读的地方文书，而不是带背景图的功能面板。 */
+.game-dialog-map-drawer {
+  border: 10px solid transparent;
+  border-image: var(--ink-frame-panel) 12 round;
+  background: linear-gradient(90deg, rgba(57,48,36,.16), rgba(247,242,231,.05) 7%, rgba(247,242,231,.04) 91%, rgba(57,48,36,.12));
+  box-shadow: -18px 22px 42px rgba(26,31,30,.28), inset 0 0 0 1px rgba(255,253,243,.55);
+}
+
+.game-dialog-map-drawer::before {
+  inset: 0;
+  filter: saturate(.58) contrast(.9) brightness(.96);
+}
+
+.game-dialog-map-drawer::after {
+  inset: 13px 12px;
+  border: 1px solid rgba(72,59,41,.24);
+  background: linear-gradient(90deg, rgba(247,242,231,.08), transparent 10%, transparent 90%, rgba(145,121,83,.08));
+}
+
+.map-info-drawer-inner {
+  background: linear-gradient(90deg, rgba(247,242,231,.84), rgba(247,242,231,.68) 55%, rgba(235,226,208,.76));
+}
+
+.map-info-hero {
+  min-height: 198px;
+  padding: 33px 34px 25px;
+  background: linear-gradient(to bottom, rgba(247,242,231,.02), rgba(247,242,231,.24) 38%, rgba(247,242,231,.95) 92%, rgba(247,242,231,.99));
+}
+
+.map-info-hero::before {
+  top: 22px;
+  left: 29px;
+  width: 46px;
+  height: 3px;
+  background: var(--archive-vermilion);
+  box-shadow: 54px 0 0 rgba(38,49,55,.34), 85px 0 0 rgba(38,49,55,.14);
+}
+
+.map-info-hero::after {
+  height: 116px;
+  background: linear-gradient(transparent, rgba(247,242,231,.94) 70%, rgba(247,242,231,.99));
+}
+
+.map-info-title-deck { display: flex; align-items: center; gap: 13px; }
+.map-info-city-seal {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 2px solid rgba(154,64,55,.78);
+  color: rgba(142,53,45,.88);
+  background: rgba(154,64,55,.06);
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-size: 21px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .04em;
+  transform: rotate(-4deg);
+  box-shadow: inset 0 0 0 1px rgba(247,242,231,.7);
+}
+
+.map-info-hero-title {
+  font-size: clamp(38px, 3.2vw, 46px);
+  letter-spacing: .18em;
+  line-height: .95;
+  text-shadow: 0 1px 0 rgba(255,253,243,.88), 0 7px 16px rgba(41,49,48,.11);
+}
+
+.map-info-hero-sub { margin: 12px 0 0 51px; }
+.map-info-kicker { margin-bottom: 10px; color: #7e332d; }
+
+.map-info-scroll {
+  padding: 0 33px 32px;
+  background: linear-gradient(90deg, rgba(247,242,231,.98), rgba(247,242,231,.91) 72%, rgba(229,219,199,.86));
+}
+
+.map-info-record {
+  padding: 25px 0 27px;
+  border-bottom: 0;
+}
+
+.map-info-record + .map-info-record {
+  background: linear-gradient(90deg, transparent, rgba(79,112,117,.035), transparent);
+  border-top: 1px solid rgba(101,86,60,.15);
+}
+
+.map-info-record::before { display: none; }
+.map-info-record .section-heading { align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 0; border-bottom: 0; }
+.map-info-record .section-heading small {
+  position: relative;
+  min-width: 68px;
+  padding: 6px 11px 6px 13px;
+  background: linear-gradient(90deg, #a98e68, #c6b18b 75%, rgba(198,177,139,.18));
+  color: #fff9eb;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-shadow: 0 1px rgba(67,51,32,.28);
+}
+
+.map-info-record .section-heading small::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 0;
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-left: 10px solid #c6b18b;
+}
+
+.map-info-record .section-heading h2 {
+  font-size: 20px;
+  letter-spacing: .12em;
+}
+
+.map-info-overview-body {
+  display: grid;
+  grid-template-columns: minmax(134px, .72fr) minmax(0, 1.28fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.map-info-census {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-content: center;
+  gap: 4px 10px;
+  min-height: 124px;
+  margin: 0;
+  padding: 16px 15px 15px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(79,112,117,.13), rgba(247,242,231,.15) 75%);
+  border-top: 2px solid rgba(79,112,117,.54);
+  border-bottom: 1px solid rgba(79,112,117,.23);
+}
+
+.map-info-census::after {
+  content: '户籍';
+  position: absolute;
+  right: -4px;
+  bottom: -11px;
+  color: rgba(79,112,117,.08);
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.map-info-fact-icon { grid-row: span 2; display: grid; place-items: center; color: var(--archive-cyan); }
+.map-info-fact-icon svg { width: 27px; height: 27px; stroke-width: 1.4; }
+.map-info-census dt { color: var(--archive-ink-soft); font-size: 12px; letter-spacing: .08em; }
+.map-info-census dd { margin: 0; color: var(--archive-ink); font-size: 29px; font-weight: 700; line-height: 1; }
+.map-info-census dd small { margin-left: 4px; color: var(--archive-ink-soft); font-size: 11px; font-weight: 400; }
+.map-info-census p { grid-column: 1 / -1; margin: 3px 0 0; color: var(--archive-ink-soft); font-size: 11px; line-height: 1.45; }
+
+.map-info-state-list { display: grid; align-content: center; gap: 11px; margin: 0; }
+.map-info-state {
+  display: grid;
+  grid-template-columns: 18px 42px 1fr auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 2px 0 8px;
+  border-bottom: 1px solid rgba(95,84,65,.12);
+}
+.map-info-state:last-child { border-bottom: 0; }
+.map-info-state svg { width: 16px; height: 16px; color: var(--archive-cyan); stroke-width: 1.45; }
+.map-info-state dt { color: var(--archive-ink-soft); font-size: 12px; }
+.map-info-state dd { justify-self: end; margin: 0; color: var(--archive-ink); font-size: 20px; font-weight: 700; line-height: 1; }
+.map-info-state dd small { margin-left: 2px; color: var(--archive-ink-soft); font-size: 10px; font-weight: 400; }
+.map-info-meter { grid-column: 2 / -1; position: relative; display: block; height: 3px; margin-top: 2px; overflow: hidden; background: rgba(38,49,55,.13); }
+.map-info-meter::before { content: ''; display: block; width: var(--meter); height: 100%; background: var(--archive-cyan); }
+.map-info-state-unrest svg, .map-info-state-unrest .map-info-meter::before { color: var(--archive-vermilion); background: var(--archive-vermilion); }
+.map-info-state-pressure svg, .map-info-state-pressure .map-info-meter::before { color: #a2763d; background: #a2763d; }
+
+.map-info-status {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 12px;
+  margin-top: 19px;
+  padding: 11px 0 0;
+  border-left: 0;
+  border-top: 1px solid rgba(154,64,55,.28);
+  background: transparent;
+}
+.map-info-status span { color: var(--archive-vermilion); font-size: 11px; font-weight: 700; letter-spacing: .14em; }
+.map-info-status p { margin: 0; color: var(--archive-ink-soft); font-size: 12px; line-height: 1.65; }
+
+.map-info-ledger { gap: 7px 18px; }
+.map-info-ledger > div { min-height: 66px; padding: 10px 2px 8px; border-bottom: 1px solid rgba(95,84,65,.13); }
+.map-info-ledger dt { color: var(--archive-ink-soft); font-size: 11px; letter-spacing: .05em; }
+.map-info-ledger dd { font-size: 21px; }
+.map-info-ledger small { display: block; margin: 4px 0 0; font-size: 10px; line-height: 1.35; }
+
+.investment-current { border-left: 0; border-top: 1px solid rgba(79,112,117,.33); background: transparent; }
+.map-info-armies article { padding: 13px 3px; border-bottom: 1px solid rgba(95,84,65,.13); }
+
+@media (max-width: 1024px) {
+  .map-info-hero { padding-inline: 28px; }
+  .map-info-scroll { padding-inline: 26px; }
+}
+
+@media (max-width: 760px) {
+  .map-info-overview-body { grid-template-columns: 1fr; gap: 16px; }
+  .map-info-census { min-height: 105px; }
+  .map-info-record .section-heading h2 { font-size: 18px; }
+}
+
+/* 州郡档案终稿覆盖层：必须置于旧地图档案样式之后。 */
+.game-dialog-map-drawer { width:min(510px,calc(100vw - 42px)); height:min(840px,calc(100vh - 72px)); max-height:none; padding:clamp(34px,5vw,48px) clamp(34px,5vw,47px) clamp(37px,5vw,50px); overflow:hidden; border:0; border-radius:2px; background:var(--archive-county-dossier) center/100% 100% no-repeat !important; box-shadow:-22px 26px 58px rgba(21,29,29,.34),0 3px 1px rgba(255,250,234,.36) inset; }
+.game-dialog-map-drawer::before,.game-dialog-map-drawer::after { display:none; }
+.game-dialog-map-drawer .game-dialog-content { height:100%; overflow:hidden; background:transparent; }
+.game-dialog-map-drawer .game-dialog-header { top:clamp(39px,5vw,50px); right:clamp(39px,5vw,52px); z-index:5; }
+.game-dialog-map-drawer .game-dialog-header button { width:27px; height:27px; border:1px solid rgba(83,56,35,.74); border-radius:1px; color:#f1e5c8; background:linear-gradient(135deg,rgba(255,255,255,.16),transparent 36%),linear-gradient(145deg,#6b4c31,#39291f 62%,#7d5b37); box-shadow:0 1px 0 rgba(255,240,197,.38) inset,0 2px 4px rgba(26,18,12,.23); }
+.map-info-drawer-inner { height:100%; background:radial-gradient(ellipse at 50% 16%,rgba(255,255,249,.5),transparent 47%),linear-gradient(90deg,rgba(138,109,67,.08),transparent 9%,transparent 91%,rgba(138,109,67,.08)),var(--ink-tex-paper-revival) center/330px auto repeat,#f7f1e4; }
+.map-info-hero { min-height:174px; padding:32px 31px 24px; border-bottom:0; background:transparent; }
+.map-info-hero::before,.map-info-hero::after { display:none; }
+.map-info-kicker { color:#963e34; font-size:10px; font-weight:700; letter-spacing:.25em; }
+.map-info-title-deck { align-items:flex-end; gap:11px; margin-top:8px; }
+.map-info-city-seal { width:27px; height:27px; margin:0 0 6px 1px; border:1px solid rgba(135,49,40,.76); border-radius:1px; color:#9a4037; background:rgba(248,235,210,.36); box-shadow:0 0 0 2px rgba(154,64,55,.08) inset; font-size:15px; }
+.map-info-hero-title { color:#222b2d; font-size:clamp(39px,5.2vw,51px) !important; font-weight:800; line-height:.94; letter-spacing:.09em; text-shadow:0 1px 0 rgba(255,255,255,.42); }
+.map-info-hero-sub { margin:13px 0 0 40px; color:rgba(38,49,55,.68); font-size:12px; letter-spacing:.09em; }
+.map-info-scroll { padding:0 31px 28px; scrollbar-width:thin; scrollbar-color:#7d5c3b transparent; }
+.map-info-scroll::-webkit-scrollbar { width:6px; }.map-info-scroll::-webkit-scrollbar-thumb { border:1px solid rgba(74,49,30,.45); border-radius:5px; background:linear-gradient(90deg,#aa8b64,#62452e,#a3835c); }
+.map-info-record { padding:17px 0 20px; border-bottom:0; }.map-info-record+.map-info-record { margin-top:2px; border-top:1px solid rgba(102,77,48,.16); }
+.map-info-record .section-heading { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; margin:0 0 15px; }
+.map-info-record .section-heading small { min-width:0; padding:0; border:0; color:#994238; background:transparent; font-size:10px; font-weight:700; letter-spacing:.14em; }
+.map-info-record .section-heading h2 { position:relative; margin:0; padding:7px 12px 8px; overflow:hidden; color:#f8efdd; font-size:17px; font-weight:700; letter-spacing:.12em; background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 45%),linear-gradient(90deg,#765338,#9f7c52 13%,#62432d 54%,#8a6743); box-shadow:0 1px 0 rgba(255,240,206,.32) inset,0 -1px 0 rgba(47,29,19,.38) inset; }
+.map-info-record .section-heading h2::after { content:''; position:absolute; top:3px; bottom:3px; right:5px; width:1px; background:rgba(255,235,195,.25); }
+.map-info-overview-body { gap:28px; }.map-info-census { min-height:132px; padding:14px 4px 14px 0; background:transparent; border:0; border-left:2px solid rgba(79,112,117,.48); }.map-info-census::after { content:none; }.map-info-census dt { font-size:11px; letter-spacing:.12em; }.map-info-census dd { font-size:34px; letter-spacing:-.03em; }.map-info-census dd small { font-size:11px; }.map-info-census p { margin-top:7px; color:rgba(38,49,55,.6); font-size:10px; }
+.map-info-state-list { gap:13px; }.map-info-state { padding:1px 0 8px; border-bottom:0; }.map-info-state dt { font-size:11px; }.map-info-state dd { font-size:21px; }.map-info-meter { height:5px; margin-top:4px; border-radius:1px; background:linear-gradient(180deg,rgba(57,48,39,.2),rgba(255,255,255,.48)); box-shadow:0 1px 1px rgba(66,48,31,.18) inset; }.map-info-meter::before { background:linear-gradient(180deg,#7d9a9a,#3f676c); box-shadow:0 1px 0 rgba(255,255,255,.34) inset; }.map-info-state-unrest .map-info-meter::before { background:linear-gradient(180deg,#bd6a59,#8e362f); }.map-info-state-pressure .map-info-meter::before { background:linear-gradient(180deg,#b59664,#876239); }
+.map-info-status { grid-template-columns:78px 1fr; gap:10px; margin-top:21px; padding:10px 11px 9px; border:1px solid rgba(154,64,55,.31); background:linear-gradient(110deg,rgba(154,64,55,.08),rgba(255,250,239,.13)); }.map-info-status span { display:flex; align-items:center; gap:6px; color:#963e34; font-size:10px; }.map-info-status span::before { content:'注'; display:inline-grid; width:18px; height:18px; place-items:center; border:1px solid currentColor; border-radius:50%; font-family:"Source Han Serif","Noto Serif SC",serif; font-size:10px; line-height:1; }.map-info-status p { color:rgba(72,48,40,.76); font-size:11px; line-height:1.7; }
+.map-info-ledger { gap:10px 24px; }.map-info-ledger>div { min-height:68px; padding:11px 0 10px; }.map-info-ledger dd { font-size:23px; }
+@media (max-width:1024px) { .game-dialog-map-drawer { width:min(492px,calc(100vw - 32px)); padding-inline:38px; }.map-info-hero,.map-info-scroll { padding-inline:27px; } }
+@media (max-width:760px) { .game-dialog-map-drawer { height:calc(100vh - 32px); padding:32px 31px 36px; }.map-info-hero,.map-info-scroll { padding-inline:22px; }.map-info-hero-title { font-size:38px; } }
+
+/* 消除旧 Dialog 内层遗留的白色矩形：内页只使用簿册素材本身的连续宣纸。 */
+.game-dialog-map-drawer {
+  outline: 0;
+  background-clip: border-box;
+  background-origin: border-box;
+}
+
+.map-info-drawer-inner {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.map-info-scroll {
+  background: transparent !important;
+}
+
+/* 簿册的可读区止于宣纸内页：滚动内容不能进入下方封皮。 */
+.game-dialog-map-drawer {
+  padding-bottom: clamp(112px, 11vw, 148px);
+}
+
+.map-info-drawer-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.map-info-scroll {
+  min-height: 0;
+  padding-bottom: 74px;
+}
+
+/* 默认采用浅水墨档案底景；控件同步去除木器、皮革式材质。 */
+.game-dialog-map-drawer {
+  background-image: var(--archive-county-dossier-ink-wash) !important;
+  box-shadow: -18px 22px 48px rgba(38,49,55,.2), 0 1px 0 rgba(255,255,255,.58) inset;
+}
+
+.game-dialog-map-drawer .game-dialog-header button {
+  border-color: rgba(64,87,91,.56);
+  color: #31484b;
+  background: rgba(247,242,231,.84);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.52) inset;
+}
+
+.game-dialog-map-drawer .game-dialog-header button:hover {
+  color: #fff9ed;
+  background: #4f7075;
+}
+
+@media (max-width: 760px) {
+  .game-dialog-map-drawer { padding-bottom: 96px; }
+  .map-info-scroll { padding-bottom: 58px; }
+}
+
+/* 浅水墨档案的空间层：舆图退墨，文书浮起，正文像印在纸上。 */
+.game-dialog-map-drawer {
+  isolation: isolate;
+  overflow: visible;
+  border: 1px solid rgba(73, 100, 102, .22);
+  border-radius: 3px 2px 4px 2px;
+  background-position: center;
+  box-shadow:
+    0 28px 66px rgba(24, 34, 35, .30),
+    0 8px 17px rgba(34, 45, 45, .18),
+    0 1px 0 rgba(255,255,255,.72) inset,
+    0 -14px 24px rgba(92, 88, 68, .08) inset,
+    9px 0 14px rgba(66, 79, 76, .06) inset,
+    -7px 0 12px rgba(66, 79, 76, .05) inset;
+}
+
+/* map-drawer 非模态：伪遮罩不夺取地图点击，只让背景在阅读时退后。 */
+.game-dialog-map-drawer::before {
+  display: block;
+  content: '';
+  position: fixed;
+  inset: -100vmax;
+  z-index: -2;
+  pointer-events: none;
+  background: rgba(31, 43, 43, .16);
+  backdrop-filter: blur(1.6px) saturate(.72) brightness(.86);
+}
+
+.game-dialog-map-drawer::after {
+  display: block;
+  content: '';
+  position: absolute;
+  inset: 10px 12px 12px 11px;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid rgba(91, 108, 103, .16);
+  border-radius: 2px 4px 2px 5px;
+  box-shadow:
+    0 0 0 5px rgba(255, 255, 250, .06) inset,
+    0 13px 18px rgba(42, 48, 44, .10) inset,
+    0 -5px 10px rgba(74, 76, 61, .10) inset;
+}
+
+.game-dialog-map-drawer .game-dialog-content {
+  overflow: hidden;
+  border-radius: 2px 2px 4px 3px;
+}
+
+.game-dialog-map-drawer > header {
+  top: clamp(28px, 3.4vw, 42px);
+  right: clamp(27px, 3.4vw, 40px);
+}
+
+.game-dialog-map-drawer > header button {
+  width: 29px;
+  height: 29px;
+  border: 1px solid rgba(64, 87, 91, .52);
+  border-radius: 1px 2px 1px 3px;
+  color: #31484b;
+  background: rgba(247,242,231,.76);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.48) inset, 0 2px 5px rgba(42,57,55,.12);
+}
+
+.game-dialog-map-drawer > header button:hover {
+  color: #fff9ed;
+  border-color: #4f7075;
+  background: #4f7075;
+}
+
+.map-info-drawer-inner {
+  background: transparent !important;
+}
+
+.map-info-hero-title,
+.map-info-census dd,
+.map-info-state dd,
+.map-info-ledger dd {
+  text-shadow: 0 1px 0 rgba(255,255,255,.64), 0 -1px 0 rgba(34,49,50,.08);
+}
+
+.map-info-hero-sub,
+.map-info-census dt,
+.map-info-state dt,
+.map-info-ledger dt,
+.map-info-ledger small {
+  color: rgba(48, 72, 75, .73);
+}
+
+/* 区块是纸面题签与墨线，不再是棕色网页横条。 */
+.map-info-record .section-heading {
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(65, 91, 93, .24);
+}
+
+.map-info-record .section-heading small {
+  position: relative;
+  padding: 2px 0 2px 8px;
+  color: #994238;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-shadow: 0 1px 0 rgba(255,245,230,.76);
+}
+
+.map-info-record .section-heading small::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  background: #9a4037;
+  box-shadow: 2px 0 rgba(154,64,55,.13);
+}
+
+.map-info-record .section-heading h2 {
+  padding: 0 0 1px;
+  color: #31484b !important;
+  font-size: 20px !important;
+  letter-spacing: .14em;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: 0 1px 0 rgba(255,255,255,.72), 0 -1px 0 rgba(38,58,58,.06);
+}
+
+.map-info-record .section-heading h2::after {
+  top: auto;
+  right: 0;
+  bottom: -8px;
+  width: 34px;
+  height: 2px;
+  background: linear-gradient(90deg, #4f7075, rgba(79,112,117,0));
+}
+
+/* 纸面标尺：进度以墨迹和纸轨表达，避免现代高亮组件感。 */
+.map-info-meter {
+  height: 6px;
+  border-top: 1px solid rgba(61, 79, 77, .18);
+  border-bottom: 1px solid rgba(255,255,255,.55);
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, rgba(74,87,78,.10) 0 26px, rgba(255,255,255,.14) 26px 28px);
+  box-shadow: none;
+}
+
+.map-info-meter::before {
+  background: linear-gradient(90deg, rgba(56,102,107,.82), rgba(79,112,117,.96) 78%, rgba(69,96,96,.76));
+  box-shadow: 0 1px 0 rgba(255,255,255,.26) inset;
+}
+
+.map-info-state-unrest .map-info-meter::before { background: linear-gradient(90deg, rgba(146,54,47,.72), #9a4037); }
+.map-info-state-pressure .map-info-meter::before { background: linear-gradient(90deg, rgba(136,98,57,.70), #9b7443); }
+
+.map-info-status {
+  border-color: rgba(154,64,55,.25);
+  background: linear-gradient(90deg, rgba(154,64,55,.05), transparent 72%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset;
+}
+
+/* 地图始终是清晰可读的世界底层：地方档案不得加遮罩或背景虚化。 */
+.game-dialog-map-drawer::before {
+  display: none !important;
+  backdrop-filter: none;
+  background: none;
+}
+
+/* 州、郡、城为三册不同的地方档案：图像只组织材质与情绪，中央仍保持正文可读。 */
+.game-dialog-map-drawer.map-info-material-province {
+  background-image: var(--archive-administrative-province-ledger-v1) !important;
+  background-size: 100% 100%;
+  box-shadow: -22px 28px 62px rgba(18, 24, 25, .42), 0 1px 0 rgba(255,255,255,.42) inset;
+}
+
+.game-dialog-map-drawer.map-info-material-commandery {
+  background-image: var(--archive-administrative-commandery-ledger-v1) !important;
+  background-size: 100% 100%;
+  box-shadow: -19px 25px 56px rgba(35, 35, 29, .38), 0 1px 0 rgba(255,255,255,.42) inset;
+}
+
+.game-dialog-map-drawer.map-info-material-city {
+  background-image: var(--archive-administrative-city-ledger-v1) !important;
+  background-size: 100% 100%;
+  box-shadow: -23px 29px 64px rgba(20, 25, 29, .46), 0 1px 0 rgba(255,255,255,.38) inset;
+}
+
+/* 地方簿册 v2：正文顺着素材中的题签、账栏和附卷落位，而非压在一块背景纸上。 */
+.game-dialog-map-drawer.map-info-material-province,
+.game-dialog-map-drawer.map-info-material-commandery,
+.game-dialog-map-drawer.map-info-material-city {
+  width: min(450px, calc(100vw - 48px));
+  height: min(675px, calc(100vh - 126px));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(72, 76, 69, .26);
+  border-radius: 2px;
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: -16px 20px 42px rgba(38, 43, 39, .28), 0 1px 0 rgba(255, 255, 249, .72) inset;
+}
+
+.game-dialog-map-drawer.map-info-material-province { background-image: var(--archive-administrative-province-ledger-v3) !important; }
+.game-dialog-map-drawer.map-info-material-commandery { background-image: var(--archive-administrative-commandery-ledger-v3) !important; }
+.game-dialog-map-drawer.map-info-material-city { background-image: var(--archive-administrative-city-ledger-v3) !important; }
+
+.game-dialog-map-drawer.map-info-material-province .game-dialog-content,
+.game-dialog-map-drawer.map-info-material-commandery .game-dialog-content,
+.game-dialog-map-drawer.map-info-material-city .game-dialog-content {
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background: transparent;
+}
+
+.game-dialog-map-drawer.map-info-material-province > header,
+.game-dialog-map-drawer.map-info-material-commandery > header,
+.game-dialog-map-drawer.map-info-material-city > header {
+  top: 16px;
+  right: 17px;
+}
+
+.game-dialog-map-drawer.map-info-material-province > header button,
+.game-dialog-map-drawer.map-info-material-commandery > header button,
+.game-dialog-map-drawer.map-info-material-city > header button {
+  width: 23px;
+  height: 23px;
+  color: #41585a;
+  border-color: rgba(76, 91, 85, .37);
+  background: rgba(255, 252, 241, .8);
+}
+
+.map-info-drawer-inner {
+  display: grid;
+  grid-template-rows: 142px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  background: transparent !important;
+}
+
+.map-info-hero {
+  min-height: 0;
+  padding: 38px 46px 10px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.map-info-kicker {
+  display: block;
+  margin: 0 0 4px 3px;
+  color: #914037;
+  font-size: 9px;
+  letter-spacing: .22em;
+}
+
+.map-info-title-deck { margin-top: 0; gap: 8px; }
+.map-info-city-seal { width: 24px; height: 24px; margin-bottom: 3px; font-size: 13px; }
+.map-info-hero-title { color: #263b3d; font-size: 34px !important; line-height: 1; letter-spacing: .12em; }
+.map-info-hero-sub { margin: 7px 0 0 32px; color: rgba(39, 62, 64, .78); font-size: 10px; }
+.map-info-hero-judgement { max-width: 298px; margin: 7px 0 0 32px; padding: 0 0 0 8px; border-left-width: 2px; color: rgba(51, 62, 55, .78); font-size: 11px; line-height: 1.45; }
+
+.map-info-scroll {
+  min-height: 0;
+  padding: 0 43px 22px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(93, 110, 102, .45) transparent;
+  background: transparent !important;
+}
+
+/* 总览是印在账栏上的一整条总账，不是四张并列数据卡。 */
+.map-info-record { padding: 13px 0 15px; background: transparent; border: 0; }
+.map-info-record + .map-info-record { margin-top: 0; border-top: 1px solid rgba(69, 89, 83, .17); }
+.map-info-primary-ledger { padding-top: 5px; }
+.map-info-record .section-heading { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0; border: 0; }
+.map-info-record .section-heading small { padding: 0 0 0 7px; color: #9a4037; font-size: 9px; letter-spacing: .13em; }
+.map-info-record .section-heading h2 { padding: 0; color: #314c4e !important; font-size: 15px !important; font-weight: 700; letter-spacing: .13em; background: transparent; box-shadow: none; }
+.map-info-record .section-heading h2::after { display: none; }
+.map-info-grand-totals { margin: 0 0 9px; border-color: rgba(66, 91, 86, .24); background: transparent; }
+.map-info-grand-totals > div { padding: 7px 5px 8px; border-color: rgba(66, 91, 86, .18); }
+.map-info-grand-totals dt { color: rgba(48, 77, 78, .72); font-size: 9px; letter-spacing: .09em; }
+.map-info-grand-totals dd { margin-top: 3px; color: #2b4244; font-size: 20px; }
+.map-info-state-list { gap: 4px; }
+.map-info-state { grid-template-columns: 16px 52px 1fr auto; padding: 2px 0 4px; }
+.map-info-state dt { font-size: 10px; color: rgba(45, 67, 68, .78); }
+.map-info-state dd { font-size: 16px; color: #273f41; }
+.map-info-state dd small { font-size: 8px; }
+.map-info-meter { height: 3px; margin-top: 1px; }
+
+/* 目录和纪事化为内夹附卷；轻微错位让它们成为文书构造的一部分。 */
+.map-info-directory-slip { position: relative; margin: 2px -3px 0 5px; padding: 13px 12px 13px 14px; background: transparent; box-shadow: none; }
+.map-info-directory-slip::before { content: ''; position: absolute; left: 4px; top: 8px; bottom: 8px; width: 1px; background: rgba(154, 64, 55, .44); }
+.map-info-armies article { padding: 6px 0; border-color: rgba(73, 88, 81, .18); }
+.map-info-armies article strong { color: #2d4749; font-size: 12px; }
+.map-info-armies article small { color: rgba(53, 67, 59, .73); font-size: 9px; line-height: 1.45; }
+.map-info-ledger-note { margin: 7px 0 0; color: rgba(47, 64, 58, .75); font-size: 10px; line-height: 1.55; }
+.map-info-annotation-slip { margin: 4px 8px 0 0; padding: 10px 12px; background: linear-gradient(90deg, rgba(154,64,55,.08), rgba(255,250,236,.18)); border-left: 2px solid rgba(154,64,55,.42); }
+.map-info-annotation-slip li { padding: 4px 0 4px 15px; font-size: 10px; line-height: 1.45; }
+.map-info-annotation-slip small { margin-top: 5px; font-size: 9px; }
+.map-info-chronicle-slip { margin: 3px 0 0 7px; padding: 10px 0 6px 12px; border-left: 1px dashed rgba(61, 89, 88, .38); }
+.map-info-chronicle-slip li { grid-template-columns: 58px 1fr; gap: 7px; padding: 5px 0; font-size: 10px; }
+.map-info-chronicle-slip time { font-size: 9px; }
+
+@media (max-width: 760px) {
+  .game-dialog-map-drawer.map-info-material-province,
+  .game-dialog-map-drawer.map-info-material-commandery,
+  .game-dialog-map-drawer.map-info-material-city {
+    width: calc(100vw - 26px);
+    height: min(675px, calc(100vh - 88px));
+  }
+  .map-info-drawer-inner { grid-template-rows: 132px minmax(0, 1fr); }
+  .map-info-hero { padding: 32px 36px 8px; }
+  .map-info-scroll { padding-inline: 33px; }
+  .map-info-hero-title { font-size: 30px !important; }
+}
+
+/* 地方簿册 v3：一张连续的宣纸承载全部事实，不再用内页、卡片或方格遮盖素材。 */
+.game-dialog-map-drawer.map-info-material-province .map-info-drawer-inner,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-drawer-inner,
+.game-dialog-map-drawer.map-info-material-city .map-info-drawer-inner {
+  grid-template-rows: 148px minmax(0, 1fr);
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-hero,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-hero,
+.game-dialog-map-drawer.map-info-material-city .map-info-hero {
+  padding: 34px 43px 10px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-scroll,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-scroll,
+.game-dialog-map-drawer.map-info-material-city .map-info-scroll {
+  padding: 0 40px 22px;
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-primary-ledger,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-primary-ledger,
+.game-dialog-map-drawer.map-info-material-city .map-info-primary-ledger,
+.game-dialog-map-drawer.map-info-material-province .map-info-directory-slip,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-directory-slip,
+.game-dialog-map-drawer.map-info-material-city .map-info-directory-slip,
+.game-dialog-map-drawer.map-info-material-province .map-info-annotation-slip,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-annotation-slip,
+.game-dialog-map-drawer.map-info-material-city .map-info-annotation-slip,
+.game-dialog-map-drawer.map-info-material-province .map-info-chronicle-slip,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-chronicle-slip,
+.game-dialog-map-drawer.map-info-material-city .map-info-chronicle-slip {
+  background: transparent;
+  box-shadow: none;
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-primary-ledger,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-primary-ledger,
+.game-dialog-map-drawer.map-info-material-city .map-info-primary-ledger {
+  padding: 5px 0 15px;
+  border: 0;
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-directory-slip,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-directory-slip,
+.game-dialog-map-drawer.map-info-material-city .map-info-directory-slip {
+  margin: 4px 0 0 7px;
+  padding: 11px 0 12px 13px;
+  border: 0;
+  border-left: 2px solid rgba(75, 121, 120, .52);
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-annotation-slip,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-annotation-slip,
+.game-dialog-map-drawer.map-info-material-city .map-info-annotation-slip {
+  margin: 6px 3px 0 0;
+  padding: 9px 0 9px 12px;
+  border: 0;
+  border-left: 2px solid rgba(154, 64, 55, .42);
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-chronicle-slip,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-chronicle-slip,
+.game-dialog-map-drawer.map-info-material-city .map-info-chronicle-slip {
+  margin: 6px 0 0 7px;
+  padding: 8px 0 6px 12px;
+  border: 0;
+  border-left: 1px dashed rgba(67, 104, 104, .48);
+}
+
+.game-dialog-map-drawer.map-info-material-province .map-info-grand-totals,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-grand-totals,
+.game-dialog-map-drawer.map-info-material-city .map-info-grand-totals,
+.game-dialog-map-drawer.map-info-material-province .map-info-state-list,
+.game-dialog-map-drawer.map-info-material-commandery .map-info-state-list,
+.game-dialog-map-drawer.map-info-material-city .map-info-state-list {
+  background: transparent;
+}
+
+@media (max-width: 760px) {
+  .game-dialog-map-drawer.map-info-material-province .map-info-hero,
+  .game-dialog-map-drawer.map-info-material-commandery .map-info-hero,
+  .game-dialog-map-drawer.map-info-material-city .map-info-hero { padding-inline: 33px; }
+  .game-dialog-map-drawer.map-info-material-province .map-info-scroll,
+  .game-dialog-map-drawer.map-info-material-commandery .map-info-scroll,
+  .game-dialog-map-drawer.map-info-material-city .map-info-scroll { padding-inline: 30px; }
+}

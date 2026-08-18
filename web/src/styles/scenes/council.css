@@ -1,0 +1,146 @@
+/* 廷议：席位、议题、书吏录入三层仪式构图。 */
+.council-hall-stage { background: linear-gradient(rgba(247,242,231,.82),rgba(247,242,231,.82)), var(--revival-scene-council); background-position:center; background-size:cover; }.council-hall-inner { padding:18px; }.council-hall-inner > header { display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--ui-line); }.council-hall-inner .close-button { border:0; background:transparent; color:var(--ui-ink-soft); }.council-stage-layout { display:grid; grid-template-columns:156px minmax(0,1fr); gap:14px; margin-top:14px; }.council-attendance { padding:14px; background:rgba(79,112,117,.08); border-left:3px solid var(--ui-cyan); }.council-attendance small { color:var(--ui-cyan); font-size:var(--ui-note); letter-spacing:.14em; }.council-attendance span { display:block; padding:9px 0; color:var(--ui-ink); border-bottom:1px dashed var(--ui-line); font-size:13px; }.council-stage-layout main { display:grid; align-content:start; gap:14px; }.council-topic,.council-transcript { padding:16px; }.council-topic label { display:block; margin:13px 0 6px; color:var(--ui-ink-soft); font-size:var(--ui-note); }.council-topic textarea { width:100%; min-height:88px; padding:10px 12px; color:var(--ui-ink); background:rgba(255,252,244,.82); border:1px solid var(--ui-line-strong); resize:vertical; }.council-topic .action-seal { margin-top:10px; }.council-transcript { min-height:250px; }.council-transcript > .section-heading { margin-bottom:12px; }.council-error { display:flex; align-items:center; gap:8px; color:var(--ui-vermilion); }
+@media (max-width: 760px) { .council-stage-layout { grid-template-columns:1fr; }.council-attendance { display:flex; flex-wrap:wrap; gap:7px; }.council-attendance small { width:100%; }.council-attendance span { padding:4px 7px; border:1px dashed var(--ui-line); } }
+
+/* 选席页保持名录—议题—席位三栏，不再只是人物卡片清单。 */
+.minister-selection-layout { grid-template-columns: minmax(280px, 1fr) minmax(190px, .6fr) 230px; }
+.council-theme-preview { padding: 14px; background: rgba(247,242,231,.7); border-inline: 1px solid var(--ui-line); }
+.council-theme-preview h3 { margin: 8px 0; color: var(--ui-ink); font-size: var(--ui-heading); line-height: 1.55; }
+.council-theme-preview p { margin: 0; color: var(--ui-ink-soft); font-size: var(--ui-note); line-height: 1.7; }
+.council-theme-preview dl { display: grid; gap: 8px; margin: 18px 0 0; }.council-theme-preview dl div { padding-top: 8px; border-top: 1px dashed var(--ui-line); }.council-theme-preview dt { color: var(--ui-cyan); font-size: 11px; letter-spacing: .08em; }.council-theme-preview dd { margin: 3px 0 0; color: var(--ui-ink); font-size: var(--ui-note); }
+@media (max-width: 980px) { .minister-selection-layout { grid-template-columns: minmax(0,1fr) 210px; }.council-theme-preview { grid-column: 1 / -1; border: 0; border-block: 1px solid var(--ui-line); } }
+@media (max-width: 700px) { .minister-selection-layout { grid-template-columns: 1fr; }.council-seat-ledger { min-height: auto; } }
+
+/* 府堂召议：一张已展开的长卷，而不是卷轴背景上再压一座弹窗。 */
+.council-scroll-page {
+  width: 100%;
+  min-height: 100dvh;
+  color: #293338;
+  background: #211b15 url('/assets/ui/archive/council-convocation-scroll-v2.png') center / cover no-repeat;
+}
+
+.council-scroll-page .council-scroll-selection {
+  width: 100%;
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.council-scroll-page .council-scroll-inner {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(1320px, calc(100% - clamp(120px, 12vw, 236px)));
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: clamp(25px, 4vh, 48px) clamp(18px, 2.8vw, 44px) clamp(30px, 4vh, 52px);
+  background: transparent !important;
+}
+
+.council-scroll-page .council-summons-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 100px;
+  align-items: start;
+  min-height: 108px;
+  padding: 0 0 15px;
+  border-bottom: 1px solid rgba(105, 88, 65, .38);
+  text-align: center;
+}
+
+.council-scroll-page .council-summons-header > div { justify-self: center; }
+.council-scroll-page .council-summons-header small { display: block; color: #a14d43; font: 700 10px/1.2 "Songti SC", STSong, serif; letter-spacing: .35em; }
+.council-scroll-page .council-summons-header h1 { margin: 7px 0 0; color: #263238; font: 700 clamp(31px, 3vw, 48px)/1 "STKaiti", "Kaiti SC", serif; letter-spacing: .22em; }
+.council-scroll-page .council-summons-header h2 { margin: 8px 0 0; color: #77564c; font: 600 14px/1.1 "STKaiti", "Kaiti SC", serif; letter-spacing: .34em; }
+.council-scroll-page .council-summons-header p { margin: 8px 0 0; color: #687073; font: 12px/1.45 "Songti SC", STSong, serif; letter-spacing: .08em; }
+.council-scroll-page .council-summons-header p b { margin-left: 13px; color: #a14d43; font-weight: 700; letter-spacing: .14em; }
+
+.council-scroll-page .council-return {
+  align-self: center;
+  justify-self: start;
+  padding: 7px 10px;
+  border: 1px solid rgba(93, 112, 112, .36);
+  border-radius: 0;
+  color: #57747a;
+  background: rgba(250, 246, 231, .43);
+  font: 600 13px/1.1 "STKaiti", "Kaiti SC", serif;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+.council-scroll-page .council-return:hover { color: #8f453d; border-color: rgba(151, 71, 60, .55); background: rgba(249, 239, 217, .63); }
+.council-scroll-page .council-header-seal { display: grid; place-items: center; justify-self: end; width: 43px; height: 43px; margin: 6px 6px 0 0; border: 1px solid rgba(151, 71, 60, .66); border-radius: 50%; color: #a14d43; font: 700 22px/1 "STKaiti", "Kaiti SC", serif; transform: rotate(-8deg); opacity: .85; }
+
+.council-scroll-page .minister-selection-layout {
+  display: grid;
+  grid-template-columns: minmax(480px, 1.6fr) minmax(150px, .52fr) minmax(218px, .68fr);
+  gap: clamp(16px, 2.3vw, 40px);
+  min-height: 0;
+  padding: clamp(22px, 3.5vh, 42px) 0 16px;
+}
+.council-scroll-page .minister-roster { min-width: 0; }
+.council-scroll-page .council-roster-heading,
+.council-scroll-page .council-folio-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid rgba(105,88,65,.28); }
+.council-scroll-page .minister-layout-label { margin:0; color:#a14d43; font:700 11px/1 "Songti SC", STSong, serif; letter-spacing:.28em; }
+.council-scroll-page .council-roster-heading span,
+.council-scroll-page .council-folio-heading span { color:#7d817d; font:11px/1.3 "Songti SC", STSong, serif; letter-spacing:.04em; }
+
+.council-scroll-page .minister-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0; margin-top:10px; background:transparent; }
+.council-scroll-page .minister-grid > button { position:relative; display:flex; align-items:center; min-height:62px; padding:8px 13px 8px 5px; border:0 !important; border-bottom:1px solid rgba(105,88,65,.24) !important; border-radius:0 !important; color:#293338; background:transparent !important; box-shadow:none !important; text-align:left; cursor:pointer; }
+.council-scroll-page .minister-grid > button:nth-child(odd) { margin-right:22px; }
+.council-scroll-page .minister-grid > button:hover { background:linear-gradient(90deg, rgba(159, 75, 63, .08), transparent 76%) !important; }
+.council-scroll-page .minister-grid > button.selected { background:linear-gradient(90deg, rgba(159, 75, 63, .15), transparent 78%) !important; box-shadow: inset 3px 0 #a14d43 !important; }
+.council-scroll-page .minister-seal { display:grid; flex:0 0 auto; place-items:center; width:34px; height:34px; margin-right:11px; border:1px solid rgba(159,75,63,.62); border-radius:50%; color:#a14d43; font:700 18px/1 "STKaiti", "Kaiti SC", serif; }
+.council-scroll-page .minister-info { display:grid; gap:4px; min-width:0; }
+.council-scroll-page .minister-info strong { color:#293338; font:700 18px/1 "STKaiti", "Kaiti SC", serif; letter-spacing:.16em; }
+.council-scroll-page .minister-info small { overflow:hidden; color:#737979; font:11px/1.2 "Songti SC", STSong, serif; text-overflow:ellipsis; white-space:nowrap; }
+.council-scroll-page .check-mark { position:absolute; right:8px; top:50%; display:grid; place-items:center; width:28px; height:28px; border:1px solid rgba(159,75,63,.76); border-radius:50%; color:#a14d43; font:10px/1 "STKaiti", "Kaiti SC", serif; transform:translateY(-50%) rotate(-10deg); }
+
+.council-scroll-page .council-seat-ledger { min-height:0; padding:3px 15px 10px; border-left:1px solid rgba(105,88,65,.28); background:linear-gradient(180deg, rgba(79,112,117,.055), transparent 70%); }
+.council-scroll-page .council-seat-ledger ol { display:grid; gap:5px; margin:12px 0 0; padding:0; list-style:none; }
+.council-scroll-page .council-seat-ledger li { position:relative; padding:8px 0 7px 17px; border-bottom:1px dashed rgba(105,88,65,.28); }
+.council-scroll-page .council-seat-ledger li::before { content:"入"; position:absolute; left:0; top:9px; color:#a14d43; font:12px/1 "STKaiti", "Kaiti SC", serif; }
+.council-scroll-page .council-seat-ledger strong { display:block; color:#293338; font:700 15px/1 "STKaiti", "Kaiti SC", serif; letter-spacing:.14em; }
+.council-scroll-page .council-seat-ledger small,
+.council-scroll-page .council-seat-empty { color:#737979; font:11px/1.7 "Songti SC", STSong, serif; }
+.council-scroll-page .council-seat-empty { margin:21px 0 0; padding:0; }
+
+.council-scroll-page .council-topic-folio { position:relative; min-height:0; padding:3px 0 8px 20px; border-left:1px solid rgba(105,88,65,.28); background:transparent; }
+.council-scroll-page .council-topic-slips { display:grid; gap:7px; margin-top:13px; }
+.council-scroll-page .council-topic-slips button { position:relative; display:grid; grid-template-columns:26px 1fr 18px; align-items:center; min-height:46px; padding:6px 11px 6px 8px; border:1px solid rgba(115,94,66,.38); border-left:3px solid rgba(122,100,70,.63); border-radius:0; color:#374247; background:rgba(249,244,226,.24); box-shadow:none; text-align:left; cursor:pointer; }
+.council-scroll-page .council-topic-slips button:hover,
+.council-scroll-page .council-topic-slips button.selected { border-color:rgba(159,75,63,.74); border-left-color:#a14d43; background:linear-gradient(90deg, rgba(159,75,63,.10), rgba(249,244,226,.12)); }
+.council-scroll-page .council-topic-slips i { color:#7f8987; font:10px/1 "Songti SC", STSong, serif; font-style:normal; }
+.council-scroll-page .council-topic-slips strong { color:#293338; font:700 16px/1.05 "STKaiti", "Kaiti SC", serif; letter-spacing:.12em; }
+.council-scroll-page .council-topic-slips small { grid-column:2 / 3; margin-top:3px; color:#717a79; font:10px/1.15 "Songti SC", STSong, serif; }
+.council-scroll-page .council-topic-slips span { grid-column:3; grid-row:1 / span 2; color:#a14d43; font:13px/1 "STKaiti", "Kaiti SC", serif; }
+
+.council-scroll-page .minister-selection footer { display:flex; justify-content:flex-end; gap:12px; padding:13px 0 0; border-top:1px solid rgba(105,88,65,.33); background:transparent; }
+.council-scroll-page .minister-selection footer button { min-height:40px; padding:0 18px; border-radius:0; font:600 14px/1 "STKaiti", "Kaiti SC", serif; letter-spacing:.14em; cursor:pointer; }
+.council-scroll-page .minister-selection footer .secondary { border:1px solid rgba(90,111,113,.45); color:#57747a; background:rgba(250,246,231,.35); }
+.council-scroll-page .minister-selection footer .primary { position:relative; min-width:158px; border:1px solid #7d302c; color:#fff7e8; background:#9b4439; box-shadow:inset 0 0 0 2px rgba(255,230,192,.2), 0 2px 0 rgba(93,50,39,.38); }
+.council-scroll-page .minister-selection footer .primary::before { content:""; position:absolute; left:-18px; top:50%; width:15px; height:15px; border:2px solid #8b3f35; border-right:0; transform:translateY(-50%); }
+.council-scroll-page .minister-selection footer button:disabled { opacity:.38; cursor:not-allowed; }
+
+@media (max-width: 1080px) {
+  .council-scroll-page .council-scroll-inner { width:calc(100% - 104px); }
+  .council-scroll-page .minister-selection-layout { grid-template-columns:minmax(0,1.35fr) minmax(190px,.65fr); }
+  .council-scroll-page .council-seat-ledger { grid-column:1 / -1; display:grid; grid-template-columns:130px 1fr; gap:12px; border-top:1px solid rgba(105,88,65,.28); border-left:0; }
+  .council-scroll-page .council-seat-ledger ol { grid-template-columns:repeat(3, minmax(0,1fr)); margin:0; }
+}
+@media (max-width: 720px) {
+  .council-scroll-page { background-position:center; }
+  .council-scroll-page .council-scroll-inner { width:calc(100% - 48px); padding-inline:4px; }
+  .council-scroll-page .council-summons-header { grid-template-columns:1fr 40px; text-align:left; }
+  .council-scroll-page .council-summons-header > div { justify-self:start; }
+  .council-scroll-page .council-return { grid-column:1 / -1; grid-row:2; margin-top:12px; }
+  .council-scroll-page .council-summons-header h1 { font-size:31px; }
+  .council-scroll-page .minister-selection-layout { grid-template-columns:1fr; }
+  .council-scroll-page .minister-grid { grid-template-columns:1fr; }
+  .council-scroll-page .minister-grid > button:nth-child(odd) { margin-right:0; }
+  .council-scroll-page .council-seat-ledger { grid-template-columns:1fr; }
+  .council-scroll-page .council-seat-ledger ol { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .council-scroll-page .council-topic-folio { padding-left:0; border-left:0; }
+}

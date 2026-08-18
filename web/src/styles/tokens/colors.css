@@ -1,0 +1,136 @@
+/* ========================================
+   Design Tokens - Colors & Variables
+   统一两套 :root 系统
+   ======================================== */
+
+:root {
+  /* Base Typography */
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  color: #28231b;
+  background: #eef0eb;
+  font-synthesis: none;
+
+  /* Legacy Color Tokens (for backward compatibility) */
+  --ink: #263137;
+  --paper: #f3eddf;
+  --paper-deep: #dfd4bd;
+  --gold: #9b7a43;
+  --red: #9a4037;
+  --jade: #496d70;
+
+  /* RGB Components for rgba() usage */
+  --ink-seal-rgb: 138, 42, 32;
+  --ink-line-rgb: 60, 45, 25;
+  --ink-paper-rgb: 232, 220, 184;
+  --ink-paper-soft-rgb: 242, 232, 200;
+  --ink-dark-rgb: 26, 24, 18;
+  --ink-jade-rgb: 62, 107, 94;
+  --ink-gold-rgb: 185, 144, 77;
+  --ink-line-warm-rgb: 111, 86, 48;
+  --ink-paper-warm-rgb: 218, 202, 160;
+
+  /* Named Color Tokens */
+  --ink-bg: #1a1812;
+  --ink-paper: #e8dcb8;
+  --ink-paper-soft: #f2e8c8;
+  --ink-line: rgba(var(--ink-line-rgb), 0.28);
+  --ink-line-strong: rgba(var(--ink-line-rgb), 0.48);
+  --ink-seal: #8a2a20;
+  --ink-jade: #3e6b5e;
+  --ink-gold: #b9904d;
+  --ink-shadow: 0 10px 26px rgba(var(--ink-dark-rgb), 0.22);
+
+  /* Backdrop Tokens */
+  --ink-backdrop-blur: 8px;
+  --ink-backdrop-tint: rgba(var(--ink-dark-rgb), 0.55);
+
+  /* Frame & Texture URL Tokens */
+  --ink-frame-panel: url('/assets/ui/frame-panel-ink.webp');
+  --ink-frame-card: url('/assets/ui/frame-card-ink.webp');
+  --ink-frame-button: url('/assets/ui/frame-button-ink.webp');
+
+  /* Background Scene URLs */
+  --ink-bg-hall: url('/assets/ui/bg-hall.webp');
+  --ink-bg-secret: url('/assets/ui/bg-secret-chamber.webp');
+  --ink-bg-dock: url('/assets/ui/bg-dock-right.webp');
+  --ink-bg-menu-side: url('/assets/ui/bg-menu-side.webp');
+  --ink-bg-city: url('/assets/ui/bg-city.webp');
+  --ink-bg-province: url('/assets/ui/bg-province.webp');
+  --ink-bg-army: url('/assets/ui/bg-army.webp');
+  --ink-bg-character: url('/assets/ui/bg-character.webp');
+  --ink-bg-diplomacy: url('/assets/ui/bg-diplomacy.webp');
+  --ink-bg-strategy: url('/assets/ui/bg-strategy.webp');
+  --ink-bg-history: url('/assets/ui/bg-history.webp');
+  --ink-bg-family: url('/assets/ui/bg-family.webp');
+  --ink-bg-map: url('/assets/ui/bg-map.webp');
+  --ink-bg-review: url('/assets/ui/bg-review.webp');
+  --ink-bg-adjudication: url('/assets/ui/bg-adjudication.webp');
+  --ink-bg-adjudication-march: url('/assets/ui/bg-adjudication-march.webp');
+  --ink-bg-adjudication-naval: url('/assets/ui/bg-adjudication-naval.webp');
+  --ink-bg-adjudication-siege: url('/assets/ui/bg-adjudication-siege.webp');
+  --ink-bg-adjudication-camp: url('/assets/ui/bg-adjudication-camp.webp');
+  --ink-bg-adjudication-envoy: url('/assets/ui/bg-adjudication-envoy.webp');
+  --ink-bg-adjudication-disaster: url('/assets/ui/bg-adjudication-disaster.webp');
+  --ink-bg-event-urgent: url('/assets/ui/bg-event-urgent.webp');
+  --ink-bg-event-disaster: url('/assets/ui/bg-event-disaster.webp');
+  --ink-bg-event-harvest: url('/assets/ui/bg-event-harvest.webp');
+  --ink-bg-report: url('/assets/ui/bg-report.webp');
+
+  /* Texture URLs */
+  --ink-tex-paper: url('/assets/ui/texture-paper.webp');
+  --ink-tex-paper-revival: url('/assets/ui/texture-paper-revival.webp');
+  --revival-scene-council: url('/assets/ui/scene/council-hall-revival.webp');
+  --revival-scene-secret: url('/assets/ui/scene/secret-chamber-revival.webp');
+  --revival-scene-monthly: url('/assets/ui/scene/monthly-desk-revival.webp');
+  --revival-scene-map-dossier: url('/assets/ui/scene/map-dossier-revival.webp');
+  --archive-county-dossier: url('/assets/ui/bg-county-dossier-v2.png');
+  --archive-county-dossier-ink-wash: url('/assets/ui/bg-county-dossier-ink-wash-v1.png');
+  --archive-administrative-province-ledger-v1: url('/assets/ui/bg-administrative-province-ledger-v1.png');
+  --archive-administrative-commandery-ledger-v1: url('/assets/ui/bg-administrative-commandery-ledger-v1.png');
+  --archive-administrative-city-ledger-v1: url('/assets/ui/bg-administrative-city-ledger-v1.png');
+  --archive-administrative-province-ledger-v2: url('/assets/ui/bg-administrative-province-ledger-v2.png');
+  --archive-administrative-commandery-ledger-v2: url('/assets/ui/bg-administrative-commandery-ledger-v2.png');
+  --archive-administrative-city-ledger-v2: url('/assets/ui/bg-administrative-city-ledger-v2.png');
+  --archive-administrative-province-ledger-v3: url('/assets/ui/bg-administrative-province-ledger-v3.png');
+  --archive-administrative-commandery-ledger-v3: url('/assets/ui/bg-administrative-commandery-ledger-v3.png');
+  --archive-administrative-city-ledger-v3: url('/assets/ui/bg-administrative-city-ledger-v3.png');
+  --archive-scene-council-record-v2: url('/assets/ui/archive/council-record-v2.png');
+  --archive-scene-secret-letter-v2: url('/assets/ui/archive/secret-letter-v2.png');
+  --archive-scene-directive-ledger-v2: url('/assets/ui/archive/directive-ledger-v2.png');
+  --archive-scene-decree-review-v2: url('/assets/ui/archive/decree-review-v2.png');
+  --archive-scene-adjudication-record-v2: url('/assets/ui/archive/adjudication-record-v2.png');
+  --archive-scene-city-ledger-v2: url('/assets/ui/archive/city-ledger-v2.png');
+  --archive-scene-character-biography-v2: url('/assets/ui/archive/character-biography-v2.png');
+  --archive-scene-army-register-v2: url('/assets/ui/archive/army-register-v2.png');
+  --archive-scene-army-headquarters-overview-v1: url('/assets/ui/archive/army-headquarters-overview-v1.png');
+  --archive-army-hub-scroll-v1: url('/assets/ui/military-hub/hub-scroll-v1.png');
+  --archive-army-roster-scroll-v1: url('/assets/ui/military-hub/roster-scroll-v1.png');
+  --archive-army-theater-map-v1: url('/assets/ui/military-hub/theater-map-v1.png');
+  --archive-army-command-still-life-v1: url('/assets/ui/military-hub/command-still-life-v1.png');
+  --archive-scene-diplomacy-correspondence-v2: url('/assets/ui/archive/diplomacy-correspondence-v2.png');
+  --archive-scene-event-memorial-v2: url('/assets/ui/archive/event-memorial-v2.png');
+  --archive-scene-situation-desk-v2: url('/assets/ui/archive/situation-desk-v2.png');
+  --archive-scene-monthly-chronicle-v2: url('/assets/ui/archive/monthly-chronicle-v2.png');
+  --archive-scene-history-book-v2: url('/assets/ui/archive/history-book-v2.png');
+  --archive-prop-menu-paper-slip-v2: url('/assets/ui/archive/menu-paper-slip-v2.png');
+  --revival-emblem-strategy-drafting: url('/assets/ui/strategy-drafting-emblem-v1.png');
+  --revival-scene-directive: url('/assets/ui/scene/directive-desk-revival.webp');
+  --revival-frame-atlas: url('/assets/ui/frame/frame-atlas-revival.webp');
+  --revival-command-prop-atlas: url('/assets/ui/prop/command-prop-atlas-revival.webp');
+  --revival-seal-action: url('/assets/ui/seal/slices/action.webp');
+  --revival-seal-confirmed: url('/assets/ui/seal/slices/confirmed.webp');
+  --revival-seal-danger: url('/assets/ui/seal/slices/danger.webp');
+  --revival-seal-month-end: url('/assets/ui/seal/slices/month-end.webp');
+  --revival-seal-military-order: url('/assets/ui/seal/slices/military-order.webp');
+  --revival-icon-people: url('/assets/ui/icon/slices/people.webp');
+  --revival-icon-legitimacy: url('/assets/ui/icon/slices/legitimacy.webp');
+  --revival-icon-morale: url('/assets/ui/icon/slices/morale.webp');
+  --revival-icon-grain: url('/assets/ui/icon/slices/grain.webp');
+  --revival-icon-wealth: url('/assets/ui/icon/slices/wealth.webp');
+  --revival-icon-intel: url('/assets/ui/icon/slices/intel.webp');
+  --revival-icon-relation: url('/assets/ui/icon/slices/relation.webp');
+  --revival-icon-risk: url('/assets/ui/icon/slices/risk.webp');
+  --revival-icon-pending: url('/assets/ui/icon/slices/pending.webp');
+  --ink-tex-wash: url('/assets/ui/texture-ink-wash.webp');
+  --ink-divider: url('/assets/ui/divider-ink.webp');
+}

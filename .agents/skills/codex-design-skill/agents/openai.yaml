@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Design"
+  short_description: "Build distinctive, production-ready UI in code"
+  default_prompt: "Use $codex-design-skill to plan and implement this interface with a strong visual direction."

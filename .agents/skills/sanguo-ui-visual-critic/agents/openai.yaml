@@ -1,0 +1,4 @@
+interface:
+  display_name: "SANGUO UI Visual Critic"
+  short_description: "Audit completed SANGUO UI against commercial game visual quality"
+  default_prompt: "Use $sanguo-ui-visual-critic to audit this completed SANGUO UI."

@@ -1,0 +1,4 @@
+/* 主菜单沿用天下舆图，菜单仅作为低存在感的题签。 */
+.menu-screen { min-height: 100vh; color: var(--ui-ink); background: #dce0da url('/底图_expanded.jpg?v=20260720-rect-crop-outpaint') center / cover no-repeat; }
+.ink-side-menu, .menu-settings-panel { background: rgba(247, 242, 231, .86); border-color: var(--ui-line-strong); box-shadow: var(--ui-shadow); }
+.ink-side-menu button { border-radius: 0; }

@@ -1,0 +1,555 @@
+/* SituationHub - 本月局势与行动枢纽 */
+
+.situation-hub-root {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 主体区域：左局势 + 右方略簿 */
+.situation-hub-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 0;
+  min-height: 0;
+  padding: 12px 16px 0;
+  overflow: hidden;
+}
+
+/* 左侧局势主区 */
+.situation-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 16px;
+  padding-bottom: 12px;
+}
+
+.situation-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.situation-header h2 {
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: var(--ink-seal, #8a2a20);
+  margin: 0;
+}
+
+.situation-date {
+  font-size: 13px;
+  color: var(--ink, #5f503a);
+  letter-spacing: 0.08em;
+}
+
+/* 局势概览卡片 */
+.situation-overview {
+  display: grid;
+  gap: 10px;
+}
+
+.overview-card {
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(var(--ink-paper-soft-rgb, 242, 232, 200), 0.6), rgba(200, 183, 142, 0.4));
+  border: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), 0.35);
+  border-radius: 2px;
+}
+
+.overview-card h3 {
+  font-size: 15px;
+  color: #5d281f;
+  margin: 0 0 6px;
+}
+
+.overview-card p {
+  font-size: 13px;
+  color: #5f503a;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.overview-hint {
+  font-size: 12px !important;
+  color: #8a7b60 !important;
+  font-style: italic;
+}
+
+/* 行动入口网格 */
+.situation-actions h3 {
+  font-size: 15px;
+  color: #5d281f;
+  margin: 0 0 8px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(var(--ink-paper-soft-rgb, 242, 232, 200), 0.7), rgba(200, 183, 142, 0.5));
+  border: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), 0.4);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #30291f;
+}
+
+.action-btn:hover {
+  background: linear-gradient(180deg, rgba(var(--ink-paper-soft-rgb, 242, 232, 200), 0.9), rgba(200, 183, 142, 0.7));
+  border-color: var(--ink-seal, #8a2a20);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn svg {
+  width: 20px;
+  height: 20px;
+  color: var(--ink-seal, #8a2a20);
+}
+
+.action-btn span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.action-btn small {
+  font-size: 11px;
+  color: #8a7b60;
+}
+
+.primary-action {
+  background: linear-gradient(180deg, #6f3d2c, #51261f) !important;
+  border-color: var(--ink-gold, #b9904d) !important;
+  color: #f4e5c5 !important;
+}
+
+.primary-action svg {
+  color: var(--ink-gold, #b9904d) !important;
+}
+
+.primary-action small {
+  color: #d4c4a0 !important;
+}
+
+/* 右侧固定方略簿 */
+.situation-book {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(var(--ink-paper-soft-rgb, 242, 232, 200), 0.55), rgba(200, 183, 142, 0.35));
+  border-left: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), 0.3);
+  overflow: hidden;
+}
+
+.book-header {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), 0.25);
+}
+
+.book-header h2 {
+  font-size: 15px;
+  color: var(--ink-seal, #8a2a20);
+  margin: 0 0 4px;
+  letter-spacing: 0.08em;
+}
+
+.book-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.book-stats .stat {
+  font-size: 12px;
+  color: #6d5a3a;
+}
+
+.stat-warn {
+  color: #c0392b !important;
+}
+
+.book-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+}
+
+.book-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: #8a7b60;
+}
+
+.book-empty p {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.book-empty .hint {
+  font-size: 11px;
+  color: #a89a7a;
+  margin-top: 8px;
+}
+
+.book-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.book-item {
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), 0.3);
+  border-radius: 2px;
+  background: rgba(var(--ink-paper-soft-rgb, 242, 232, 200), 0.4);
+}
+
+.book-item-invalid {
+  border-color: rgba(192, 57, 43, 0.4);
+}
+
+.book-item-issued {
+  border-color: rgba(var(--ink-gold-rgb, 185, 144, 77), 0.5);
+  background: rgba(var(--ink-gold-rgb, 185, 144, 77), 0.1);
+}
+
+.book-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.book-type {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.05em;
+}
+
+.book-type-internal { background: #e8dcc0; color: #5d6b3a; }
+.book-type-military { background: #e0ccc0; color: #7b3528; }
+.book-type-diplomatic { background: #c8d8d0; color: #3e6b5e; }
+.book-type-other { background: #ddd8c8; color: #6d5a3a; }
+.book-type-secret { background: #2b1f18; color: #d4b779; }
+
+.book-status {
+  font-size: 11px;
+}
+
+.book-status-draft { color: #8a7b60; }
+.book-status-validated { color: #3e6b5e; }
+.book-status-invalid { color: #c0392b; }
+.book-status-issued { color: var(--ink-gold, #b9904d); }
+
+.book-item strong {
+  display: block;
+  font-size: 13px;
+  color: #2d2318;
+  margin-bottom: 2px;
+}
+
+.book-item-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #8a7b60;
+}
+
+.book-footer {
+  padding: 10px 14px;
+  border-top: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), 0.25);
+}
+
+.book-footer .seal-button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* 核心闭环重构：主卷只承载本月待议，其他事实进入编年列。 */
+.situation-hub-rebuild { grid-template-columns: minmax(0, 760px) 296px; justify-content: center; gap: 18px; padding: 18px 28px 0; }
+.situation-hub-root > .metric-bar { position: relative; inset: auto; z-index: 4; flex: 0 0 auto; width: 100%; height: 72px; }
+.situation-hub-rebuild .situation-main { gap: 16px; padding-right: 0; }.situation-hub-rebuild .situation-header { align-items: center; padding: 2px 2px 12px; border-bottom: 1px solid var(--ui-line); }.situation-header small { color: var(--ui-vermilion); font-size: var(--ui-note); letter-spacing: .16em; }.situation-hub-rebuild .situation-header h2 { margin: 3px 0; color: var(--ui-ink); font-size: var(--ui-title); letter-spacing: .16em; }.situation-hub-rebuild .situation-date { color: var(--ui-ink-soft); }
+.monthly-agenda, .situation-reputation, .chronicle-panel, .faction-panel, .situation-hub-rebuild .situation-book { padding: 16px; }.agenda-list { display: grid; gap: 1px; margin-top: 13px; background: var(--ui-line); }.agenda-item { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 13px; background: rgba(247,242,231,.82); }.agenda-primary { border-left: 3px solid var(--ui-vermilion); }.agenda-item h3 { margin: 0; color: var(--ui-ink); font-size: var(--ui-heading); }.agenda-item p { margin: 5px 0 0; color: var(--ui-ink-soft); font-size: var(--ui-body); line-height: 1.55; }.agenda-item .action-seal { white-space: nowrap; }
+.situation-reputation p { margin: 13px 0 0; color: var(--ui-ink); line-height: 1.65; }.situation-reputation .action-seal { margin-top: 12px; }.situation-actions { padding-bottom: 12px; }.situation-actions .section-heading { margin-bottom: 10px; }.situation-hub-rebuild .action-grid { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1px; }.situation-hub-rebuild .action-btn { min-height: 108px; padding: 14px; background: rgba(247,242,231,.85); border: 0; border-radius: 0; color: var(--ui-ink); }.situation-hub-rebuild .action-btn.primary-action { background: var(--ui-vermilion) !important; }.situation-hub-rebuild .action-btn svg { color: var(--ui-cyan); }
+.situation-side-chronicle { display: grid; align-content: start; gap: 14px; overflow: auto; padding-bottom: 12px; }.chronicle-panel ol { display: grid; gap: 0; margin: 12px 0 0; padding: 0; list-style: none; }.chronicle-panel li { display: grid; gap: 5px; padding: 11px 0; border-bottom: 1px dashed var(--ui-line); }.chronicle-panel li:last-child { border-bottom: 0; }.chronicle-panel li strong { color: var(--ui-ink); font-size: var(--ui-body); }.chronicle-panel li p, .faction-panel p, .situation-hub-rebuild .situation-book p { margin: 0; color: var(--ui-ink-soft); font-size: var(--ui-note); line-height: 1.6; }.situation-hub-rebuild .situation-book { background: rgba(239,232,217,.72); border: 1px solid var(--ui-line); border-top: 3px solid var(--ui-vermilion); box-shadow: none; }.situation-hub-rebuild .situation-book .action-seal { width: 100%; justify-content: center; margin-top: 10px; }
+@media (max-width: 1100px) { .situation-hub-rebuild { grid-template-columns: minmax(0,1fr) 260px; padding-inline: 16px; }.situation-hub-rebuild .action-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 900px) { .situation-hub-rebuild { grid-template-columns: 1fr; overflow: auto; padding: 14px 14px 64px; }.situation-side-chronicle { grid-template-columns: repeat(2,minmax(0,1fr)); overflow: visible; }.situation-hub-rebuild .situation-book { grid-column: span 2; }.situation-hub-root { overflow: auto; }.situation-main { overflow: visible; } }
+@media (max-width: 580px) { .agenda-item { grid-template-columns: 1fr; }.agenda-item .action-seal { justify-self: start; }.situation-side-chronicle { grid-template-columns: 1fr; }.situation-hub-rebuild .situation-book { grid-column: auto; }.situation-hub-rebuild .action-grid { grid-template-columns: 1fr; } }
+
+/* 天下推演录：世界结果的单张横向分析卷，不承担行动与草案入口。
+ * 主体使用 AI 绘制的府堂长卷与五段水墨推演图带，文字仅落在素材的留白处。 */
+.persistent-world-stage:has(.world-analysis-root) .persistent-world-map { visibility:hidden; }
+.persistent-world-content:has(.world-analysis-root) { pointer-events:auto; }
+.world-analysis-root { position:fixed; inset:0; z-index:12; width:100vw; height:100vh; display:grid; place-items:stretch; overflow:hidden; pointer-events:auto; background:#d9d0bd; }
+.world-analysis-root .metric-bar { position:relative; z-index:2; }
+.world-analysis-ledger { position:relative; width:100%; min-height:100%; margin:0; padding:7.1vh 10.3vw 6.2vh; overflow:auto; color:var(--ui-ink); background:url('/assets/ui/scene/world-analysis-ledger-hall-v1.png') center/cover no-repeat; border:0; box-shadow:none; }
+.world-analysis-ledger::before { content:""; position:absolute; inset:2.2vh 4vw 2.6vh; border:1px solid rgba(81,79,67,.2); box-shadow:inset 0 0 36px rgba(118,107,83,.04); pointer-events:none; }
+.world-analysis-ledger::after { content:""; display:none; }
+.world-analysis-ledger > * { position:relative; z-index:1; }
+.world-ledger-title { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; min-height:96px; padding:2px 18px 18px; border-bottom:1px solid rgba(93,92,81,.35); }
+.world-ledger-date { align-self:start; margin-top:9px; color:rgba(231,224,202,.76); font-size:13px; line-height:1.75; letter-spacing:.1em; text-shadow:0 1px 2px rgba(22,18,13,.7); }
+.world-ledger-title h1 { margin:0; color:#1e2a2d; font-family:"STKaiti","Kaiti SC",serif; font-size:clamp(42px,4.35vw,66px); font-weight:700; letter-spacing:.24em; text-shadow:0 1px 0 rgba(255,255,255,.68), 0 2px 8px rgba(31,30,26,.15); white-space:nowrap; }
+.world-ledger-close { justify-self:end; align-self:start; min-width:96px; min-height:32px; margin-top:4px; padding:7px 11px 6px; border:1px solid rgba(105,67,43,.54); border-radius:0; background:linear-gradient(90deg, rgba(244,235,210,.78), rgba(226,211,177,.7)); color:#6d3528; box-shadow:inset 0 0 0 2px rgba(255,249,229,.34), 0 2px 5px rgba(22,18,13,.2); font-family:"STKaiti","Kaiti SC",serif; font-size:13px; letter-spacing:.12em; cursor:pointer; }
+.world-ledger-close i { margin-right:4px; font-style:normal; font-family:serif; }.world-ledger-close:hover { color:#8b3025; background:#f3e7c9; }
+.world-ledger-conclusion { display:grid; grid-template-columns:290px minmax(0,1fr); gap:24px; padding:27px 18px 23px; border-bottom:1px solid rgba(93,92,81,.28); background:linear-gradient(90deg, rgba(239,243,238,.2), transparent 63%); }
+.world-ledger-conclusion small, .world-ledger-events header small, .world-ledger-fronts header small, .world-ledger-marks header small { display:block; color:#a14435; font-size:12px; font-weight:700; letter-spacing:.18em; }
+.world-ledger-conclusion small::before, .world-ledger-events header small::before, .world-ledger-fronts header small::before, .world-ledger-marks header small::before { content:"— "; color:#ae5541; }
+.world-ledger-conclusion h2 { margin:9px 0 0; color:#243033; font-family:"STKaiti","Kaiti SC",serif; font-size:25px; line-height:1.38; letter-spacing:.1em; white-space:nowrap; }
+.world-ledger-conclusion p { max-width:820px; margin:4px 0 0; color:#273235; font-family:"STKaiti","Kaiti SC",serif; font-size:19px; font-weight:600; line-height:1.82; letter-spacing:.04em; text-shadow:0 1px rgba(255,255,255,.38); }
+.world-ledger-mainline { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:0; border-bottom:1px solid rgba(93,92,81,.3); }
+.world-ledger-events { padding:24px 28px 22px 18px; }
+.world-ledger-events header, .world-ledger-fronts header { display:flex; align-items:baseline; gap:17px; margin-bottom:20px; }
+.world-ledger-events header p, .world-ledger-fronts header p { margin:0; color:#65706c; font-size:13px; letter-spacing:.04em; }
+.world-ledger-events ol { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:0; margin:0; padding:144px 0 0; list-style:none; background:url('/assets/ui/scene/world-analysis-timeline-v1.png') center top/100% auto no-repeat; }
+.world-ledger-events li { position:relative; min-height:192px; padding:40px 16px 8px 0; border-right:1px solid rgba(93,92,81,.22); }
+.world-ledger-events li:last-child { border-right:0; padding-right:0; }
+.world-ledger-events li::before { content:""; position:absolute; top:20px; left:0; right:0; height:1px; background:rgba(129,64,44,.44); }
+.world-ledger-events li:last-child::before { right:50%; }
+.ledger-turn { position:absolute; z-index:1; top:4px; left:0; display:grid; place-items:center; width:34px; height:34px; border:1px solid #a64e3b; border-radius:50%; color:#984330; background:rgba(248,243,230,.82); box-shadow:0 0 0 4px rgba(248,243,230,.45); font-size:10px; }
+.ledger-turn i { display:none; }
+.world-ledger-events strong { display:block; color:#263235; font-family:"STKaiti","Kaiti SC",serif; font-size:20px; letter-spacing:.08em; }
+.world-ledger-events li p { margin:9px 0; color:#374143; font-size:14px; line-height:1.78; }
+.world-ledger-events li small { display:block; color:#6c756f; font-size:11px; line-height:1.55; }
+.world-ledger-events li em { position:absolute; right:10px; bottom:4px; color:var(--ui-vermilion); font-style:normal; font-size:10px; letter-spacing:.08em; }
+.world-ledger-marks { margin:25px 0 20px; padding:16px 0 16px 24px; border-left:1px solid rgba(93,92,81,.3); background:linear-gradient(90deg, rgba(235,230,215,.23), transparent); }
+.world-ledger-marks header { display:block; padding:0 12px 15px 0; border-bottom:1px solid rgba(93,92,81,.3); }
+.world-ledger-marks h2 { margin:7px 0 0; color:#263235; font-family:"STKaiti","Kaiti SC",serif; font-size:24px; letter-spacing:.13em; }
+.world-ledger-marks section { display:grid; grid-template-columns:72px 1fr; gap:11px; padding:15px 10px 15px 0; border-bottom:1px solid rgba(93,92,81,.22); }
+.world-ledger-marks b { display:grid; place-items:center; width:62px; height:62px; border:1px solid currentColor; border-radius:50%; color:#a34636; background:rgba(249,244,226,.36); box-shadow:inset 0 0 0 3px rgba(163,70,54,.1); font-family:"STKaiti","Kaiti SC",serif; font-size:16px; line-height:1.2; text-align:center; transform:rotate(-5deg); }
+.world-ledger-marks .mark-assessment b { color:#46646a; transform:rotate(4deg); }.world-ledger-marks .mark-rumor b { color:#6c665b; transform:rotate(-3deg); }
+.world-ledger-marks p { margin:0; color:#59615f; font-size:12px; line-height:1.78; }
+.world-ledger-fronts { padding:24px 18px 0; }
+.world-ledger-fronts > div { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; }
+.world-ledger-fronts article { min-height:155px; padding:12px 16px 10px 0; border-right:1px solid rgba(93,92,81,.23); }.world-ledger-fronts article:not(:first-child) { padding-left:16px; }.world-ledger-fronts article:last-child { border-right:0; }
+.world-ledger-fronts h3 { margin:0; color:#283235; font-family:"STKaiti","Kaiti SC",serif; font-size:19px; letter-spacing:.08em; }.world-ledger-fronts p { margin:10px 0; color:#58625f; font-size:13px; line-height:1.7; }.world-ledger-fronts article small { color:#a14435; font-size:11px; }.world-ledger-empty { min-height:266px; margin:0; display:block; padding:0; color:transparent; user-select:none; background:url('/assets/ui/scene/world-analysis-timeline-v1.png') center top/100% auto no-repeat; }
+@media (max-width:1100px) { .world-analysis-ledger { padding:58px 8vw 42px; }.world-ledger-events ol, .world-ledger-fronts > div { grid-template-columns:repeat(3,minmax(0,1fr)); }.world-ledger-events li:nth-child(3) { border-right:0; }.world-ledger-events li:nth-child(n+4) { margin-top:12px; }.world-ledger-fronts article:nth-child(3) { border-right:0; } }
+@media (max-width:760px) { .world-analysis-root { overflow:auto; }.world-analysis-ledger { min-height:0; margin:8px auto 24px; }.world-ledger-title, .world-ledger-conclusion, .world-ledger-mainline { grid-template-columns:1fr; }.world-ledger-title h1 { grid-row:1; }.world-ledger-date { display:none; }.world-ledger-title > span { position:absolute; right:0; top:18px; }.world-ledger-mainline { gap:0; }.world-ledger-marks { border-left:0; border-top:1px solid rgba(93,92,81,.3); padding-left:0; }.world-ledger-events ol, .world-ledger-fronts > div { grid-template-columns:1fr; }.world-ledger-events li, .world-ledger-fronts article { min-height:0; border-right:0; border-bottom:1px solid rgba(93,92,81,.2); }.world-ledger-events li::before { display:none; }.world-ledger-events li { padding-top:10px; padding-left:44px; }.ledger-turn { top:8px; }.world-ledger-fronts article:not(:first-child) { padding-left:0; }.world-ledger-fronts article:last-child { border-bottom:0; } }
+
+.book-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 底部导航 */
+.situation-dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: linear-gradient(180deg, rgba(30, 24, 16, 0.85), rgba(20, 16, 10, 0.95));
+  border-top: 1px solid rgba(var(--ink-gold-rgb, 185, 144, 77), 0.25);
+}
+
+.situation-dock button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #c4b48a;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.situation-dock button:hover {
+  background: rgba(var(--ink-gold-rgb, 185, 144, 77), 0.15);
+  border-color: rgba(var(--ink-gold-rgb, 185, 144, 77), 0.3);
+  color: #f4e5c5;
+}
+
+.situation-dock button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.situation-dock button span {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* 月报浮标 */
+.situation-hub-root .monthly-report-chip {
+  position: fixed;
+  z-index: 24;
+  right: 340px;
+  top: 128px;
+  left: auto;
+  display: grid;
+  gap: 2px;
+  max-width: 280px;
+  padding: 10px 13px;
+  text-align: left;
+  background: linear-gradient(#eadfbe, #cdb98d);
+  border: 1px solid #8c6a3d;
+  border-radius: 2px;
+  color: #30291f;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.situation-hub-root .monthly-report-chip span {
+  font-size: 12px;
+  color: #755533;
+  letter-spacing: 0.18em;
+}
+
+.situation-hub-root .monthly-report-chip strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 月报面板覆盖 */
+.monthly-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.monthly-report-dock {
+  width: min(600px, 90vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(#e6d8b8, #cbb88f);
+  border: 1px solid #9a7644;
+  border-radius: 3px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.monthly-report-dock > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #4e2018, #7b3528 52%, #2b130e);
+  border-bottom: 1px solid #b68b4d;
+  color: #f4dfae;
+}
+
+.monthly-report-dock > header span {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+}
+
+.monthly-report-dock > header button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #b68b4d;
+  background: #15100b;
+  color: #ead7a6;
+  cursor: pointer;
+}
+
+.report-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.report-body p {
+  font-size: 13px;
+  color: #5f503a;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.report-body button {
+  padding: 8px 16px;
+  border: 1px solid #7b3528;
+  background: #6f3328;
+  color: #f4e5c5;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* 响应式 */
+@media (max-width: 1100px) {
+  .situation-hub-body {
+    grid-template-columns: 1fr;
+  }
+
+  .situation-book {
+    display: flex;
+    position: fixed;
+    z-index: 45;
+    left: 12px;
+    right: 12px;
+    bottom: 54px;
+    height: 146px;
+    border: 1px solid rgba(var(--ink-line-rgb, 160, 130, 80), .45);
+    box-shadow: var(--ink-shadow);
+  }
+
+  .situation-book .book-list { display: none; }
+  .situation-book .book-header { padding: 9px 12px; }
+  .situation-book .book-footer { padding: 8px 12px; }
+  .situation-main { padding-bottom: 164px; }
+
+  .situation-hub-root .monthly-report-chip {
+    right: 20px;
+  }
+}
+
+.display-settings { position: fixed; z-index: 70; inset: auto 18px 18px auto; width: min(390px, calc(100vw - 36px)); padding: 18px; background: var(--ink-paper); border: 1px solid var(--ink-line-strong); box-shadow: var(--ink-shadow); }
+.display-settings header { display: flex; align-items: center; justify-content: space-between; }
+.display-settings h2 { margin: 0; color: var(--ink-seal); }
+.display-settings p { font-size: 13px; line-height: 1.5; }
+.display-settings label { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin: 10px 0; font-size: 14px; }
+.display-settings select { min-width: 105px; }
+.display-settings .settings-check { justify-content: flex-start; }
+.directive-guidance { margin: 16px 0; padding: 14px; border: 1px solid var(--ink-line); background: rgba(var(--ink-paper-soft-rgb), .42); }
+.directive-guidance h2 { margin: 0 0 6px; font-size: 17px; color: var(--ink-seal); }
+.directive-guidance p, .directive-guidance details { font-size: 13px; line-height: 1.55; }
+.template-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+:root[data-font-scale="small"] { font-size: 14px; }
+:root[data-font-scale="large"] { font-size: 18px; }
+:root[data-motion="reduced"] *, :root[data-motion="reduced"] *::before, :root[data-motion="reduced"] *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+:root[data-motion="none"] *, :root[data-motion="none"] *::before, :root[data-motion="none"] *::after { animation: none !important; transition: none !important; }
+:root[data-background-strength="low"] .scene-background { opacity: .35; }
+:root[data-background-strength="strong"] .scene-content { background: rgba(var(--ink-paper-rgb), .82) !important; }
+:root[data-performance="low"] .scene-content, :root[data-performance="low"] .panel-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+@media (max-width: 700px) {
+  .action-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .situation-dock {
+    gap: 2px;
+    padding: 4px 8px;
+  }
+
+  .situation-dock button {
+    padding: 4px 8px;
+  }
+
+  .situation-dock button span {
+    font-size: 10px;
+  }
+}

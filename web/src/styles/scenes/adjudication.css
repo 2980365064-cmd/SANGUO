@@ -1,0 +1,13 @@
+/* 推演记录采用编年条目，而非仪表盘式结果面板。 */
+.adjudication-flow { width: min(920px, calc(100vw - 72px)); margin: 18px auto; padding: 22px; color: var(--ui-ink); background-image: linear-gradient(rgba(247,242,231,.20) 0%, rgba(247,242,231,.86) 6%, rgba(247,242,231,.88) 94%, rgba(247,242,231,.25) 100%), var(--ink-bg-adjudication); background-size: cover; background-position: center; border: 1px solid var(--ui-line-strong); box-shadow: var(--ui-shadow); }
+.adjudication-flow header, .execution-log { margin-bottom: 20px; }
+.executing-indicator { color: var(--ui-cyan); font-weight: 700; animation: ink-pulse 1.5s infinite; }
+.error-message { margin-bottom: 20px; padding: 10px; color: var(--ui-vermilion); background: rgba(154, 64, 55, .08); border-left: 3px solid var(--ui-vermilion); }
+.event-list { max-height: 500px; overflow-y: auto; padding: 10px; border: 1px solid var(--ui-line); }
+.event-item { margin-bottom: 8px; padding: 10px; border-left: 3px solid var(--ui-cyan); }
+.event-header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; font-size: .9em; }.event-type { font-weight: 700; }.event-phase, .event-draft, .option-description { color: var(--ui-ink-soft); }.event-message { color: var(--ui-ink); }
+.decision-dialog { margin-bottom: 20px; padding: 20px; background: rgba(157, 109, 44, .08); border-left: 3px solid var(--ui-warning); }
+.decision-options { display: grid; gap: 10px; margin-top: 15px; }.decision-option { padding: 10px; text-align: left; color: var(--ui-ink); background: rgba(255, 252, 244, .8); border: 1px solid var(--ui-line); }.decision-option:hover { border-color: var(--ui-cyan); }.option-description { display: block; margin-top: 5px; font-size: .9em; }
+.execution-actions { display: flex; gap: 10px; }
+@keyframes ink-pulse { 50% { opacity: .45; } }
+@media (max-width: 900px) { .review-decree, .adjudication-flow { width: calc(100vw - 28px); margin: 14px auto; padding: 16px; } }

@@ -1,0 +1,8 @@
+/* 通用浮层：内容由 GameDialog/PanelRoot 提供，皮肤只在此定义。 */
+.modal-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(38, 49, 55, .34); backdrop-filter: blur(3px); }
+.dialogue-modal, .api-config-modal, .display-settings {
+  position: fixed; z-index: 81; left: 50%; top: 50%; width: min(620px, calc(100vw - 40px));
+  max-height: min(760px, calc(100vh - 40px)); transform: translate(-50%, -50%); overflow: auto;
+  background: var(--ui-paper) var(--ink-tex-paper-revival) center / cover;
+  border: 1px solid var(--ui-line-strong); border-top: 4px solid var(--ui-vermilion); box-shadow: 0 24px 72px rgba(25, 33, 34, .32);
+}

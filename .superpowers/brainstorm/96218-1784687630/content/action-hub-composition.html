@@ -1,0 +1,21 @@
+<h2>A 方案继续细化：草案放在哪里？</h2>
+<p class="subtitle">目标是让玩家始终看见“本月要解决什么”，又随时知道自己准备颁布什么，避免在多个面板间来回迷路。</p>
+
+<div class="cards">
+  <div class="card" data-choice="side-ledger" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">地图态势背景 · 建安十三年八月</div><div class="mockup-body" style="display:grid;grid-template-columns:1.7fr .8fr;min-height:300px"><div style="padding:12px"><span class="label">本月局势</span><h3>曹军南下，江东犹疑</h3><div style="border:1px solid #bba77c;padding:8px;margin:8px 0"><b>紧急 · 江夏粮道告急</b><p>粮秣仅可支撑一月。可询问赵云、糜竺，或拟定调粮方案。</p><button class="mock-button">问策</button><button class="mock-button">拟入草案</button></div><div style="border:1px solid #bba77c;padding:8px"><b>机遇 · 孙权使者至</b><p>鲁肃愿议共抗曹操。</p></div></div><div style="border-left:2px solid #8a2a20;padding:12px;background:#f1e7cf"><span class="label">本月军府方略</span><h3>草案 3</h3><p>外交 · 联孙抗曹</p><p>军事 · 整备水军</p><p>内政 · 安抚江夏</p><hr/><button class="mock-button">审阅与颁令</button><small>校验状态：可颁</small></div></div></div></div>
+    <div class="card-body"><h3>A1 · 固定侧边“本月方略簿”</h3><p>推荐。局势卡在主区，草案始终可见；点击后才进入完整编辑器。适合桌面端，也最利于形成“问策→入簿→颁令”的习惯。</p></div>
+  </div>
+
+  <div class="card" data-choice="bottom-tray" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">地图态势背景 · 建安十三年八月</div><div class="mockup-body" style="min-height:300px;padding:12px"><span class="label">本月局势</span><h3>曹军南下，江东犹疑</h3><div style="border:1px solid #bba77c;padding:10px;margin:10px 0"><b>紧急 · 江夏粮道告急</b><p>问策、密谈、拟入草案</p></div><div style="position:relative;margin-top:70px;border-top:2px solid #8a2a20;padding:10px;background:#f1e7cf"><b>本月方略簿 · 3 条草案</b><span style="float:right">展开审阅与颁令</span><p>外交 / 军事 / 内政</p></div></div></div></div>
+    <div class="card-body"><h3>A2 · 底部抽屉式方略簿</h3><p>为地图留出最大空间，但草案的优先级较弱，展开后也会与月报、时间线争夺底部区域。</p></div>
+  </div>
+
+  <div class="card" data-choice="on-demand" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">地图态势背景 · 建安十三年八月</div><div class="mockup-body" style="min-height:300px;padding:12px"><span class="label">本月局势</span><h3>曹军南下，江东犹疑</h3><div style="border:1px solid #bba77c;padding:10px;margin:10px 0"><b>紧急 · 江夏粮道告急</b><p>问策、密谈、拟入草案</p></div><div style="border:1px solid #bba77c;padding:10px"><b>机遇 · 孙权使者至</b><p>问策、密谈、拟入草案</p></div><button class="mock-button" style="float:right">军府方略 3</button></div></div></div>
+    <div class="card-body"><h3>A3 · 仅用悬浮入口打开方略簿</h3><p>界面最干净，但草案容易被遗忘，且玩家难以在局势与待颁方略之间建立即时对应。</p></div>
+  </div>
+</div>
+
+<div class="section"><p><b>无论选择哪种：</b>“草案簿”只显示标题、分类、承办人、风险和校验状态；完整正文、润色切换、优先级和删除均放在“审阅与颁令”页完成。</p></div>

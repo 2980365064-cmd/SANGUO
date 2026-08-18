@@ -1,0 +1,8 @@
+/* 可复用条目与轻量卡片：避免页面各自堆叠厚重矩形框。 */
+.list-row, .draft-select-item, .event-item {
+  background: rgba(247, 242, 231, .82);
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 3px 10px rgba(36, 45, 45, .05);
+}
+
+.empty-state { color: var(--ui-ink-soft); line-height: 1.7; }

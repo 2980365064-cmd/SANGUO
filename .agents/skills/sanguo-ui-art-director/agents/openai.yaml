@@ -1,0 +1,4 @@
+interface:
+  display_name: "SANGUO UI Art Director"
+  short_description: "Define SANGUO archival game UI visual direction and constraints"
+  default_prompt: "Use $sanguo-ui-art-director to direct this SANGUO UI task before design."

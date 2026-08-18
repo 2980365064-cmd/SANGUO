@@ -1,0 +1,16 @@
+<h2>月度推演结束后，「每月总计」如何进入下一回合？</h2>
+<p class="subtitle">它不应再是地图上的一个可随手收起的小面板，而应承担方略核销、天下反馈、待决事项和回合交接。</p>
+
+<div class="cards">
+  <div class="card" data-choice="report-gate" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">建安十三年八月 · 军府方略执行回奏</div><div class="mockup-body" style="display:grid;grid-template-columns:.8fr 1.4fr;min-height:330px"><div style="padding:10px;border-right:1px solid #bba77c"><span class="label">本月总计</span><p><b>一 · 方略核销</b></p><p>二 · 军令与战事</p><p>三 · 密令与暗流</p><p>四 · 外交与盟约</p><p>五 · 天下动向</p><p>六 · 仁义口碑</p><p>七 · 尚未尽知者</p></div><div style="padding:10px"><span class="label">方略核销</span><h3>联孙抗曹　部分成功</h3><p>鲁肃陈说利害，孙权未许盟约，约待曹军入荆后再议。公开关系上升，江东仍有疑忌。</p><hr/><h3>安抚江夏　成功</h3><p>赵云护送流民入城，民望上升，粮秣支出增加。</p><hr/><div style="border:1px solid #8a2a20;padding:8px"><b>待主公裁断 · 刘琦请援</b><p>选择后继续外交阶段</p><button class="mock-button">进入裁断</button></div><button class="mock-button">确认阅毕，进入下月局势</button></div></div></div></div>
+    <div class="card-body"><h3>C1 · 回合交接总报（推荐）</h3><p>全部阶段完成后强制进入完整总报；有待决事件则在对应节点暂停，处理完才能“确认阅毕”并进入下月局势。历史可回看，但不再阻塞当月操作。</p></div>
+  </div>
+
+  <div class="card" data-choice="right-drawer" onclick="toggleSelect(this)">
+    <div class="card-image"><div class="mockup"><div class="mockup-header">地图态势背景 · 八月结算完成</div><div class="mockup-body" style="display:grid;grid-template-columns:1.2fr .8fr;min-height:330px"><div style="padding:10px"><h3>进入九月局势</h3><p>地图、指令枢纽已可操作。</p><button class="mock-button">每月总计</button></div><div style="padding:10px;border-left:2px solid #8a2a20;background:#f1e7cf"><span class="label">每月总计</span><h3>八月结算</h3><p>方略核销</p><p>战事</p><p>外交</p><p>口碑</p><hr/><b>待决：刘琦请援</b></div></div></div></div>
+    <div class="card-body"><h3>C2 · 右侧常驻抽屉</h3><p>与当前实现接近，便于边看地图边翻阅，但容易让玩家跳过结算，也弱化一次回合结束应有的叙事重量。</p></div>
+  </div>
+</div>
+
+<div class="section"><p><b>两者共同要求：</b>每条已颁方略必须有“成功 / 部分成功 / 失败 / 延续中”的可展开回奏；数值变化、规则审计与 AI 叙事分层呈现，不以原始 JSON 作为玩家界面。</p></div>

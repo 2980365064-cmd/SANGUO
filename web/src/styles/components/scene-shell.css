@@ -1,0 +1,128 @@
+/* ========================================
+   Components - Scene Shell
+   三层结构：场景图 + 调节层 + 内容层
+   ======================================== */
+
+.scene-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Layer 1: 全幅场景图 */
+.scene-background {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 1;
+}
+
+.scene-asset-notice {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 4;
+  color: rgba(67, 46, 24, .75);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* Layer 2: 低强度墨洗调节层 */
+.scene-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-wash);
+  mix-blend-mode: multiply;
+  opacity: 0.15;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Layer 3: 可读内容层 */
+.scene-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: rgba(var(--ink-paper-rgb), 0.92);
+  backdrop-filter: blur(2px);
+}
+
+/* Scene-specific background mappings */
+/* 注意：部分背景图尚未生成，使用相近场景作为 fallback */
+
+.scene-map .scene-background { background-image: var(--ink-bg-map); }
+
+.scene-council .scene-background {
+  background-image: var(--ink-bg-hall);
+}
+
+.scene-secret .scene-background {
+  background-image: var(--ink-bg-secret);
+}
+
+.scene-city .scene-background {
+  background-image: var(--ink-bg-city);
+}
+
+.scene-province .scene-background {
+  background-image: var(--ink-bg-province);
+}
+
+.scene-army .scene-background {
+  background-image: var(--ink-bg-army);
+}
+
+.scene-character .scene-background {
+  background-image: var(--ink-bg-character);
+}
+
+.scene-diplomacy .scene-background {
+  background-image: var(--ink-bg-diplomacy);
+}
+
+.scene-strategy .scene-background {
+  background-image: var(--ink-bg-strategy);
+}
+
+.scene-history .scene-background {
+  background-image: var(--ink-bg-history);
+}
+
+.scene-family .scene-background {
+  background-image: var(--ink-bg-family);
+}
+
+.scene-directive .scene-background {
+  background-image: var(--ink-bg-strategy);
+}
+
+.scene-review .scene-background { background-image: var(--ink-bg-review); }
+
+/* 推演场景 — 主场景 + 6 个子场景 */
+.scene-adjudication .scene-background { background-image: var(--ink-bg-adjudication); }
+
+/* adjudication 子场景暂用主场景 fallback，待生成专项背景后替换 */
+.scene-adjudication-march .scene-background { background-image: var(--ink-bg-adjudication-march); }
+
+.scene-adjudication-naval .scene-background { background-image: var(--ink-bg-adjudication-naval); }
+
+.scene-adjudication-siege .scene-background { background-image: var(--ink-bg-adjudication-siege); }
+
+.scene-adjudication-camp .scene-background { background-image: var(--ink-bg-adjudication-camp); }
+
+.scene-adjudication-envoy .scene-background { background-image: var(--ink-bg-adjudication-envoy); }
+
+.scene-adjudication-disaster .scene-background { background-image: var(--ink-bg-adjudication-disaster); }
+
+/* 事件场景 — 暂用相近背景 fallback */
+.scene-event-urgent .scene-background { background-image: var(--ink-bg-event-urgent); }
+
+.scene-event-disaster .scene-background { background-image: var(--ink-bg-event-disaster); }
+
+.scene-event-harvest .scene-background { background-image: var(--ink-bg-event-harvest); }
+
+.scene-report .scene-background { background-image: var(--ink-bg-report); }

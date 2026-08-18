@@ -1,0 +1,14 @@
+/* ========================================
+   Design Tokens - Typography
+   ======================================== */
+
+@font-face {
+  font-family: "Source Han Serif";
+  src: url('/fonts/SourceHanSerifSC-Regular.otf');
+}
+
+@font-face {
+  font-family: "Source Han Serif";
+  src: url('/fonts/SourceHanSerifSC-Bold.otf');
+  font-weight: 700;
+}

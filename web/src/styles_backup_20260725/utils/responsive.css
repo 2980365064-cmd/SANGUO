@@ -1,0 +1,50 @@
+/* ========================================
+   Utilities - Responsive Design
+   ======================================== */
+
+@media (max-width: 1540px) {
+  .metric-bar {
+    width: calc(100vw - 320px);
+  }
+  
+  .floating-panel {
+    width: min(920px, calc(100vw - 260px));
+  }
+}
+
+@media (max-width: 1380px) {
+  .metric-bar {
+    height: 72px;
+  }
+  
+  .command-dock {
+    right: 12px;
+  }
+  
+  .monthly-report-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .strategy-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  body {
+    min-width: auto;
+  }
+  
+  .metric-bar {
+    width: 100%;
+    left: 0;
+  }
+  
+  .command-dock {
+    width: 116px;
+  }
+  
+  .floating-panel {
+    width: calc(100vw - 140px);
+  }
+}

@@ -1,0 +1,7 @@
+.situation-hub-root{background:var(--archive-scene-situation-desk-v2) center/cover no-repeat!important;box-shadow:0 16px 34px rgba(38,49,55,.18),inset 0 0 0 1px rgba(79,112,117,.13)}
+.monthly-summary{--world-document-scene:var(--archive-scene-monthly-chronicle-v2);background-image:var(--world-document-scene)!important;background-size:cover;box-shadow:0 16px 34px rgba(38,49,55,.18)}
+.info-page-history{--info-page-bg:var(--archive-scene-history-book-v2);background-image:var(--info-page-bg)!important;background-size:cover;box-shadow:0 16px 34px rgba(38,49,55,.18)}
+.menu-screen .ink-menu-caption::before{content:'';position:absolute;width:150px;height:120px;right:-32px;top:-34px;pointer-events:none;background:var(--archive-prop-menu-paper-slip-v2) center/contain no-repeat;opacity:.78;mix-blend-mode:multiply}
+.monthly-summary .monthly-ledger{background:linear-gradient(90deg,rgba(247,242,231,.35),transparent 60%)}
+.info-page-history .info-body{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.info-page-history .paper-panel-ui{background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0}.info-page-history .info-body>.paper-panel-ui+.paper-panel-ui{padding-left:18px;border-left:1px solid rgba(79,112,117,.25)!important}
+@media(max-width:760px){.info-page-history .info-body{grid-template-columns:1fr}.info-page-history .info-body>.paper-panel-ui+.paper-panel-ui{padding:17px 0 0;border-left:0!important;border-top:1px solid rgba(79,112,117,.25)!important}}

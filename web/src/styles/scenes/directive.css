@@ -1,0 +1,55 @@
+/* 军府方略簿：建议库（左列全高）+ 四类方略（右侧纸张式书写）。 */
+.directive-book .app-frame-header { position: sticky; top: 0; z-index: 3; }
+.directive-desk-notice { margin: 14px 22px 0; padding: 10px 14px; color: var(--ui-ink-soft); }
+
+/* 两栏布局：建议库 | 方略区 */
+.directive-desk-layout { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr); align-items: stretch; gap: 0; margin: 0 22px 22px; min-height: calc(100% - 72px); }
+
+/* 建议库 — 占满左列全部高度 */
+.directive-suggestion-library { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 180px); display: flex; flex-direction: column; }
+.directive-suggestion-library .paper-panel-ui { flex: 1; display: grid; grid-template-rows: auto auto auto 1fr; gap: 12px; padding: 14px; overflow: hidden; }
+.directive-suggestion-library p { margin: 0; color: var(--ui-ink-soft); font-size: var(--ui-note); line-height: 1.65; }
+
+.suggestion-assign { display: grid; grid-template-columns: 1fr; gap: 7px; color: var(--ui-ink-soft); font-size: var(--ui-note); }
+.suggestion-assign select { width: 100%; min-height: 34px; padding: 6px 8px; color: var(--ui-ink); background: rgba(255,252,244,.82); border: 1px solid var(--ui-line-strong); }
+
+.directive-suggestion-list { display: grid; gap: 1px; overflow: auto; background: var(--ui-line); flex: 1; min-height: 0; }
+.directive-suggestion-list > label { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; padding: 9px; color: var(--ui-ink); background: rgba(247,242,231,.88); cursor: pointer; }
+.directive-suggestion-list input { margin-top: 4px; accent-color: var(--ui-vermilion); }
+.directive-suggestion-list span { display: grid; gap: 3px; font-size: var(--ui-note); line-height: 1.5; }
+.directive-suggestion-list small { color: var(--ui-ink-soft); }
+.directive-suggestion-list > p { padding: 16px 10px; text-align: center; }
+
+/* 右侧 — 四个方略 section（像一张纸上写的四个项目） */
+.directive-sections-column { display: flex; flex-direction: column; border-left: 1px solid var(--ui-line); }
+
+/* 每个 section — 无黑色隔阂，仅用虚线分隔 */
+.directive-section { padding: 16px 20px; border-bottom: 1px dashed var(--ui-line); cursor: text; transition: background var(--ui-motion); }
+.directive-section:last-of-type { border-bottom: none; }
+.directive-section.is-active { background: rgba(79,112,117,.05); }
+
+.directive-section-label { display: flex; align-items: baseline; gap: 10px; }
+.directive-section-label strong { font-size: 20px; letter-spacing: .14em; color: var(--ui-ink); }
+
+.directive-section textarea {
+  width: 100%; margin-top: 10px; padding: 10px 12px; color: var(--ui-ink);
+  background: rgba(255,252,244,.72); border: 1px solid var(--ui-line); border-radius: 0;
+  resize: vertical; line-height: 1.65; min-height: 80px;
+  font-family: inherit; font-size: var(--ui-body);
+}
+.directive-section textarea:focus { border-color: var(--ui-cyan); outline: none; box-shadow: 0 0 0 1px var(--ui-cyan); }
+
+/* 底部工具栏 — 润色文书 + 下达军令 */
+.directive-bottom-bar { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--ui-line-strong); }
+
+/* 响应式 */
+@media (max-width: 1040px) {
+  .directive-desk-layout { grid-template-columns: 230px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .directive-desk-layout { grid-template-columns: 1fr; margin: 14px; }
+  .directive-suggestion-library { position: static; max-height: none; }
+  .directive-sections-column { border-left: none; border-top: 1px solid var(--ui-line); }
+  .directive-suggestion-list { max-height: 240px; }
+  .directive-desk-notice { margin-inline: 14px; }
+}

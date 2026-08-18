@@ -1,0 +1,154 @@
+/* 第二阶段第二组：军府方略、颁令校阅、行止推演各有独立案卷身份。 */
+.directive-book { --world-document-scene: var(--archive-scene-directive-ledger-v2); }
+.review-decree { --world-document-scene: var(--archive-scene-decree-review-v2); }
+.adjudication-flow { --world-document-scene: var(--archive-scene-adjudication-record-v2); }
+
+.directive-book,
+.review-decree,
+.adjudication-flow {
+  background-image: var(--world-document-scene) !important;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 16px 34px rgba(38, 49, 55, .18), inset 0 0 0 1px rgba(79, 112, 117, .13);
+}
+
+.directive-book::before,
+.review-decree::before,
+.adjudication-flow::before { display: none !important; }
+
+.directive-book .app-frame-header,
+.review-decree .app-frame-header,
+.adjudication-flow > header {
+  position: relative;
+  background: linear-gradient(90deg, rgba(247, 242, 231, .9), rgba(247, 242, 231, .28) 68%, transparent);
+  border-bottom-color: rgba(79, 112, 117, .3) !important;
+}
+
+/* 军府方略簿：左侧来函摘录与右侧连续四节军令使用同一张簿页，不制造卡片阵列。 */
+.directive-book .directive-desk-layout {
+  margin: 0 28px 26px;
+  border: 0;
+  border-top: 1px solid rgba(79, 112, 117, .3);
+  border-bottom: 1px solid rgba(169, 142, 104, .28);
+  background: linear-gradient(90deg, rgba(247,242,231,.32), transparent 25%);
+}
+
+.directive-book .directive-suggestion-library {
+  top: 73px;
+  padding: 19px 18px;
+  background: linear-gradient(180deg, rgba(79,112,117,.1), transparent 44%) !important;
+  border-right-color: rgba(79, 112, 117, .28);
+}
+
+.directive-book .directive-suggestion-library .paper-panel-ui,
+.directive-book .directive-desk-notice {
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.directive-book .directive-desk-notice {
+  margin: 15px 28px 0;
+  padding: 9px 13px;
+  color: var(--ui-ink-soft);
+  border-left: 2px solid var(--ui-vermilion) !important;
+  background: rgba(154,64,55,.06) !important;
+}
+
+.directive-book .directive-suggestion-list { gap: 0; background: transparent; }
+.directive-book .directive-suggestion-list > label {
+  padding: 11px 2px;
+  background: transparent;
+  border-bottom: 1px solid rgba(79, 112, 117, .2);
+}
+.directive-book .directive-suggestion-list > label:hover { background: linear-gradient(90deg, rgba(79,112,117,.12), transparent); }
+
+.directive-book .directive-sections-column { border-left: 0; }
+.directive-book .directive-section {
+  padding: 17px 23px 19px;
+  border-bottom: 1px solid rgba(79, 112, 117, .23);
+  background: transparent;
+}
+.directive-book .directive-section.is-active { background: linear-gradient(90deg, rgba(79,112,117,.1), transparent 58%); }
+.directive-book .directive-section-label::before {
+  content: '军令';
+  margin-right: 9px;
+  color: var(--ui-vermilion);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+.directive-book .directive-section-label strong { font-family: "Source Han Serif", "Noto Serif SC", serif; letter-spacing: .2em; }
+.directive-book .directive-section textarea { background: rgba(255,253,246,.43); border-color: rgba(79,112,117,.34); box-shadow: inset 0 1px 8px rgba(38,49,55,.05); }
+.directive-book .directive-bottom-bar { padding: 16px 23px; background: linear-gradient(90deg, transparent, rgba(169,142,104,.12)); border-top: 0; }
+
+/* 审阅颁令：先校阅待颁文书，朱砂只留给封存或最终下达。 */
+.review-decree { overflow: auto; }
+.review-decree > .paper-panel-ui,
+.review-decree > .batch-actions,
+.review-decree > .decree-actions,
+.review-decree > .error-message { margin-inline: 29px; }
+.review-decree .paper-panel-ui { padding: 20px 0; background: transparent !important; border: 0 !important; border-radius: 0; box-shadow: none !important; }
+.review-decree .paper-panel-ui + .paper-panel-ui { border-top: 1px solid rgba(79,112,117,.25) !important; }
+.review-decree .batch-info { border-bottom: 0; }
+.review-decree .draft-select-list { gap: 0; border-top: 1px solid rgba(169,142,104,.28); }
+.review-decree .draft-select-item { padding: 13px 8px 13px 12px; border-bottom: 1px solid rgba(79,112,117,.2) !important; }
+.review-decree .draft-select-item.selected { background: linear-gradient(90deg, rgba(154,64,55,.09), transparent 55%) !important; border-left-color: var(--ui-vermilion) !important; }
+.review-decree .selection-actions button,
+.review-decree .decree-actions > button { border-radius: 0; }
+.review-decree .batch-actions,
+.review-decree .decree-actions { padding: 17px 0 25px; }
+
+/* 行止推演：阶段事件沿一条编年轴连续落笔，避免日志卡片。 */
+.adjudication-flow { padding: 0 30px 28px; overflow: auto; }
+.adjudication-flow > header { margin: 0 -30px 21px; padding-inline: 30px; }
+.adjudication-flow .error-message { margin-bottom: 15px; background: rgba(154,64,55,.06); border-left-color: var(--ui-vermilion); }
+.adjudication-flow .execution-log { position: relative; margin-left: 10px; padding-left: 24px; }
+.adjudication-flow .execution-log::before { content: ''; position: absolute; top: 39px; bottom: 10px; left: 0; width: 1px; background: linear-gradient(var(--ui-cyan), rgba(169,142,104,.25)); }
+.adjudication-flow .event-list { max-height: 500px; padding: 0; background: transparent; border: 0; }
+.adjudication-flow .event-item {
+  position: relative;
+  margin: 0;
+  padding: 13px 15px 14px;
+  border-left: 0 !important;
+  border-bottom: 1px solid rgba(79,112,117,.2);
+  background: transparent;
+}
+.adjudication-flow .event-item::after { content: ''; position: absolute; left: -29px; top: 18px; width: 9px; height: 9px; border: 2px solid var(--ui-cyan); border-radius: 50%; background: var(--ui-paper); }
+.adjudication-flow .event-item.event-decision_point::after,
+.adjudication-flow .event-item.event-error::after { border-color: var(--ui-vermilion); }
+.adjudication-flow .event-item::before { content: '纪事'; color: var(--ui-cyan); }
+.adjudication-flow .event-header { margin-bottom: 6px; }
+.adjudication-flow .decision-dialog { padding: 17px 20px; background: linear-gradient(90deg, rgba(154,64,55,.08), transparent); border: 1px solid rgba(154,64,55,.25); border-left: 3px solid var(--ui-vermilion); }
+.adjudication-flow .decision-option { border-radius: 0; background: rgba(255,253,246,.46); border-color: rgba(79,112,117,.3); }
+
+/* 封缄确认短笺：不使用系统默认白框，朱砂只标识最终行动。 */
+.game-dialog-decree {
+  border-color: rgba(154,64,55,.42) !important;
+  background: linear-gradient(90deg, rgba(247,242,231,.28), rgba(247,242,231,.76)), var(--dialog-bg) center/cover no-repeat, var(--world-paper) !important;
+  box-shadow: 0 22px 55px rgba(26,35,35,.25), inset 0 0 0 1px rgba(247,242,231,.7) !important;
+}
+.game-dialog-decree > header { background: linear-gradient(90deg, rgba(247,242,231,.84), rgba(247,242,231,.2)) !important; }
+.game-dialog-decree .game-dialog-content { background: linear-gradient(90deg, rgba(247,242,231,.55), transparent); }
+
+@media (max-width: 1024px) {
+  .directive-book .directive-desk-layout { margin-inline: 20px; }
+  .directive-book .directive-desk-notice { margin-inline: 20px; }
+  .review-decree > .paper-panel-ui,
+  .review-decree > .batch-actions,
+  .review-decree > .decree-actions,
+  .review-decree > .error-message { margin-inline: 22px; }
+  .adjudication-flow { padding-inline: 22px; }
+  .adjudication-flow > header { margin-inline: -22px; padding-inline: 22px; }
+}
+
+@media (max-width: 760px) {
+  .directive-book .directive-desk-layout { margin-inline: 14px; }
+  .directive-book .directive-suggestion-library { position: static; padding: 16px 0; }
+  .review-decree > .paper-panel-ui,
+  .review-decree > .batch-actions,
+  .review-decree > .decree-actions,
+  .review-decree > .error-message { margin-inline: 15px; }
+}

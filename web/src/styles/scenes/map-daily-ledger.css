@@ -1,0 +1,132 @@
+/* 天下舆图顶部的军府军符：外轮廓、云纹、印座与六个纸槽均来自 AI 材质稿；
+   本文件只负责将真实数据落入对应的实体槽位，绝不以 CSS 伪造外框。 */
+.map-desk > .metric-bar {
+  position: absolute;
+  z-index: 23;
+  top: 3px;
+  left: 51px;
+  width: min(1755px, calc(100vw - 74px));
+  height: 114px;
+  min-height: 114px;
+  padding: 0;
+  display: block;
+  overflow: visible;
+  isolation: isolate;
+  color: #283335;
+  background: url('/assets/ui/archive/military-command-plaque-v2.png') center / 100% 100% no-repeat !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.map-desk > .metric-bar::before,
+.map-desk > .metric-bar::after,
+.map-desk > .metric-bar .metric-paperweight { content: none !important; display: none !important; }
+
+/* 左端不是卡片，而是军府铜印所在的 AI 生成印座。 */
+.map-desk > .metric-bar .campaign-mark {
+  position: absolute;
+  z-index: 1;
+  left: 1.7%;
+  top: 18%;
+  width: 11.3%;
+  height: 64%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #9e4037 !important;
+  background: transparent !important;
+}
+.map-desk > .metric-bar .campaign-mark small,
+.map-desk > .metric-bar .campaign-mark > span:not(.campaign-calligraphy),
+.map-desk > .metric-bar .campaign-mark strong { display: none; }
+.map-desk > .metric-bar .campaign-calligraphy {
+  display: block;
+  width: auto;
+  height: auto;
+  color: #a52f28;
+  font: 700 clamp(27px, 2.15vw, 40px)/1 "STKaiti", "Kaiti SC", serif;
+  letter-spacing: .12em;
+  text-shadow: 0 1px 0 rgba(255,255,255,.38), 0 0 1px rgba(120,35,29,.3);
+  transform: none;
+}
+
+/* 六项国势各自落在素材已留出的宣纸凹槽中。 */
+.map-desk > .metric-bar .metric-ledger {
+  position: absolute;
+  z-index: 1;
+  left: 16.7%;
+  top: 29%;
+  width: 75.1%;
+  height: 47%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding: 0;
+  gap: 0;
+}
+.map-desk > .metric-bar .metric-chip {
+  position: relative;
+  display: grid;
+  grid-template-columns: 23px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 5px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 10px 2px;
+  color: #263335;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-align: left;
+}
+.map-desk > .metric-bar .metric-chip:hover { background: rgba(110, 132, 130, .09) !important; transform: none; }
+.map-desk > .metric-bar .hud-ink-icon {
+  width: 21px;
+  height: 21px;
+  opacity: .88;
+  filter: grayscale(.33) sepia(.11);
+}
+.map-desk > .metric-bar .metric-chip-copy { display: grid; gap: 1px; min-width: 0; }
+.map-desk > .metric-bar .metric-chip-copy small {
+  overflow: hidden;
+  color: #58625e;
+  font: 700 10px/1 "Source Han Serif", serif;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.map-desk > .metric-bar .metric-chip-copy strong {
+  color: #273335;
+  font: 700 22px/1 "STKaiti", "Kaiti SC", "Source Han Serif", serif;
+  letter-spacing: .03em;
+}
+.map-desk > .metric-bar .metric-trend {
+  position: absolute;
+  left: 34px;
+  right: 12px;
+  bottom: 1px;
+  width: auto;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, rgba(79,112,117,.12), rgba(79,112,117,.48), transparent);
+}
+
+/* 年月不再占据一张方块；它写在军符上沿的漆木题签处。 */
+/* 右上不再写日期，军符仅承载实时国势。 */
+.map-desk > .metric-bar .turn-date { display: none; }
+
+@media (max-width: 1180px) {
+  .map-desk > .metric-bar { left: 51px; width: calc(100vw - 74px); }
+  .map-desk > .metric-bar .metric-chip { grid-template-columns: 16px minmax(0, 1fr); padding-inline: 4px; }
+  .map-desk > .metric-bar .hud-ink-icon { width: 15px; height: 15px; }
+  .map-desk > .metric-bar .metric-chip-copy small { font-size: 7px; }
+  .map-desk > .metric-bar .metric-chip-copy strong { font-size: 15px; }
+  .map-desk > .metric-bar .metric-trend { left: 22px; right: 5px; }
+}
+
+@media (max-width: 900px) {
+  .map-desk > .metric-bar .metric-chip-copy small { display: none; }
+  .map-desk > .metric-bar .metric-chip { grid-template-columns: 15px 1fr; }
+  .map-desk > .metric-bar .turn-date { display: none; }
+}

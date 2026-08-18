@@ -1,0 +1,23 @@
+/* 阶段五信息页：查阅、拟入方略、返回三层，禁止恢复后台式深色卡片。 */
+.info-page { width:min(1120px, calc(100vw - 72px)); min-height:min(720px, calc(100vh - 132px)); max-height:calc(100vh - 132px); margin:18px auto; overflow:auto; color:var(--ui-ink); background-image: linear-gradient(rgba(247,242,231,.22) 0%, rgba(247,242,231,.86) 6%, rgba(247,242,231,.88) 94%, rgba(247,242,231,.28) 100%), var(--info-page-bg, none); background-size: cover; background-position: center; border:1px solid var(--ui-line-strong); box-shadow:var(--ui-shadow); }
+/* 按页面类型指定背景画 */
+.info-page-army      { --info-page-bg: var(--ink-bg-army); }
+.info-page-character { --info-page-bg: var(--ink-bg-character); }
+.info-page-city      { --info-page-bg: var(--ink-bg-city); }
+.info-page-diplomacy { --info-page-bg: var(--ink-bg-diplomacy); }
+.info-page-history   { --info-page-bg: var(--ink-bg-history); }
+.info-page-event     { --info-page-bg: var(--ink-bg-event-urgent); }
+.info-page-province  { --info-page-bg: var(--ink-bg-province); }
+.info-page-family    { --info-page-bg: var(--ink-bg-family); }
+.info-page-strategy  { --info-page-bg: var(--ink-bg-strategy); }
+.info-page .app-frame-header { position:sticky; top:0; z-index:2; }
+.info-body { display:grid; grid-template-columns:minmax(250px,.78fr) minmax(0,1.22fr); gap:14px; padding:18px; overflow:visible; }
+.info-page .info-list { display:grid; align-content:start; gap:1px; max-height:none; padding:0; overflow:visible; background:var(--ui-line); border:1px solid var(--ui-line); }
+.info-page .info-card { display:flex; width:100%; gap:10px; padding:12px; color:var(--ui-ink); text-align:left; background:rgba(255,252,244,.78); border:0; border-radius:0; box-shadow:none; cursor:pointer; }
+.info-page .info-card:hover,.info-page .info-card.selected { color:var(--ui-ink); background:rgba(79,112,117,.1); box-shadow:inset 3px 0 var(--ui-vermilion); transform:none; }
+.info-page .card-icon { display:grid; place-items:center; width:28px; color:var(--ui-cyan); }.info-page .card-info { display:grid; gap:3px; }.info-page .card-info strong { color:var(--ui-ink); }.info-page .card-info span { color:var(--ui-ink-soft); font-size:var(--ui-note); line-height:1.5; }
+.info-page .info-detail,.info-page .info-body > section { min-width:0; padding:16px; color:var(--ui-ink); background:rgba(247,242,231,.76); border:1px solid var(--ui-line); box-shadow:0 5px 16px rgba(36,45,45,.05); }.info-page .info-detail h2,.info-page .info-body h2 { color:var(--ui-ink); border-bottom:1px solid var(--ui-line); padding-bottom:8px; }
+.info-detail-heading { display:flex; align-items:start; justify-content:space-between; gap:10px; }.info-detail-heading .section-heading { flex:1; }.info-detail-heading .action-seal { flex-shrink:0; }
+.info-page .info-detail dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; margin:0; border:1px solid var(--ui-line); }.info-page .info-detail dt,.info-page .info-detail dd { padding:8px 10px; margin:0; border-bottom:1px dashed var(--ui-line); }.info-page .info-detail dt { color:var(--ui-ink-soft); font-size:var(--ui-note); }.info-page .info-detail dd { color:var(--ui-ink); font-weight:600; }
+.info-page .empty,.info-page .empty-hint { color:var(--ui-ink-soft); line-height:1.7; }.info-page .event-options { display:grid; gap:8px; }.info-page .option-btn { justify-content:flex-start; }
+@media (max-width:900px) { .info-page { width:calc(100vw - 28px); max-height:none; margin:14px auto 70px; }.info-body { grid-template-columns:1fr; padding:14px; } }

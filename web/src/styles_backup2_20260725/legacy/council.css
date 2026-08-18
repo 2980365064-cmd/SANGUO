@@ -1,0 +1,439 @@
+/* ═══════════════════════════════════════════════════════════════
+   府堂议事 · 廷议 UI
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 廷议主舞台 */
+.council-hall-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, .7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.council-hall-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-bg-hall) center/cover no-repeat;
+  opacity: .85;
+}
+.council-hall-inner {
+  position: relative;
+  z-index: 1;
+  width: min(1000px, 90vw);
+  height: min(700px, 85vh);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 16px;
+  padding: 24px;
+  background: linear-gradient(90deg, rgba(var(--ink-paper-rgb),.92), rgba(200, 181, 132, .88));
+  border: 1px solid var(--ink-line-strong);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .5), inset 0 0 60px rgba(var(--ink-line-warm-rgb),.2);
+  animation: ink-slide-in .3s ease;
+}
+.council-hall-inner header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ink-line);
+}
+.council-hall-inner h2 {
+  font-size: 22px;
+  color: #2a1e13;
+  text-shadow: 0 1px 0 #f3e8c7;
+  margin: 0;
+}
+.council-hall-inner .close-button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink-line);
+  background: transparent;
+  color: var(--ink);
+}
+.council-hall-inner .close-button:hover {
+  background: var(--ink-seal);
+  color: #f0e0c0;
+}
+
+/* 议题输入区 */
+.council-topic {
+  display: grid;
+  gap: 8px;
+}
+.council-topic label {
+  font-size: 12px;
+  color: #5b452d;
+  letter-spacing: .1em;
+}
+.council-topic textarea {
+  height: 60px;
+  padding: 10px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+  color: var(--ink);
+  font: inherit;
+  resize: none;
+}
+.council-topic textarea:focus {
+  outline: none;
+  border-color: var(--ink-seal);
+  box-shadow: 0 0 0 2px rgba(var(--ink-seal-rgb),.15);
+}
+.council-topic button {
+  justify-self: end;
+  padding: 8px 20px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+  color: var(--ink);
+  font: inherit;
+}
+.council-topic button.primary {
+  background: var(--ink-seal);
+  color: #f0e0c0;
+  border-color: var(--ink-seal);
+}
+.council-topic button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* 对话记录区 */
+.council-transcript {
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 大臣发言气泡 */
+.minister-bubble {
+  position: relative;
+  max-width: 80%;
+  padding: 10px 14px;
+  background: var(--ink-paper-soft);
+  border: 1px solid var(--ink-line);
+  border-left: 3px solid var(--ink-jade);
+}
+.minister-bubble.emperor {
+  align-self: flex-end;
+  border-left-color: var(--ink-seal);
+  border-right: 3px solid var(--ink-seal);
+  background: linear-gradient(135deg, rgba(var(--ink-seal-rgb),.08), var(--ink-paper-soft));
+}
+.minister-bubble.conclusion {
+  max-width: 100%;
+  background: linear-gradient(90deg, rgba(var(--ink-gold-rgb),.15), var(--ink-paper-soft));
+  border-left-color: var(--ink-gold);
+}
+.minister-bubble header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.minister-bubble strong {
+  font-size: 13px;
+  color: #2a1e13;
+}
+.minister-bubble .role-tag {
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--ink-line);
+  color: var(--ink-paper);
+  border-radius: 2px;
+}
+.minister-bubble p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #3a3020;
+}
+.minister-bubble .cursor {
+  display: inline-block;
+  width: 4px;
+  height: 12px;
+  margin-left: 2px;
+  background: var(--ink);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+.minister-bubble .live-indicator {
+  color: var(--ink-seal);
+  font-size: 12px;
+  animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+/* 建议弹出按钮 */
+.suggestion-popup {
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  animation: fadeIn .2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.suggestion-popup button {
+  padding: 6px 12px;
+  background: var(--ink-seal);
+  color: #f0e0c0;
+  border: 1px solid var(--ink-seal);
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+}
+.suggestion-popup button:hover {
+  background: #6d1f18;
+}
+
+/* 大臣选择界面 */
+.minister-selection {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(4px);
+}
+.minister-selection-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-wash);
+  mix-blend-mode: multiply;
+  opacity: .15;
+  pointer-events: none;
+}
+.minister-selection-inner {
+  position: relative;
+  z-index: 1;
+  width: min(800px, 85vw);
+  max-height: 80vh;
+  padding: 24px;
+  background: var(--ink-paper);
+  border: 1px solid var(--ink-line-strong);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .4);
+}
+.minister-selection header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ink-line);
+}
+.minister-selection h2 {
+  font-size: 20px;
+  color: #2a1e13;
+  margin: 0;
+}
+.minister-selection header p {
+  font-size: 13px;
+  color: #6b5d47;
+}
+.minister-selection header strong {
+  color: var(--ink-seal);
+}
+.minister-selection .close-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink-line);
+  background: transparent;
+  color: var(--ink);
+}
+.minister-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 10px;
+}
+.minister-grid button {
+  position: relative;
+  padding: 8px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+  text-align: center;
+  transition: all .15s ease;
+}
+.minister-grid button:hover {
+  border-color: var(--ink-line-strong);
+  transform: translateY(-2px);
+}
+.minister-grid button.selected {
+  border-color: var(--ink-seal);
+  background: linear-gradient(135deg, rgba(var(--ink-seal-rgb),.1), var(--ink-paper-soft));
+}
+.minister-grid button .portrait {
+  height: 100px;
+  margin-bottom: 6px;
+}
+.minister-info strong {
+  display: block;
+  font-size: 13px;
+  color: #2a1e13;
+}
+.minister-info small {
+  font-size: 12px;
+  color: #7c6d56;
+}
+.check-mark {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: var(--ink-seal);
+  color: #f0e0c0;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.minister-selection footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ink-line);
+}
+.minister-selection footer button {
+  padding: 8px 20px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+  color: var(--ink);
+  font: inherit;
+}
+.minister-selection footer button.primary {
+  background: var(--ink-seal);
+  color: #f0e0c0;
+  border-color: var(--ink-seal);
+}
+.minister-selection footer button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* 建议库侧栏 */
+.suggestion-library {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 320px;
+  max-height: 70vh;
+  z-index: 101;
+  background: var(--ink-paper);
+  border: 1px solid var(--ink-line-strong);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .35);
+}
+.suggestion-library-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-wash);
+  mix-blend-mode: multiply;
+  opacity: .12;
+  pointer-events: none;
+}
+.suggestion-library-inner {
+  position: relative;
+  z-index: 1;
+  padding: 16px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.suggestion-library header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--ink-line);
+}
+.suggestion-library h3 {
+  font-size: 15px;
+  color: #2a1e13;
+  margin: 0;
+}
+.suggestion-library .close-button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink-line);
+  background: transparent;
+  color: var(--ink);
+}
+.suggestion-library ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.suggestion-library li {
+  padding: 10px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+}
+.suggestion-library li p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #3a3020;
+}
+.suggestion-library li footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.suggestion-library li small {
+  font-size: 12px;
+  color: #7c6d56;
+}
+.suggestion-library li .actions {
+  display: flex;
+  gap: 6px;
+}
+.suggestion-library li button {
+  padding: 4px 8px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+  color: var(--ink);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.suggestion-library li button:hover {
+  border-color: var(--ink-line-strong);
+  background: var(--ink-paper);
+}
+.suggestion-library li button.danger {
+  color: var(--ink-seal);
+}
+.suggestion-library li .converted {
+  font-size: 12px;
+  color: var(--ink-jade);
+}
+/* 存量廷议规则。新廷议舞台样式位于 ../scenes/council.css。 */

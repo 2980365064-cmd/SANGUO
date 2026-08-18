@@ -1,0 +1,154 @@
+/* 单独密谈：军府案头的一张展开私密名册，AI 素材仅为无文字物质底稿。 */
+.secret-hub:has(.private-talk-dossier) {
+  width: min(1280px, calc(100vw - 34px));
+  min-height: min(604px, calc(100vh - 28px));
+  background: #273039 !important;
+  box-shadow: 0 22px 56px rgba(18, 23, 27, .42);
+}
+
+.secret-hub:has(.private-talk-dossier) .app-frame-header {
+  position: absolute;
+  z-index: 4;
+  inset: 36px 7% auto;
+  height: auto;
+  padding: 0;
+  pointer-events: none;
+  background: none;
+  border: 0;
+}
+.secret-hub:has(.private-talk-dossier) .app-frame-header::after { display: none; }
+.secret-hub:has(.private-talk-dossier) .app-frame-back { pointer-events: auto; }
+.secret-hub:has(.private-talk-dossier) .app-frame-back .action-seal {
+  padding: 7px 10px; color: var(--ui-ink); border: 1px solid rgba(75, 83, 82, .46);
+  background: rgba(247, 243, 231, .6); box-shadow: none; border-radius: 0;
+}
+.secret-hub:has(.private-talk-dossier) .app-frame-title {
+  position: absolute; left: 50%; transform: translateX(-50%); width: 420px; text-align: center;
+}
+.secret-hub:has(.private-talk-dossier) .app-frame-title small { color: var(--ui-vermilion); letter-spacing: .22em; }
+.secret-hub:has(.private-talk-dossier) .app-frame-title h1 { margin-top: 4px; color: #24282a; font-size: clamp(31px, 3.5vw, 48px); letter-spacing: .2em; text-shadow: 0 1px #fff9eb; }
+
+.secret-hub .secret-body:has(.private-talk-dossier) {
+  position: relative; min-height: min(604px, calc(100vh - 28px)); padding: 0; overflow: hidden;
+  background: url('/assets/ui/archive/private-talk-dossier-v1.png') center / cover no-repeat;
+}
+.private-talk-dossier { position: relative; min-height: inherit; color: #283034; }
+.dossier-intro { position: absolute; z-index: 2; top: 98px; left: 14%; width: 53%; display: flex; align-items: center; justify-content: space-between; padding-bottom: 7px; border-bottom: 1px solid rgba(129, 69, 58, .6); }
+.dossier-intro p { margin: 0; font-size: 12px; letter-spacing: .12em; color: #5d5a55; }
+.dossier-filters { display: flex; gap: 2px; padding: 2px; border: 1px solid rgba(129, 69, 58, .25); background: rgba(248, 242, 227, .35); }
+.dossier-filters button { border: 0; border-radius: 0; padding: 4px 7px; background: transparent; color: #69645d; font-size: 10px; letter-spacing: .08em; }
+.dossier-filters button.active { color: #fff7e9; background: #914c42; }
+
+.dossier-content { position: absolute; top: 138px; left: 10.5%; right: 7.8%; bottom: 78px; display: grid; grid-template-columns: minmax(0, 1fr) 25%; gap: 3%; }
+.minister-roster { position: relative; min-width: 0; padding-left: 42px; }
+.roster-spine { position: absolute; left: 0; top: 12px; bottom: 6px; writing-mode: vertical-rl; color: #8f493e; font-size: 12px; letter-spacing: .26em; border-left: 1px solid rgba(143, 73, 62, .5); padding-left: 7px; }
+.roster-lines { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(68px, 1fr); height: 100%; overflow-y: auto; border-top: 1px solid rgba(75, 97, 99, .28); }
+.minister-slip { position: relative; display: grid; grid-template-columns: 42px 1fr 20px; align-items: center; min-width: 0; padding: 7px 8px; text-align: left; color: #303132; border: 0; border-right: 1px solid rgba(75, 97, 99, .16); border-bottom: 1px solid rgba(75, 97, 99, .25); border-radius: 0; background: transparent; transition: background .18s ease, transform .18s ease; }
+.minister-slip:hover { background: linear-gradient(90deg, rgba(154, 64, 55, .09), transparent); transform: translateX(2px); }
+.minister-slip:focus, .minister-slip:focus-visible { outline: 1px solid rgba(154, 64, 55, .7); outline-offset: -3px; }
+.minister-slip.selected { background: linear-gradient(90deg, rgba(154, 64, 55, .19), rgba(154, 64, 55, .04) 75%, transparent); }
+.minister-slip.selected::before { content: ''; position: absolute; inset: 10px 8px 10px 3px; border-top: 1px solid rgba(149, 65, 54, .52); border-bottom: 1px solid rgba(149, 65, 54, .27); transform: rotate(-.4deg); }
+.minister-seal { display: grid; place-items: center; width: 34px; height: 34px; color: #934a3f; border: 1px solid rgba(147, 74, 63, .68); border-radius: 50%; font-family: STKaiti, KaiTi, serif; font-size: 22px; }
+.minister-slip-copy { min-width: 0; display: grid; gap: 1px; }
+.minister-slip-copy strong { color: #2d2c2a; font-family: STKaiti, KaiTi, serif; font-size: 18px; letter-spacing: .12em; }
+.minister-slip-copy small, .minister-slip-copy em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #625d55; font-size: 10px; font-style: normal; letter-spacing: .05em; }
+.minister-slip-copy em { color: #7d807c; }
+.selection-mark { z-index: 1; display: grid; place-items: center; width: 19px; height: 19px; color: #a14d42; border: 1px solid currentColor; border-radius: 50%; font-size: 14px; font-style: normal; opacity: 0; transform: rotate(-12deg); }
+.minister-slip.selected .selection-mark { opacity: 1; }
+.empty-hint { grid-column: 1 / -1; align-self: center; text-align: center; color: #776e62; }
+
+.confidential-sleeve { position: relative; padding: 33px 9% 0; overflow: hidden; }
+.confidential-sleeve h2 { margin: 0; writing-mode: vertical-rl; color: #2f2b28; font-family: STKaiti, KaiTi, serif; font-size: 22px; letter-spacing: .25em; }
+.sleeve-tabs { position: absolute; top: 42px; left: 34%; right: 8%; display: grid; gap: 8px; }
+.sleeve-tabs span { padding: 7px 10px; color: #615d57; font-size: 11px; letter-spacing: .14em; background: rgba(255, 250, 238, .1); border-bottom: 1px solid rgba(111, 91, 71, .2); }
+.sleeve-tabs span::before { content: '○'; color: #9d5143; margin-right: 7px; }
+.selected-name-slip { position: absolute; z-index: 2; left: 11%; right: 8%; bottom: 39px; min-height: 64px; display: flex; align-items: center; gap: 10px; padding: 8px 12px; opacity: 0; transform: translateY(26px); background: linear-gradient(110deg, rgba(253, 248, 236, .94), rgba(226, 219, 197, .8)); box-shadow: 0 -2px 10px rgba(55, 42, 31, .13); transition: opacity .28s ease, transform .32s cubic-bezier(.2,.8,.2,1); }
+.selected-name-slip.is-visible { opacity: 1; transform: translateY(0); }
+.selected-name-slip b { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; color: #934a3f; border: 1px solid rgba(147, 74, 63, .68); border-radius: 50%; font: 22px STKaiti, KaiTi, serif; }
+.selected-name-slip span { display: grid; gap: 3px; min-width: 0; }.selected-name-slip strong { font: 19px STKaiti, KaiTi, serif; letter-spacing: .1em; }.selected-name-slip small { color: #665d55; font-size: 10px; }.confidential-sleeve > p { position: absolute; left: 11%; right: 9%; bottom: 20px; margin: 0; color: #62574e; font-size: 10px; line-height: 1.45; }
+
+.dossier-footer { position: absolute; z-index: 3; left: 13.6%; right: 11%; bottom: 45px; display: flex; align-items: end; justify-content: space-between; }
+.dossier-material-note { display: grid; margin-left: 84px; color: #60564d; transform: rotate(-4deg); }.dossier-material-note span { font: 17px STKaiti, KaiTi, serif; letter-spacing: .1em; }.dossier-material-note small { font-size: 9px; letter-spacing: .08em; }
+.seal-action { position: relative; display: grid; place-items: center; width: 124px; height: 57px; padding: 0; color: #f8e7ca; border: 3px double rgba(248, 218, 177, .65); border-radius: 50%; background: radial-gradient(circle at 35% 28%, #b85d4d, #82362f 62%, #61231f); box-shadow: 0 6px 9px rgba(44, 29, 25, .35), inset 0 0 13px rgba(48, 15, 12, .5); transform: rotate(-8deg); }
+.seal-action:disabled { color: #d6b8a0; filter: grayscale(.65); cursor: not-allowed; opacity: .72; }.seal-action:not(:disabled):hover { transform: rotate(-5deg) translateY(-2px); }
+.seal-action > span:not(.seal-knot) { display: flex; align-items: center; gap: 4px; font: 18px STKaiti, KaiTi, serif; letter-spacing: .1em; }.seal-action svg { width: 14px; }.seal-action small { font-size: 8px; letter-spacing: .06em; }.seal-knot { position: absolute; width: 142px; height: 31px; border: 3px solid #5b4940; border-top: 0; border-radius: 0 0 50% 50%; opacity: .8; transform: translateY(18px); pointer-events: none; }
+
+@media (max-width: 860px), (max-height: 680px) {
+  .secret-hub:has(.private-talk-dossier), .secret-hub .secret-body:has(.private-talk-dossier) { min-height: 604px; }
+  .dossier-content { top: 132px; bottom: 72px; left: 8%; right: 5%; grid-template-columns: minmax(0, 1fr) 27%; }
+  .dossier-intro { top: 94px; left: 12%; width: 56%; }.minister-roster { padding-left: 30px; }.roster-spine { font-size: 10px; }.minister-slip { grid-template-columns: 35px 1fr 17px; padding: 5px; }.minister-seal { width: 29px; height: 29px; font-size: 19px; }.minister-slip-copy strong { font-size: 15px; }.minister-slip-copy em { display: none; }.selected-name-slip { bottom: 32px; }
+}
+@media (max-width: 680px) { .secret-hub:has(.private-talk-dossier) { width: 100vw; }.dossier-content { grid-template-columns: 1fr; bottom: 160px; }.confidential-sleeve { display: none; }.roster-lines { grid-template-columns: repeat(2, minmax(0, 1fr)); }.dossier-intro { width: 73%; }.dossier-footer { left: 7%; right: 7%; }.dossier-material-note { display: none; } }
+
+/* 独立密谈页：脱离天下舆图工作窗，在整张案卷上阅读人物与密札。 */
+.scene-secret { height: 100vh; min-height: 720px; background: #222c31 url('/assets/ui/archive/private-talk-dossier-portrait-stage-v2.png') center / cover no-repeat; }
+.scene-secret .scene-background, .scene-secret .scene-wash { display: none; }
+.scene-secret .scene-content { overflow: hidden; background: transparent; backdrop-filter: none; }
+.scene-secret .secret-hub:has(.private-talk-dossier) { width: 100%; min-height: 100%; background: transparent !important; box-shadow: none; }
+.scene-secret .secret-hub .secret-body:has(.private-talk-dossier) { min-height: 100vh; background: transparent !important; }
+.scene-secret .secret-hub:has(.private-talk-dossier) .app-frame-header { inset: 42px 8.5% auto; }
+.scene-secret .dossier-intro { top: 132px; left: 34%; width: 39%; }
+.scene-secret .dossier-content { top: 190px; left: 8%; right: 7%; bottom: 112px; display: grid; grid-template-columns: 27% minmax(0, 1fr) 23%; gap: 2.5%; }
+.scene-secret .minister-portrait-reveal { position: relative; min-width: 0; overflow: visible; isolation: isolate; pointer-events: none; }
+.scene-secret .minister-portrait-reveal::before, .scene-secret .minister-portrait-reveal::after { content: none; }
+.scene-secret .minister-portrait-reveal img { position: absolute; z-index: 1; inset: -9% -36% -11% -29%; width: 165%; height: 120%; object-fit: cover; object-position: center top; opacity: 0; filter: grayscale(.62) sepia(.32) contrast(.9) saturate(.58) brightness(1.08); mix-blend-mode: multiply; -webkit-mask-image: radial-gradient(ellipse at 49% 43%, #000 15%, rgba(0,0,0,.9) 32%, rgba(0,0,0,.4) 43%, transparent 56%); mask-image: radial-gradient(ellipse at 49% 43%, #000 15%, rgba(0,0,0,.9) 32%, rgba(0,0,0,.4) 43%, transparent 56%); transform: scale(1.08) translateY(1%); transition: opacity .5s ease, transform .75s cubic-bezier(.2,.8,.2,1); }
+.scene-secret .minister-portrait-reveal.is-visible img { opacity: .72; transform: scale(1) translateY(0); }
+.scene-secret .minister-portrait-reveal.portrait-offset-right.is-visible img { transform: scale(1) translate(12%, 0); }
+.scene-secret .minister-portrait-reveal.portrait-offset-vertical-hero.is-visible img { transform: scale(1.3) translate(10%, -14%); }
+.portrait-calligraphy { position: absolute; z-index: 4; left: -13px; top: 27%; display: grid; grid-template-columns: auto auto auto; align-items: start; gap: 7px; color: #2e302e; writing-mode: vertical-rl; text-orientation: mixed; text-shadow: 0 1px rgba(248, 244, 231, .72); transform: rotate(-3deg); }
+.portrait-calligraphy small { color: #994d42; font: 12px STKaiti, KaiTi, serif; letter-spacing: .18em; }.portrait-calligraphy strong { font-family: STXingkai, STKaiti, KaiTi, cursive; font-size: 46px; font-weight: 600; letter-spacing: .22em; line-height: .94; }.portrait-calligraphy span { color: #4c4b44; font: 14px STKaiti, KaiTi, serif; letter-spacing: .12em; }
+.scene-secret .minister-roster { padding-left: 35px; }.scene-secret .roster-lines { grid-template-columns: repeat(2, minmax(0, 1fr)); }.scene-secret .minister-slip { min-height: 0; }.scene-secret .confidential-sleeve { padding-top: 28px; }.scene-secret .dossier-footer { left: 10%; right: 10%; bottom: 58px; }
+@media (max-width: 900px) { .scene-secret .dossier-intro { left: 32%; width: 43%; }.scene-secret .dossier-content { left: 5%; right: 5%; grid-template-columns: 29% minmax(0,1fr) 23%; } }
+
+/* 执笔后的密陈页：微信式往来节奏被收进一张连续案卷，背景没有第二个弹窗边框。 */
+.scene-secret .secret-hub:has(.secret-chat-stage) { width: 100%; min-height: 100%; background: transparent !important; box-shadow: none; }
+.scene-secret .secret-hub:has(.secret-chat-stage) .app-frame-header { display: none; }
+.scene-secret .secret-hub .secret-body:has(.secret-chat-stage) { min-height: 100vh; padding: 0; background: #e9e0c9 url('/assets/ui/archive/private-talk-correspondence-v2.png') center / cover no-repeat !important; }
+.scene-secret .secret-chat-stage, .scene-secret .secret-chat-inner { min-height: 100vh; height: 100vh; }
+.scene-secret .secret-chat-inner { grid-template-rows: 104px minmax(0, 1fr) 104px; }
+.scene-secret .correspondence-header { padding-inline: 11.5%; background: linear-gradient(90deg, rgba(250,246,232,.15), rgba(250,246,232,.04) 70%, rgba(102,73,52,.07)); }
+.scene-secret .correspondence-header::after { left: 10.8%; right: 10.8%; }
+.scene-secret .correspondent-portrait { width: 76px; height: 80px; }.scene-secret .correspondent-identity h2 { font-size: 32px; }.scene-secret .correspondence-seal { margin-right: 10px; }
+.scene-secret .secret-chat-history { padding: 20px 25% 17px 28%; }.scene-secret .secret-record { max-width: 620px; }.scene-secret .correspondence-empty { margin-top: 16vh; }.scene-secret .correspondence-composer { padding: 12px 21% 21px 28%; }
+@media (max-width: 1100px) { .scene-secret .secret-chat-history { padding-left: 22%; padding-right: 18%; }.scene-secret .correspondence-composer { padding-left: 20%; padding-right: 17%; } }
+@media (max-width: 760px) { .scene-secret .secret-chat-inner { grid-template-rows: 87px minmax(0,1fr) 135px; }.scene-secret .correspondence-header { padding-inline: 7%; }.scene-secret .secret-chat-history { padding-inline: 8%; }.scene-secret .correspondence-composer { padding-inline: 7%; }.scene-secret .correspondent-portrait { width: 55px; height: 62px; }.scene-secret .correspondent-identity h2 { font-size: 25px; } }
+
+/* 连续纸面坐标：整屏都是同一张宣纸，不再保留中央纸框或景深虚化。 */
+.scene-secret .secret-chat-stage { position: relative; inset: auto; z-index: auto; display: grid; place-items: stretch center; background: transparent !important; backdrop-filter: none; }
+.scene-secret .secret-chat-inner { width: 100%; height: 100vh; margin: 0; padding: 0; gap: 0; border: 0; background: transparent; box-shadow: none; }
+.scene-secret .correspondence-header { padding: 12px 19% 8px; background: transparent; border-bottom-color: rgba(86, 79, 63, .18); }
+.scene-secret .correspondence-header::after { left: 18.5%; right: 18.5%; opacity: .62; }
+.scene-secret .correspondent-portrait { width: 68px; height: 72px; }.scene-secret .correspondent-identity h2 { font-size: 30px; }.scene-secret .correspondence-seal { margin-left: auto; margin-right: 0; }
+.scene-secret .secret-chat-history { padding: 16px 25% 13px; background: transparent; }
+.scene-secret .correspondence-heading { padding-bottom: 6px; }.scene-secret .correspondence-empty { width: 72%; margin-top: 16vh; padding: 0; border: 0; background: transparent; box-shadow: none; color: rgba(87, 84, 75, .68); }
+.scene-secret .secret-record { width: min(79%, 620px); padding: 10px 13px 11px; border-top-color: rgba(78, 91, 83, .18); border-bottom-color: rgba(78, 91, 83, .11); background: linear-gradient(100deg, rgba(244, 239, 220, .13), rgba(244, 239, 220, 0)); box-shadow: none; clip-path: polygon(1.5% 0, 100% 2%, 98.6% 100%, 0 97%); }.scene-secret .secret-record.character { margin-left: 0; }.scene-secret .secret-record.player { margin-right: 0; background: linear-gradient(260deg, rgba(151, 62, 51, .12), rgba(151, 62, 51, 0)); clip-path: polygon(0 2%, 98.5% 0, 100% 97%, 1.5% 100%); }.scene-secret .secret-record p { font-size: 16px; }
+.scene-secret .correspondence-composer { grid-template-columns: minmax(0, 1fr) 58px auto; gap: 6px; padding: 9px 23% 13px; background: transparent; border-top-color: rgba(77, 86, 79, .2); }.scene-secret .composer-sheet { background: transparent; border: 0; border-bottom: 1px solid rgba(91, 87, 74, .42); }.scene-secret .composer-sheet::before { right: 2px; }.scene-secret .secret-chat-inner textarea { min-height: 51px; padding: 19px 2px 5px; background: transparent; }.scene-secret .secret-send { min-width: 58px; width: 58px; height: 58px; align-self: end; }.scene-secret .secret-order { min-width: 54px; padding-inline: 4px; color: #744136 !important; border-left: 1px solid rgba(139, 75, 61, .35) !important; font-size: 11px; }.scene-secret .composer-brush { right: 25%; top: -2px; }
+@media (max-width: 1100px) { .scene-secret .correspondence-header { padding-inline: 15%; }.scene-secret .correspondence-header::after { left: 14.5%; right: 14.5%; }.scene-secret .secret-chat-history { padding-inline: 18%; }.scene-secret .correspondence-composer { padding-inline: 17%; }.scene-secret .composer-brush { right: 19%; } }
+@media (max-width: 760px) { .scene-secret .correspondence-header { padding-inline: 7%; }.scene-secret .correspondence-header::after { left: 6.5%; right: 6.5%; }.scene-secret .secret-chat-history { padding-inline: 8%; }.scene-secret .correspondence-composer { padding-inline: 7%; }.scene-secret .secret-order { grid-column: auto; }.scene-secret .composer-brush { right: 9%; } }
+
+/* 纸尾留出案头余白，输入不贴屏幕底边。 */
+.scene-secret .secret-chat-inner { grid-template-rows: 104px minmax(0, 1fr) 150px; }
+.scene-secret .correspondence-composer { align-self: start; margin-top: 6px; }
+.scene-secret .composer-keyhint { position: absolute; left: 0; bottom: -15px; color: rgba(91, 83, 71, .65); font: 10px STKaiti, KaiTi, serif; letter-spacing: .08em; pointer-events: none; }
+.scene-secret .secret-chat-inner .close-button { position: fixed; z-index: 20; top: 24px; right: 82px; width: auto; height: auto; display: inline-flex; padding: 7px 10px; color: #70463d; border: 1px solid rgba(139, 75, 61, .42); border-radius: 0; background: rgba(248, 242, 226, .8); box-shadow: 0 2px 8px rgba(67, 48, 31, .1); }
+@media (max-width: 760px) { .scene-secret .secret-chat-inner { grid-template-rows: 87px minmax(0, 1fr) 164px; }.scene-secret .composer-keyhint { display: none; } }
+
+/* 府堂召议同样是独立长卷：消除存量弹层的固定定位、边框、阴影与背景虚化。 */
+.council-scroll-page .council-scroll-selection {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  display: block !important;
+  place-items: initial !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.council-scroll-page .council-scroll-inner {
+  position: relative !important;
+  z-index: auto !important;
+  max-height: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

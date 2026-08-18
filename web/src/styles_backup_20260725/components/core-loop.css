@@ -1,0 +1,160 @@
+/* 核心闭环共享规则：场景样式应在此基础上做局部表达，禁止作为全局覆盖层。 */
+:root {
+  --ui-ink: #263137;
+  --ui-ink-soft: #607177;
+  --ui-paper: #f7f2e7;
+  --ui-paper-muted: #ece4d4;
+  --ui-cyan: #4f7075;
+  --ui-vermilion: #9a4037;
+  --ui-warning: #9d6d2c;
+  --ui-line: rgba(56, 69, 68, .24);
+  --ui-line-strong: rgba(56, 69, 68, .48);
+  --ui-shadow: 0 16px 40px rgba(36, 45, 45, .16);
+  --ui-space-1: 8px; --ui-space-2: 12px; --ui-space-3: 18px; --ui-space-4: 28px;
+  --ui-title: clamp(22px, 2vw, 32px); --ui-heading: 17px; --ui-body: 14px; --ui-note: 12px;
+  --ui-motion: 180ms cubic-bezier(.2,.7,.2,1);
+}
+
+.scene-shell { background: #dce0da url('/底图_expanded.jpg?v=20260720-rect-crop-outpaint') center / cover no-repeat; }
+.persistent-world-stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #dce0da; }
+.persistent-world-map { position: absolute; inset: 0; z-index: 0; }
+.persistent-world-map .strategic-map { position: absolute; inset: 0; border: 0; box-shadow: none; }
+.persistent-world-map .map-caption { top: 84px; opacity: .74; }
+.persistent-world-content { position: relative; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
+.persistent-world-content .scene-shell, .persistent-world-content button, .persistent-world-content input, .persistent-world-content textarea, .persistent-world-content select, .persistent-world-content a { pointer-events: auto; }
+.persistent-world-content .scene-background, .persistent-world-content .scene-wash { display: none; }
+/* 非地图模块不是换场：它们只是舆图上的有限工作窗。 */
+.persistent-world-content .scene-shell { position: absolute; inset: 92px 7vw 28px; width: auto; min-height: 0; max-width: 1120px; margin: 0 auto; overflow: auto; background: rgba(247,242,231,.94) var(--ink-tex-paper-revival) center/cover; border: 1px solid var(--ui-line-strong); border-top: 3px solid var(--ui-vermilion); box-shadow: 0 18px 54px rgba(25,33,34,.23); }
+.persistent-world-content .scene-shell .app-frame { min-height: 100%; }
+.map-desk { height:100%; pointer-events:none; }.map-desk > * { pointer-events:auto; }.map-desk .metric-bar { position:relative; }.map-desk-agenda { position:absolute; z-index:4; top:96px; left:28px; width:min(340px, calc(100vw - 56px)); padding:16px; }.map-desk-agenda p { margin:12px 0; color:var(--ui-ink-soft); font-size:var(--ui-note); line-height:1.7; }.map-desk-actions { display:grid; gap:8px; margin-top:14px; }.map-desk-actions .action-seal { justify-content:flex-start; }
+/* 世界不换场：所有功能页都在同一张天下舆图之上进行。 */
+.scene-shell .scene-background { background-image: url('/底图_expanded.jpg?v=20260720-rect-crop-outpaint') !important; filter: saturate(.78) brightness(.98); }
+.scene-content { background: transparent !important; color: var(--ui-ink); }
+.scene-density-open .scene-wash { opacity: .08 !important; }
+.scene-density-standard .scene-wash { opacity: .14 !important; }
+.scene-density-focused .scene-wash { opacity: .2 !important; }
+.scene-content::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .11; background: var(--ink-tex-paper-revival) center/cover; mix-blend-mode: multiply; }
+.scene-content > * { position: relative; }
+
+button { border-radius: 0; transition: transform var(--ui-motion), background var(--ui-motion), border-color var(--ui-motion), box-shadow var(--ui-motion); }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ui-cyan); outline-offset: 3px; }
+button:not(:disabled):hover { transform: translateY(-1px); }
+.primary, .draft-btn, .primary-action { background: var(--ui-vermilion) !important; color: #fff8ec !important; border-color: var(--ui-vermilion) !important; box-shadow: 0 4px 0 rgba(94, 38, 33, .23); }
+.secondary, .back-btn, .change-char-btn { color: var(--ui-cyan) !important; background: rgba(247,242,231,.72) !important; border-color: var(--ui-line-strong) !important; }
+
+/* shared page heading: a low, calm state strip rather than a dashboard header */
+.metric-bar, .map-header, .secret-header, .directive-book > header, .monthly-summary > header, .council-page > header {
+  min-height: 72px; padding: 10px 28px; background: rgba(247,242,231,.84); border: 0; border-bottom: 1px solid var(--ui-line-strong); box-shadow: 0 5px 18px rgba(36,45,45,.06);
+}
+.metric-bar { gap: 22px; }
+.campaign-mark, .turn-date { color: var(--ui-ink) !important; }
+.campaign-mark strong, .turn-date strong { color: var(--ui-vermilion) !important; }
+.metric-ledger { display:flex; align-items:center; gap:2px; }
+.metric-chip { display:inline-flex; align-items:center; gap:5px; min-width:46px; padding:7px 8px; color:var(--ui-ink); background:transparent; border:0; border-right:1px solid var(--ui-line); box-shadow:none; }
+.metric-chip svg { width:16px; height:16px; color:var(--ui-cyan); }.metric-chip strong{font-family:inherit;font-size:14px}.metric-chip:hover{background:rgba(79,112,117,.08);transform:none}.metric-trend{display:block;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent}.metric-trend-up{border-bottom:4px solid #58714d}.metric-trend-down{border-top:4px solid var(--ui-vermilion)}.metric-trend-steady{width:5px;height:1px;border:0;background:var(--ui-ink-soft)}
+.game-tooltip { z-index:100; padding:6px 9px; color:#fff8ec; background:var(--ui-ink); border:1px solid rgba(247,242,231,.5); box-shadow:0 5px 14px rgba(36,45,45,.2); font-size:12px; }.game-tooltip-arrow{fill:var(--ui-ink)}
+.app-frame { position:relative; width:100%; min-height:100%; }.app-frame-header{min-height:72px;display:grid;grid-template-columns:minmax(180px,1fr) auto minmax(180px,1fr);align-items:center;gap:16px;padding:10px 28px;background:rgba(247,242,231,.84);border-bottom:1px solid var(--ui-line-strong);box-shadow:0 5px 18px rgba(36,45,45,.06)}.app-frame-back{justify-self:start}.app-frame-title{text-align:center}.app-frame-title small{display:block;color:var(--ui-vermilion);font-size:11px;letter-spacing:.16em}.app-frame-title h1{margin:2px 0 0;color:var(--ui-ink);font-size:24px;letter-spacing:.16em}.app-frame-actions{justify-self:end;display:flex;gap:8px}.app-frame-actions .action-seal{min-height:38px}
+
+/* Situation hub: one monthly scroll, supporting chronicle and a quiet ledger. */
+.situation-hub-body { grid-template-columns: minmax(0, 720px) 280px; justify-content: center; gap: var(--ui-space-3); padding: var(--ui-space-3) 28px 0; }
+.situation-main { gap: var(--ui-space-3); padding-right: 4px; }
+.situation-header { padding: 4px 2px 12px; border-bottom: 1px solid var(--ui-line); }
+.situation-header h2, .situation-actions h3 { color: var(--ui-ink) !important; font-size: var(--ui-title); font-weight: 700; letter-spacing: .16em; }
+.situation-header h2::before, .situation-actions h3::before { content: '本月'; margin-right: 10px; color: var(--ui-vermilion); font-size: 12px; letter-spacing: .08em; vertical-align: middle; }
+.situation-overview { grid-template-columns: minmax(0, 1.65fr) minmax(180px, .7fr); gap: var(--ui-space-2); }
+.overview-card { position: relative; padding: 18px 20px; background: rgba(247,242,231,.78); border: 1px solid var(--ui-line); border-radius: 0; box-shadow: 0 6px 18px rgba(36,45,45,.05); }
+.overview-card:first-child { grid-row: span 3; border-top: 3px solid var(--ui-cyan); }
+.overview-card:first-child::after { content: '军府纪事'; position: absolute; top: 12px; right: 16px; color: rgba(79,112,117,.6); font-size: 11px; letter-spacing: .18em; }
+.overview-card h3 { color: var(--ui-ink) !important; font-size: var(--ui-heading); border-bottom: 1px solid var(--ui-line); padding-bottom: 8px; }
+.overview-card p { color: var(--ui-ink) !important; }
+.overview-hint { color: var(--ui-ink-soft) !important; font-style: normal !important; }
+.long-term-score { color: var(--ui-vermilion) !important; font-size: 30px !important; font-weight: 700; }
+.incident-card, .memorial-card { padding: 9px 0; border-bottom: 1px dashed var(--ui-line); background: transparent !important; }
+.situation-book { background: rgba(239,232,217,.68); border: 1px solid var(--ui-line); border-top: 3px solid var(--ui-vermilion); box-shadow: var(--ui-shadow); }
+.book-header { padding: 16px; border-bottom-color: var(--ui-line); }
+.book-header h2 { color: var(--ui-ink) !important; letter-spacing: .14em; }
+.book-header h2::before { content: '方略'; color: var(--ui-vermilion); font-size: 11px; margin-right: 8px; }
+.book-item { border: 0; border-bottom: 1px dashed var(--ui-line); background: transparent; border-radius: 0; }
+.action-grid { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1px; background: var(--ui-line); border: 1px solid var(--ui-line); }
+.action-btn { min-height: 118px; padding: 16px; background: rgba(247,242,231,.86); border: 0; border-radius: 0; color: var(--ui-ink); }
+.action-btn svg { color: var(--ui-cyan); }
+.action-btn.primary-action { background: var(--ui-vermilion) !important; }
+
+/* Map: retain geography as the subject; the selected location is a narrow archive slip. */
+.map-hub { height: 100vh; display: grid; grid-template-rows: auto minmax(0,1fr) auto; padding: 0; }
+.map-header h1, .secret-header h1, .directive-book > header h1, .monthly-summary > header h1 { color: var(--ui-ink); letter-spacing: .16em; font-size: 24px; }
+.map-area { margin: 14px 28px; border: 1px solid var(--ui-line-strong); box-shadow: var(--ui-shadow); overflow: hidden; background: rgba(247,242,231,.45); }
+.map-selection-info { margin: 0 28px 18px; padding: 10px 14px; background: rgba(247,242,231,.92); border-left: 3px solid var(--ui-vermilion); box-shadow: var(--ui-shadow); background-image: linear-gradient(rgba(247,242,231,.90),rgba(247,242,231,.90)), var(--revival-scene-map-dossier); background-position: center; background-size: cover; }
+
+/* Council and secret chat: record and seats, not browser-card grids or IM bubbles. */
+.minister-selection, .council-hall-stage, .secret-hub, .directive-book, .monthly-summary { background: rgba(247,242,231,.88) !important; border: 1px solid var(--ui-line-strong) !important; box-shadow: var(--ui-shadow); }
+.minister-selection { max-width: 1180px; margin: 22px auto; }
+.minister-selection-inner > header, .council-hall-inner > header { border-bottom: 1px solid var(--ui-line); }
+.minister-grid { grid-template-columns: repeat(5, minmax(0,1fr)) !important; gap: 1px !important; background: var(--ui-line); }
+.minister-grid > button { background: rgba(247,242,231,.9) !important; border: 0 !important; border-radius: 0 !important; }
+.minister-grid > button.selected { background: rgba(79,112,117,.13) !important; box-shadow: inset 0 3px var(--ui-vermilion); }
+.minister-selection-layout { display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:18px; padding:18px; }
+.minister-layout-label { margin:0 0 9px; color:var(--ui-cyan); font-size:11px; letter-spacing:.16em; }
+.council-seat-ledger { min-height:360px; padding:14px; background:rgba(79,112,117,.08); border-left:2px solid var(--ui-cyan); }
+.council-seat-ledger ol { margin:0; padding:0; list-style:none; }.council-seat-ledger li { padding:10px 0; border-bottom:1px dashed var(--ui-line); }.council-seat-ledger strong,.council-seat-ledger small{display:block}.council-seat-ledger small,.council-seat-empty{margin:4px 0 0;color:var(--ui-ink-soft);font-size:12px;line-height:1.55}.council-seat-empty{padding-top:20px}
+.council-topic, .council-transcript { background: rgba(247,242,231,.75) !important; border: 1px solid var(--ui-line) !important; }
+.council-transcript { border-top: 3px solid var(--ui-cyan) !important; }
+.council-hall-stage { background-image: linear-gradient(rgba(247,242,231,.86),rgba(247,242,231,.86)), var(--revival-scene-council) !important; background-position: center; background-size: cover; }
+.council-kicker,.council-record-label { display:block; margin:0 0 5px; color:var(--ui-vermilion); font-size:11px; letter-spacing:.16em; }.council-hall-inner>header h2{margin:0}.council-stage-layout{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px}.council-attendance{padding:14px;background:rgba(79,112,117,.09);border-left:2px solid var(--ui-cyan)}.council-attendance small{display:block;color:var(--ui-cyan);letter-spacing:.12em;font-size:11px}.council-attendance span{display:block;padding:9px 0;border-bottom:1px dashed var(--ui-line);font-size:13px}.council-record-label{padding-bottom:8px;border-bottom:1px dashed var(--ui-line)}
+.secret-hub { width: min(1120px, calc(100vw - 120px)); margin: 18px auto; min-height: min(720px, calc(100vh - 132px)); max-height: calc(100vh - 132px); overflow: auto; }
+.secret-body { padding: 20px !important; }
+.character-grid { grid-template-columns: repeat(4,minmax(0,1fr)) !important; gap: 1px !important; background: var(--ui-line); }
+.character-card { border: 0 !important; border-radius: 0 !important; background: rgba(247,242,231,.9) !important; }
+.chat-area { border-left: 3px solid var(--ui-cyan); background: rgba(247,242,231,.72); }
+.secret-chat-stage { background: linear-gradient(rgba(247,242,231,.82),rgba(247,242,231,.82)), var(--revival-scene-secret); background-position: center; background-size: cover; }
+
+/* Directives and monthly report become authored documents. */
+.directive-book, .monthly-summary { width: min(1120px, calc(100vw - 120px)); margin: 18px auto; min-height: min(720px, calc(100vh - 132px)); max-height: calc(100vh - 132px); overflow: auto; padding: 0 !important; }
+.directive-book > header, .monthly-summary > header { margin: 0 !important; }
+.draft-stats { padding: 14px 22px; background: rgba(79,112,117,.08); border-bottom: 1px solid var(--ui-line); }
+.stat-value { color: var(--ui-vermilion) !important; }
+.directive-guidance, .draft-list, .summary-content { margin: 18px 22px; background: rgba(247,242,231,.7); border: 1px solid var(--ui-line); }
+.directive-book { background-image: linear-gradient(rgba(247,242,231,.87),rgba(247,242,231,.87)), var(--revival-scene-directive) !important; background-position: center; background-size: cover; }
+.monthly-summary { background-image: linear-gradient(rgba(247,242,231,.87),rgba(247,242,231,.87)), var(--revival-scene-monthly) !important; background-position: center; background-size: cover; }
+.draft-card { border-radius: 0 !important; border-color: var(--ui-line) !important; background: transparent !important; }
+.draft-card.selected { border-left: 3px solid var(--ui-vermilion) !important; }
+.monthly-summary h2 { color: var(--ui-ink) !important; border-bottom: 1px solid var(--ui-line); padding-bottom: 8px; }
+.execution-table th { color: var(--ui-cyan); }
+
+.panel-root { background: var(--ui-paper) !important; border: 1px solid var(--ui-line-strong) !important; border-top: 3px solid var(--ui-vermilion) !important; box-shadow: var(--ui-shadow) !important; }
+.panel-root > header { border-bottom: 1px solid var(--ui-line); color: var(--ui-ink); }
+.game-dialog-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(38,49,55,.34); backdrop-filter: blur(3px); }
+.game-dialog-surface { position: fixed; z-index: 81; left: 50%; top: 50%; width: min(620px, calc(100vw - 40px)); max-height: min(760px, calc(100vh - 40px)); transform: translate(-50%, -50%); overflow: auto; background: var(--ui-paper) var(--ink-tex-paper-revival) center/cover; border: 1px solid var(--ui-line-strong); border-top: 4px solid var(--ui-vermilion); box-shadow: 0 24px 72px rgba(25,33,34,.32); }
+.game-dialog-surface > header { display: flex; justify-content: space-between; gap: 20px; padding: 18px 20px 14px; border-bottom: 1px solid var(--ui-line); }
+.game-dialog-surface h2 { margin: 0; color: var(--ui-ink); letter-spacing: .12em; font-size: 20px; }
+.game-dialog-surface p { margin: 6px 0 0; color: var(--ui-ink-soft); font-size: var(--ui-note); }
+.game-dialog-surface header button { border: 0; background: transparent; color: var(--ui-ink-soft); }
+.game-dialog-content { padding: 20px; }
+.game-dialog-danger { border-top-color: var(--ui-vermilion); }
+.game-dialog-decree { border-top-color: var(--ui-cyan); }
+.game-dialog-map-drawer { left: auto; right: 24px; top: 92px; width: min(430px, calc(100vw - 48px)); max-height: calc(100vh - 116px); transform: none; border-top-color: var(--ui-cyan); box-shadow: 0 14px 42px rgba(25,33,34,.24); }
+.game-dialog-map-drawer .game-dialog-content { padding: 14px 16px 18px; }
+@media (max-width: 760px) { .game-dialog-map-drawer { right: 12px; top: 74px; width: calc(100vw - 24px); max-height: calc(100vh - 88px); } }
+.secret-order-form { display: grid; gap: 12px; }
+.secret-order-recipient { margin: 0; padding: 10px 12px; border-left: 3px solid var(--ui-cyan); background: rgba(79,112,117,.1); color: var(--ui-ink); }
+.secret-order-form input, .secret-order-form textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--ui-line-strong); border-radius: 0; background: rgba(255,252,244,.82); color: var(--ui-ink); }
+.secret-order-form textarea { min-height: 150px; resize: vertical; }
+.decree-confirmation { display: grid; gap: 10px; color: var(--ui-ink); }
+.decree-confirmation > p { margin: 0; padding: 10px 12px; background: rgba(79,112,117,.08); border-left: 3px solid var(--ui-cyan); }
+.decree-confirmation-note { color: var(--ui-ink-soft) !important; }
+.decree-confirmation-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.paper-panel-ui { background: rgba(247,242,231,.86); border: 1px solid var(--ui-line); box-shadow: 0 8px 22px rgba(36,45,45,.09); }
+.paper-panel-focus { border-top: 3px solid var(--ui-cyan); }
+.paper-panel-archive { border-left: 3px solid var(--ui-vermilion); }
+.paper-panel-floating { box-shadow: var(--ui-shadow); }
+.section-heading { display: flex; align-items: baseline; gap: 10px; padding-bottom: 9px; border-bottom: 1px solid var(--ui-line); }
+.section-heading small { color: var(--ui-vermilion); letter-spacing: .12em; }.section-heading h2 { margin: 0; color: var(--ui-ink); font-size: var(--ui-heading); letter-spacing: .1em; }.section-heading span { margin-left: auto; color: var(--ui-ink-soft); font-size: var(--ui-note); }
+.status-mark { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; font-size: 11px; border: 1px solid currentColor; }.status-mark-neutral{color:var(--ui-ink-soft)}.status-mark-action{color:var(--ui-cyan)}.status-mark-warning{color:var(--ui-warning)}.status-mark-danger{color:var(--ui-vermilion)}.status-mark-complete{color:#58714d}
+.status-mark::before { content:''; width:14px; height:14px; background:var(--revival-icon-pending) center/contain no-repeat; opacity:.72; }.status-mark-danger::before{background-image:var(--revival-icon-risk)}.status-mark-complete::before{background-image:var(--revival-seal-confirmed)}
+.action-seal { position:relative; padding: 9px 14px 9px 39px; border: 1px solid var(--ui-line-strong); }.action-seal::before{content:'';position:absolute;left:10px;top:50%;width:20px;height:20px;transform:translateY(-50%);background:var(--revival-seal-action) center/contain no-repeat;opacity:.78}.action-seal-primary{background:var(--ui-vermilion);color:#fff8ec}.action-seal-primary::before{filter:brightness(0) invert(1)}.action-seal-secondary{background:rgba(247,242,231,.86);color:var(--ui-cyan)}.action-seal-danger{background:var(--ui-vermilion);color:#fff8ec}.action-seal-danger::before{background-image:var(--revival-seal-danger);filter:brightness(0) invert(1)}.action-seal-ghost{background:transparent;color:var(--ui-ink-soft);border-color:transparent}
+.ledger-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px dashed var(--ui-line); }.ledger-row strong,.ledger-row small{display:block}.ledger-row small{margin-top:3px;color:var(--ui-ink-soft);font-size:var(--ui-note)}
+
+@media (max-width: 1280px) { .situation-hub-body { padding-inline: 16px; grid-template-columns: minmax(0, 1fr) 260px; } .situation-overview { grid-template-columns: 1.2fr .8fr; } .action-grid { grid-template-columns: repeat(2,1fr); } .minister-grid { grid-template-columns: repeat(4,minmax(0,1fr)) !important; } }
+@media (max-width: 900px) { .scene-shell { background-position: 55% center; } .situation-hub-body { grid-template-columns: 1fr; overflow: auto; } .situation-book { min-height: 260px; } .secret-hub, .directive-book, .monthly-summary { width: calc(100vw - 28px); margin: 14px auto; max-height: none; } }
+@media (max-width: 900px) { .persistent-world-content .scene-shell { inset: 78px 14px 14px; max-width: none; } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }

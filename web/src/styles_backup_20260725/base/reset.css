@@ -1,0 +1,30 @@
+/* ========================================
+   Base Styles - Reset
+   ======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /* 页面各自负责窄桌面排版；全局 1160px 下限会制造不可达的横向溢出。 */
+  min-width: 0;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

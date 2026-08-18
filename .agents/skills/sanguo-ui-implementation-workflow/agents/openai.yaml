@@ -1,0 +1,4 @@
+interface:
+  display_name: "SANGUO UI Implementation Workflow"
+  short_description: "Implement approved SANGUO UI as a high-fidelity game interface"
+  default_prompt: "Use $sanguo-ui-implementation-workflow to implement this approved SANGUO UI."

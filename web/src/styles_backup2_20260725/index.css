@@ -1,0 +1,44 @@
+/* ========================================
+   SANGUO - Main CSS Entry Point
+   轻水墨三国风格设计系统
+   ======================================== */
+
+/* 按场景归档的存量规则：只作过渡兼容，不再允许向这里新增样式。 */
+@import './legacy/foundation.css';
+@import './legacy/map.css';
+@import './legacy/council.css';
+@import './legacy/characters.css';
+@import './legacy/overlays.css';
+
+/* Design Tokens */
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+
+/* Base Styles */
+@import './base/reset.css';
+
+/* Component Styles */
+@import './components/buttons.css';
+@import './components/panels.css';
+@import './components/cards.css';
+@import './components/forms.css';
+@import './components/modals.css';
+@import './components/scene-shell.css';
+@import './components/core-loop.css';
+
+/* Scene Styles */
+@import './scenes/menu.css';
+@import './scenes/map.css';
+@import './scenes/council.css';
+@import './scenes/secret-chat.css';
+@import './scenes/directive.css';
+@import './scenes/review.css';
+@import './scenes/adjudication.css';
+@import './scenes/monthly-report.css';
+@import './scenes/situation-hub.css';
+@import './scenes/pages-shared.css';
+@import './scenes/info-pages.css';
+
+/* Utilities */
+@import './utils/animations.css';
+@import './utils/responsive.css';

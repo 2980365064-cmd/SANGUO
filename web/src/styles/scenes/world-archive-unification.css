@@ -1,0 +1,411 @@
+/*
+ * 全游戏浅水墨档案统一层
+ * 身份：廷议为议录，密谈为私札，军府为方略簿，审阅为颁令卷，
+ * 推演为行止录，月报与史册为编年册。仅重述既有界面，不改变任何行为。
+ */
+
+:root {
+  --world-paper: #f7f2e7;
+  --world-paper-deep: #e8dfcd;
+  --world-ink: #263137;
+  --world-ink-muted: #627479;
+  --world-cyan: #4f7075;
+  --world-vermilion: #9a4037;
+  --world-rule: rgba(55, 73, 72, .24);
+  --world-rule-soft: rgba(55, 73, 72, .13);
+  --world-paper-shadow: 0 20px 48px rgba(28, 42, 42, .22), 0 1px 0 rgba(255,255,255,.72) inset;
+}
+
+/* 一切有限工作窗均为同一世界中的不同卷宗；地图不加蒙层、不失焦。 */
+.persistent-world-content .scene-shell {
+  background: transparent !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.persistent-world-content .scene-shell .app-frame,
+.persistent-world-content .scene-shell .adjudication-flow {
+  position: relative;
+  isolation: isolate;
+  color: var(--world-ink);
+  border: 1px solid var(--world-rule);
+  border-radius: 2px 4px 2px 3px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,250,.82), transparent 43%),
+    linear-gradient(90deg, rgba(90,110,107,.07), transparent 10%, transparent 91%, rgba(134,112,80,.08)),
+    linear-gradient(rgba(247,242,231,.83), rgba(247,242,231,.80)),
+    var(--world-document-scene, none) center/cover no-repeat,
+    var(--ink-tex-paper-revival) center/340px auto repeat,
+    var(--world-paper);
+  box-shadow: var(--world-paper-shadow);
+}
+
+/* 本月案头是案卷夹，而不是另一张全屏仪表板。 */
+.persistent-world-content .scene-shell .situation-hub-root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--world-rule);
+  border-radius: 2px 4px 2px 3px;
+  background:
+    linear-gradient(rgba(247,242,231,.83), rgba(247,242,231,.80)),
+    var(--revival-scene-map-dossier) center/cover no-repeat,
+    var(--world-paper);
+  box-shadow: var(--world-paper-shadow);
+}
+
+.situation-hub-root .metric-bar {
+  min-height: 58px;
+  padding-inline: 21px;
+  background: linear-gradient(90deg, rgba(247,242,231,.96), rgba(220,231,227,.55), rgba(247,242,231,.96));
+  border-bottom: 1px solid var(--world-rule);
+  box-shadow: none;
+}
+
+.situation-hub-root .situation-hub-body { gap: 24px; padding: 18px 24px 0; }
+.situation-hub-root .situation-main { padding-right: 20px; border-right: 1px solid var(--world-rule-soft); }
+.situation-hub-root .situation-side-chronicle { padding-left: 0; }
+.situation-hub-root .situation-header { padding: 0 0 12px; border-bottom: 1px solid var(--world-rule-soft); }
+.situation-hub-root .situation-header small { color: var(--world-vermilion); font-size: 10px; font-weight: 700; letter-spacing: .18em; }
+.situation-hub-root .situation-header h2 { margin: 4px 0 2px; color: var(--world-ink) !important; font-family: "Source Han Serif", "Noto Serif SC", serif; font-size: 25px; letter-spacing: .14em; }
+.situation-hub-root .situation-header h2::before { content: none; }
+.situation-hub-root .situation-date { color: var(--world-ink-muted); }
+.situation-hub-root .monthly-agenda,
+.situation-hub-root .situation-reputation,
+.situation-hub-root .chronicle-panel,
+.situation-hub-root .faction-panel,
+.situation-hub-root .situation-book { padding: 0 0 17px; }
+.situation-hub-root .monthly-agenda + .situation-reputation,
+.situation-hub-root .situation-side-chronicle .paper-panel-ui + .paper-panel-ui { padding-top: 17px; border-top: 1px solid var(--world-rule-soft) !important; }
+.situation-hub-root .agenda-item { padding: 12px 0; border-bottom: 1px dashed var(--world-rule-soft); background: transparent !important; }
+.situation-hub-root .agenda-item:first-child { border-left: 3px solid var(--world-cyan); padding-left: 12px; }
+.situation-hub-root .action-grid { gap: 0; border: 1px solid var(--world-rule-soft); background: transparent; }
+.situation-hub-root .action-btn { min-height: 105px; padding: 13px; background: transparent !important; border-right: 1px solid var(--world-rule-soft) !important; }
+.situation-hub-root .action-btn:last-child { border-right: 0 !important; }
+.situation-hub-root .action-btn:hover { background: linear-gradient(180deg, rgba(79,112,117,.10), transparent) !important; box-shadow: inset 0 3px var(--world-cyan); }
+.situation-hub-root .action-btn svg { color: var(--world-cyan); }
+.situation-hub-root .situation-dock { border-top: 1px solid var(--world-rule-soft); background: rgba(247,242,231,.76); }
+
+/* 工作窗的高度服从常驻舆图舞台，不能沿用旧页面的 100vh 而越出纸面。 */
+.persistent-world-content .scene-shell .app-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  margin: 0 !important;
+}
+
+.persistent-world-content .scene-shell .adjudication-flow {
+  width: min(920px, 100%);
+  max-height: 100%;
+  margin: 0 auto !important;
+  overflow: auto;
+}
+
+/* 每一卷仍保有自己的场景身份，但场景只作纸下淡墨，不侵占正文。 */
+.council-hub { --world-document-scene: var(--revival-scene-council); }
+.secret-hub { --world-document-scene: var(--revival-scene-secret); }
+.directive-book { --world-document-scene: var(--revival-scene-directive); }
+.review-decree { --world-document-scene: var(--ink-bg-review); }
+.adjudication-flow { --world-document-scene: var(--ink-bg-adjudication); }
+.monthly-summary { --world-document-scene: var(--revival-scene-monthly); }
+.info-page-army { --world-document-scene: var(--ink-bg-army); }
+.info-page-character { --world-document-scene: var(--ink-bg-character); }
+.info-page-city { --world-document-scene: var(--ink-bg-city); }
+.info-page-diplomacy { --world-document-scene: var(--ink-bg-diplomacy); }
+.info-page-history { --world-document-scene: var(--ink-bg-history); }
+.info-page-event { --world-document-scene: var(--ink-bg-event-urgent); }
+
+.persistent-world-content .scene-shell .app-frame::before,
+.persistent-world-content .scene-shell .adjudication-flow::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 8px 10px;
+  pointer-events: none;
+  border-top: 1px solid rgba(79,112,117,.19);
+  border-bottom: 1px solid rgba(169,142,104,.23);
+}
+
+/* 题签：最先读取身份，再进入内容。 */
+.persistent-world-content .app-frame-header,
+.adjudication-flow > header {
+  min-height: 73px;
+  padding: 13px 23px 12px;
+  background:
+    linear-gradient(90deg, rgba(247,242,231,.98), rgba(230,237,232,.48) 47%, rgba(247,242,231,.95));
+  border-bottom: 1px solid var(--world-rule) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.72) inset;
+}
+
+.persistent-world-content .app-frame-title small {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--world-vermilion);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+
+.persistent-world-content .app-frame-title h1,
+.adjudication-flow > header h1 {
+  margin: 0;
+  color: var(--world-ink);
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-size: clamp(22px, 2.1vw, 29px);
+  font-weight: 700;
+  letter-spacing: .14em;
+  line-height: 1.2;
+  text-shadow: 0 1px 0 rgba(255,255,255,.86);
+}
+
+.persistent-world-content .app-frame-header::after,
+.adjudication-flow > header::after {
+  right: 24px;
+  bottom: -1px;
+  width: 74px;
+  border-bottom: 2px solid var(--world-vermilion);
+}
+
+.persistent-world-content .app-frame-back .action-seal,
+.persistent-world-content .app-frame-actions .action-seal,
+.persistent-world-content .app-frame-actions .status-mark {
+  min-height: 31px;
+}
+
+/* 通用内页：取消等权白卡，用簿页、墨线、留白区分。 */
+.persistent-world-content .paper-panel-ui,
+.persistent-world-content .info-detail,
+.persistent-world-content .info-body > section,
+.persistent-world-content .directive-section,
+.persistent-world-content .review-decree .batch-info,
+.persistent-world-content .review-decree .draft-selection {
+  position: relative;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.persistent-world-content .paper-panel-ui::before,
+.persistent-world-content .info-detail::before,
+.persistent-world-content .info-body > section::before {
+  inset: auto 0 0;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--world-rule), transparent);
+}
+
+.persistent-world-content .section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--world-rule-soft);
+}
+
+.persistent-world-content .section-heading small {
+  position: relative;
+  padding-left: 8px;
+  color: var(--world-vermilion);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.persistent-world-content .section-heading small::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: currentColor;
+}
+
+.persistent-world-content .section-heading h2 {
+  margin: 0;
+  color: var(--world-ink);
+  font-family: "Source Han Serif", "Noto Serif SC", serif;
+  font-size: 19px;
+  letter-spacing: .13em;
+}
+
+.persistent-world-content .section-heading > span {
+  margin-left: auto;
+  color: var(--world-ink-muted);
+  font-size: 11px;
+}
+
+.persistent-world-content input,
+.persistent-world-content textarea,
+.persistent-world-content select {
+  border: 1px solid rgba(72,93,91,.28) !important;
+  border-radius: 0 !important;
+  background: rgba(255,253,246,.58) !important;
+  box-shadow: inset 0 1px 4px rgba(66,77,72,.05) !important;
+}
+
+.persistent-world-content input:focus,
+.persistent-world-content textarea:focus,
+.persistent-world-content select:focus {
+  border-color: var(--world-cyan) !important;
+  outline: 1px solid rgba(79,112,117,.34);
+  outline-offset: 1px;
+}
+
+.persistent-world-content .action-seal,
+.game-dialog-surface .action-seal {
+  min-height: 32px;
+  border: 1px solid rgba(65,86,86,.38) !important;
+  border-radius: 1px !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset !important;
+}
+
+.persistent-world-content .action-seal-secondary,
+.persistent-world-content .action-seal-ghost,
+.game-dialog-surface .action-seal-secondary,
+.game-dialog-surface .action-seal-ghost {
+  color: var(--world-cyan) !important;
+  background: linear-gradient(90deg, rgba(250,248,239,.88), rgba(222,232,228,.66)) !important;
+}
+
+.persistent-world-content .action-seal-primary,
+.game-dialog-surface .action-seal-primary {
+  color: #fff9ed !important;
+  background: linear-gradient(135deg, #a6493f, #873831) !important;
+  border-color: #7f332e !important;
+}
+
+/* 府堂廷议：议席在左，书记议录在中，建议附卷在右。 */
+.council-hub .council-body { grid-template-columns: minmax(0, 1fr) 292px; }
+.council-hub .council-main { padding: 22px 26px; }
+.council-hub .council-suggestions {
+  padding: 18px 17px;
+  background: linear-gradient(90deg, rgba(79,112,117,.08), transparent) !important;
+  border-left: 1px solid var(--world-rule-soft);
+}
+.council-hub .council-suggestions .paper-panel-ui { padding: 0; }
+.council-hub .suggestion-item { padding: 12px 0; border-bottom: 1px dashed var(--world-rule-soft); }
+.council-hub .suggestion-item:last-child { border-bottom: 0; }
+.council-hub .suggestion-source { color: var(--world-vermilion); font-size: 10px; letter-spacing: .13em; }
+
+/* 单独密谈：以私札记录替代聊天容器，来往双方仅以墨色和落款区分。 */
+.secret-hub .secret-body { padding: 22px 28px; }
+.secret-hub .character-select { padding: 0; }
+.secret-hub .select-header { padding-bottom: 14px; border-bottom: 1px solid var(--world-rule-soft); }
+.secret-hub .character-grid { gap: 0; }
+.secret-hub .character-card {
+  border: 0 !important;
+  border-bottom: 1px solid var(--world-rule-soft) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.secret-hub .character-card:hover { background: rgba(79,112,117,.07) !important; box-shadow: inset 3px 0 var(--world-cyan) !important; }
+.secret-hub .char-avatar,
+.secret-hub .char-avatar-sm { color: var(--world-vermilion); border-color: rgba(154,64,55,.45); background: rgba(154,64,55,.06); }
+.secret-hub .chat-area { border: 1px solid var(--world-rule-soft); background: rgba(255,253,246,.18); }
+.secret-hub .chat-character-bar { padding: 12px 14px; background: linear-gradient(90deg, rgba(79,112,117,.10), transparent); border-bottom: 1px solid var(--world-rule-soft); }
+.secret-hub .secret-record { max-width: 84%; padding: 13px 15px 14px; background: transparent; border-left: 2px solid var(--world-cyan); box-shadow: none; }
+.secret-hub .secret-record.player { border-right: 2px solid var(--world-vermilion); background: rgba(154,64,55,.035); }
+.secret-hub .secret-record p { line-height: 1.85; }
+
+/* 军府方略簿：左为来函摘录，右为同一卷内四则方略。 */
+.directive-book .directive-desk-layout { margin: 0 25px 25px; border: 1px solid var(--world-rule-soft); }
+.directive-book .directive-suggestion-library { padding: 17px 15px; background: linear-gradient(180deg, rgba(79,112,117,.08), transparent 35%); border-right: 1px solid var(--world-rule-soft); }
+.directive-book .directive-suggestion-library .paper-panel-ui { padding: 0; }
+.directive-book .directive-suggestion-list { gap: 0; background: transparent; }
+.directive-book .directive-suggestion-list > label { padding: 11px 2px; background: transparent; border-bottom: 1px dashed var(--world-rule-soft); }
+.directive-book .directive-sections-column { border: 0; }
+.directive-book .directive-section { padding: 17px 21px 20px; border-bottom: 1px solid var(--world-rule-soft); }
+.directive-book .directive-section.is-active { background: linear-gradient(90deg, rgba(79,112,117,.08), transparent 45%); }
+.directive-book .directive-section-label strong { color: var(--world-ink); font-family: "Source Han Serif", "Noto Serif SC", serif; font-size: 20px; letter-spacing: .2em; }
+.directive-book .directive-section-label::before { content: '方略'; color: var(--world-vermilion); font-size: 10px; font-weight: 700; letter-spacing: .13em; }
+.directive-book .directive-bottom-bar { padding: 15px 20px; background: linear-gradient(90deg, transparent, rgba(169,142,104,.10)); }
+
+/* 审阅、推演、月报：各自是可连续阅读的卷，而不是独立的面板拼贴。 */
+.review-decree { overflow: auto; }
+.review-decree .paper-panel-ui { padding: 19px 0; }
+.review-decree .paper-panel-ui + .paper-panel-ui { border-top: 1px solid var(--world-rule-soft) !important; }
+.review-decree .draft-select-item { padding: 12px 6px; border-bottom: 1px dashed var(--world-rule-soft) !important; }
+.review-decree .draft-select-item.selected { background: linear-gradient(90deg, rgba(154,64,55,.08), transparent) !important; border-left-color: var(--world-vermilion) !important; }
+
+.adjudication-flow { padding: 0 25px 26px; }
+.adjudication-flow > header { margin: 0 -25px 20px; }
+.adjudication-flow > header p { display: inline-block; margin: 7px 12px 0 0; color: var(--world-ink-muted); font-size: 12px; }
+.adjudication-flow .execution-log h2,
+.adjudication-flow .decision-dialog h2 { color: var(--world-ink); font-family: "Source Han Serif", "Noto Serif SC", serif; font-size: 19px; letter-spacing: .14em; }
+.adjudication-flow .event-list { padding: 0; border: 0; background: transparent; }
+.adjudication-flow .event-item { margin: 0; padding: 12px 12px 12px 16px; border-bottom: 1px dashed var(--world-rule-soft); background: transparent; }
+.adjudication-flow .event-item::before { content: '录'; margin-right: 7px; color: var(--world-cyan); font-size: 10px; letter-spacing: .1em; }
+.adjudication-flow .decision-dialog { padding: 16px 18px; border: 1px solid rgba(154,64,55,.25); border-left: 3px solid var(--world-vermilion); background: rgba(154,64,55,.045); }
+
+.monthly-summary .monthly-ledger { gap: 0; margin: 0 26px 26px; }
+.monthly-summary .monthly-ledger > .paper-panel-ui { padding: 20px 0; }
+.monthly-summary .monthly-ledger > .paper-panel-ui + * { border-top: 1px solid var(--world-rule-soft); }
+.monthly-summary .monthly-ledger-columns { gap: 25px; padding: 20px 0; border-top: 1px solid var(--world-rule-soft); }
+.monthly-summary .monthly-ledger-columns main { gap: 0; }
+.monthly-summary .monthly-ledger-columns main > .paper-panel-ui { padding: 19px 0; }
+.monthly-summary .monthly-ledger-columns main > .paper-panel-ui + .paper-panel-ui { border-top: 1px solid var(--world-rule-soft); }
+.monthly-summary .monthly-ledger-columns aside { gap: 0; border-left: 1px solid var(--world-rule-soft); padding-left: 22px; }
+.monthly-summary .monthly-ledger-columns aside .paper-panel-ui { padding: 0 0 19px; }
+.monthly-summary .monthly-ledger-columns aside .paper-panel-ui + .paper-panel-ui { padding-top: 19px; border-top: 1px solid var(--world-rule-soft); }
+.monthly-summary .report-section { border-top-style: solid; border-top-color: var(--world-rule-soft); }
+.monthly-summary .report-item { padding: 12px 0 12px 13px; border-left: 2px solid var(--world-wood, #a98e68); background: transparent !important; }
+.monthly-summary .execution-timeline { gap: 0; background: transparent; }
+.monthly-summary .execution-timeline li { padding: 12px 0; background: transparent; border-bottom: 1px dashed var(--world-rule-soft); }
+
+/* 人物、军队、城池、外交、事件、史册：一侧目录，一侧展开的单份案卷。 */
+.info-page .info-body { gap: 26px; padding: 24px 26px 28px; }
+.info-page .info-list { gap: 0; border: 0; background: transparent; }
+.info-page .info-card { padding: 13px 4px; background: transparent; border-bottom: 1px dashed var(--world-rule-soft); }
+.info-page .info-card:hover,
+.info-page .info-card.selected { background: linear-gradient(90deg, rgba(79,112,117,.10), transparent) !important; box-shadow: inset 3px 0 var(--world-cyan) !important; }
+.info-page .info-detail,
+.info-page .info-body > section { padding: 0; }
+.info-page .info-detail dl { border-inline: 0; }
+.info-page .info-detail dt,
+.info-page .info-detail dd { padding: 9px 5px; border-bottom: 1px dashed var(--world-rule-soft); }
+.info-page .info-detail dt { color: var(--world-ink-muted); }
+.info-page .info-detail dd { color: var(--world-ink); }
+
+/* 对话框、确认、表单：是封缄的短笺，朱砂仅表示最终确认。 */
+.game-dialog-overlay { background: rgba(38,49,55,.16) !important; }
+.game-dialog-surface:not(.game-dialog-map-drawer) {
+  overflow: hidden;
+  border: 1px solid var(--world-rule);
+  border-radius: 2px 3px 2px 4px;
+  background:
+    linear-gradient(90deg, rgba(79,112,117,.06), transparent 10%, transparent 91%, rgba(169,142,104,.08)),
+    var(--ink-tex-paper-revival) center/310px auto repeat,
+    var(--world-paper) !important;
+  box-shadow: 0 22px 55px rgba(26,35,35,.28), 0 1px 0 rgba(255,255,255,.78) inset;
+}
+.game-dialog-surface:not(.game-dialog-map-drawer) > header { padding: 15px 18px 13px; background: linear-gradient(90deg, rgba(247,242,231,.92), rgba(220,231,227,.62)); border-bottom: 1px solid var(--world-rule-soft); }
+.game-dialog-surface:not(.game-dialog-map-drawer) > header [role="heading"] { color: var(--world-ink); font-family: "Source Han Serif", "Noto Serif SC", serif; letter-spacing: .12em; }
+.game-dialog-surface:not(.game-dialog-map-drawer) > header button { border: 1px solid var(--world-rule); border-radius: 1px; background: rgba(255,253,246,.7); color: var(--world-ink); }
+.game-dialog-surface:not(.game-dialog-map-drawer) > header button:hover { color: #fff9ed; background: var(--world-cyan); }
+.game-dialog-surface:not(.game-dialog-map-drawer) .game-dialog-content { padding: 20px; }
+
+@media (max-width: 1024px) {
+  .persistent-world-content .scene-shell { inset: 80px 24px 22px; }
+  .council-hub .council-main, .secret-hub .secret-body { padding: 18px; }
+  .directive-book .directive-desk-layout { margin: 0 18px 18px; }
+  .monthly-summary .monthly-ledger { margin-inline: 20px; }
+  .info-page .info-body { padding: 20px; }
+}
+
+@media (max-width: 760px) {
+  .persistent-world-content .scene-shell { inset: 70px 10px 14px; }
+  .persistent-world-content .app-frame-header { min-height: 64px; padding: 11px 14px; }
+  .council-hub .council-body, .monthly-summary .monthly-ledger-columns, .info-page .info-body { grid-template-columns: 1fr; }
+  .council-hub .council-suggestions, .monthly-summary .monthly-ledger-columns aside { border-left: 0; border-top: 1px solid var(--world-rule-soft); padding: 17px 0 0; }
+  .secret-hub .secret-body, .info-page .info-body { padding: 15px; }
+  .directive-book .directive-desk-layout { grid-template-columns: 1fr; margin: 0 14px 14px; }
+  .directive-book .directive-suggestion-library { border-right: 0; border-bottom: 1px solid var(--world-rule-soft); }
+  .monthly-summary .monthly-ledger { margin-inline: 15px; }
+  .adjudication-flow { padding-inline: 16px; }
+  .adjudication-flow > header { margin-inline: -16px; }
+}

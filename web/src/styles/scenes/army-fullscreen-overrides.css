@@ -1,0 +1,15 @@
+/* 第二轮安全区校准：竖屏档案必须使用无内格承载图，防止素材与动态卷段交叠。 */
+@media (max-width:620px) {
+  .military-hub-frame .app-frame-header {
+    min-height: 86px;
+    padding-top: 13px;
+  }
+
+  .military-hub-frame .app-frame-title {
+    padding-top: 2px;
+  }
+
+  .military-hub-frame:has(.military-dossier-sheet) {
+    --military-plate: url('/assets/ui/military-hub/marching-dossier-mobile-v3.png');
+  }
+}

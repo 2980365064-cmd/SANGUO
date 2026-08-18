@@ -1,0 +1,1716 @@
+/* 核心闭环共享规则：场景样式应在此基础上做局部表达，禁止作为全局覆盖层。 */
+:root {
+  --ui-ink: #263137;
+  --ui-ink-soft: #607177;
+  --ui-paper: #f7f2e7;
+  --ui-paper-muted: #ece4d4;
+  --ui-cyan: #4f7075;
+  --ui-vermilion: #9a4037;
+  --ui-warning: #9d6d2c;
+  --ui-line: rgba(56, 69, 68, 0.24);
+  --ui-line-strong: rgba(56, 69, 68, 0.48);
+  --ui-shadow: 0 16px 40px rgba(36, 45, 45, 0.16);
+  --ui-space-1: 8px;
+  --ui-space-2: 12px;
+  --ui-space-3: 18px;
+  --ui-space-4: 28px;
+  --ui-title: clamp(22px, 2vw, 32px);
+  --ui-heading: 17px;
+  --ui-body: 14px;
+  --ui-note: 12px;
+  --ui-motion: 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.scene-shell {
+  background: #dce0da url("/底图_expanded.jpg?v=20260720-rect-crop-outpaint")
+    center / cover no-repeat;
+}
+.persistent-world-stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #dce0da;
+}
+.persistent-world-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.persistent-world-map .strategic-map {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  box-shadow: none;
+}
+.persistent-world-map .annotated-province-block .province-outline {
+  /* 行政墨线独立于底图，不再以低对比描边掩盖位置问题。 */
+  stroke: #2a1b10;
+  stroke-width: 2.2;
+  opacity: 0.78;
+  filter: drop-shadow(0 1px 1px rgba(247, 242, 231, 0.55));
+}
+.persistent-world-map .annotated-province-block:hover .province-outline,
+.persistent-world-map .annotated-province-block:focus .province-outline,
+.persistent-world-map .annotated-province-block.selected .province-outline {
+  stroke: var(--ui-vermilion);
+  stroke-width: 4;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(242, 210, 139, 0.72));
+}
+.persistent-world-map .commandery-shared-boundaries {
+  stroke: #24170c;
+  stroke-width: 2.45;
+  stroke-dasharray: 7 5;
+  opacity: 0.9;
+  filter: url(#border-roughen);
+}
+.persistent-world-map .annotated-commandery-block .commandery-boundary {
+  stroke: #c74736;
+  stroke-width: 6.2;
+  opacity: 0;
+  filter: url(#border-roughen) drop-shadow(0 0 4px rgba(255, 229, 165, 0.98));
+}
+.persistent-world-map .annotated-commandery-block:hover .commandery-boundary,
+.persistent-world-map .annotated-commandery-block:focus .commandery-boundary,
+.persistent-world-map
+  .annotated-commandery-block.selected
+  .commandery-boundary {
+  opacity: 1;
+}
+.persistent-world-map .city-model {
+  filter: drop-shadow(0 1px 1px rgba(38, 49, 55, 0.34));
+}
+.persistent-world-map .city-sprite-plaque-cover {
+  fill: #b8a895;
+  stroke: #5b5045;
+  stroke-width: 0.35;
+  pointer-events: none;
+}
+.persistent-world-map .city-territory {
+  /* 城池层的辖区必须在底图上可被一眼辨认，而不只是悬浮命中区。 */
+  fill-opacity: 0.3;
+  stroke: none;
+  transition: fill-opacity 180ms ease;
+  pointer-events: visiblePainted;
+}
+.persistent-world-map .city-influence-layer .city-territory {
+  /* 势力色直接覆盖在同一张彩色舆图上；不对底图做灰化，避免各方色相被抹成同一种灰。 */
+  fill-opacity: 0.68;
+  mix-blend-mode: normal;
+}
+.persistent-world-map .city-influence-layer .city-commandery-boundaries {
+  stroke: #26363f;
+  stroke-width: 1.6;
+  stroke-dasharray: none;
+  opacity: 0.72;
+}
+.persistent-world-map .city-influence-layer .city-territory-boundary {
+  stroke: rgba(37, 50, 56, 0.92);
+  stroke-width: 1.05;
+  opacity: 0.82;
+}
+.persistent-world-map .city-territory.under-siege {
+  fill-opacity: 0.54;
+}
+.persistent-world-map .city-commandery-boundaries {
+  fill: none;
+  stroke: #24170c;
+  stroke-width: 2.45;
+  stroke-dasharray: 7 5;
+  opacity: 0.9;
+  filter: url(#border-roughen);
+  pointer-events: none;
+}
+.persistent-world-map .city-territory-boundary {
+  fill: none;
+  stroke: rgba(38, 49, 55, 0.76);
+  stroke-width: 1.55;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: url(#border-roughen);
+  pointer-events: none;
+}
+.persistent-world-map .city-highlight-boundary {
+  fill: none;
+  stroke: #c74736;
+  stroke-width: 5.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0;
+  filter: url(#border-roughen) drop-shadow(0 0 4px rgba(255, 229, 165, 0.98));
+  pointer-events: none;
+}
+.persistent-world-map .influence-city-curved-boundary {
+  fill: none;
+  stroke: #c44736;
+  stroke-width: 3.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.95;
+  filter: url(#border-roughen) drop-shadow(0 0 2px rgba(255, 244, 205, 0.95));
+  pointer-events: none;
+}
+.persistent-world-map .historical-town-reference {
+  pointer-events: none;
+  opacity: 0.72;
+}
+.persistent-world-map .historical-town-reference-dot {
+  fill: #39474a;
+  stroke: #f2ead8;
+  stroke-width: 1;
+}
+.persistent-world-map .historical-town-reference-label {
+  fill: #39474a;
+  stroke: #f7f2e7;
+  stroke-width: 2.4;
+  paint-order: stroke;
+  font-size: 10px;
+  font-family: "STKaiti", "Kaiti SC", serif;
+}
+.persistent-world-map .territory-city-node:hover .city-territory,
+.persistent-world-map .territory-city-node.selected .city-territory {
+  fill-opacity: 0.48;
+}
+.persistent-world-map .city-influence-layer .territory-city-node:hover .city-territory,
+.persistent-world-map .city-influence-layer .territory-city-node.selected .city-territory {
+  fill-opacity: 0.94;
+  filter: brightness(1.12) saturate(1.14);
+}
+.persistent-world-map .territory-city-node:hover .city-highlight-boundary,
+.persistent-world-map .territory-city-node.selected .city-highlight-boundary {
+  opacity: 1;
+}
+.persistent-world-map .unanchored-city .city-node-hit-area,
+.persistent-world-map .unanchored-city .city-model,
+.persistent-world-map .unanchored-city .capital-star,
+.persistent-world-map .unanchored-city .city-army-marker,
+.persistent-world-map .unanchored-city .city-label {
+  display: none;
+}
+.persistent-world-map .territory-city-node .city-label {
+  fill: #263137;
+  stroke: #f7f2e7;
+  stroke-width: 3;
+  opacity: 0.92;
+  font-size: 12px;
+}
+.persistent-world-map .city-influence-layer .influence-city-label {
+  fill: #273238;
+  stroke: rgba(255, 250, 236, 0.9);
+  stroke-width: 2.5;
+  paint-order: stroke;
+  stroke-linejoin: round;
+  font-family: "STSong", "Songti SC", "SimSun", serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.96;
+  pointer-events: none;
+}
+.persistent-world-map .influence-region-labels {
+  pointer-events: none;
+}
+.persistent-world-map .influence-region-label {
+  fill: #263137;
+  stroke: rgba(249, 245, 232, 0.92);
+  stroke-width: 3.2;
+  paint-order: stroke;
+  stroke-linejoin: round;
+  font-family: "STSong", "Songti SC", "SimSun", serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-anchor: middle;
+  opacity: 0.98;
+  filter: drop-shadow(0 1px 0 rgba(255, 250, 235, 0.48));
+}
+.persistent-world-map .map-caption {
+  top: 84px;
+  opacity: 0.74;
+}
+.persistent-world-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.persistent-world-content .scene-shell,
+.persistent-world-content button,
+.persistent-world-content input,
+.persistent-world-content textarea,
+.persistent-world-content select,
+.persistent-world-content a {
+  pointer-events: auto;
+}
+.persistent-world-content .scene-background,
+.persistent-world-content .scene-wash {
+  display: none;
+}
+/* 非地图模块不是换场：它们只是舆图上的有限工作窗。 */
+.persistent-world-content .scene-shell {
+  position: absolute;
+  inset: 92px 7vw 28px;
+  width: auto;
+  min-height: 0;
+  max-width: 1120px;
+  margin: 0 auto;
+  overflow: auto;
+  background: rgba(247, 242, 231, 0.94) var(--ink-tex-paper-revival)
+    center/cover;
+  border: 1px solid var(--ui-line-strong);
+  border-top: 3px solid var(--ui-vermilion);
+  box-shadow: 0 18px 54px rgba(25, 33, 34, 0.23);
+}
+.persistent-world-content .scene-shell .app-frame {
+  min-height: 100%;
+}
+.map-desk {
+  height: 100%;
+  pointer-events: none;
+}
+.map-desk > * {
+  pointer-events: auto;
+}
+.map-desk .metric-bar {
+  position: relative;
+}
+/* 天下舆图的案头不是侧栏：整卷原画就是容器，DOM 只在纸面上落字。 */
+.map-desk-scroll {
+  position: fixed;
+  z-index: 42;
+  top: 154px;
+  left: 18px;
+  width: 310px;
+  height: min(690px, calc(100vh - 160px));
+  overflow: hidden;
+  pointer-events: none;
+  background: none;
+  filter: none;
+}
+/* 竹轴是外层器物，纸卷缩进其内：收放时纸边不会从竹轴两侧弹出。 */
+.map-desk-scroll::before {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  top: 0.6354%;
+  right: 0.9479%;
+  left: 0.9479%;
+  height: 3.2566%;
+  pointer-events: none;
+  opacity: 0;
+  background: url("/assets/ui/scene/map-desk-scroll-roller-v7.png") center/100%
+    100% no-repeat;
+  transition: opacity 120ms linear;
+}
+/* 展开态是一张原生完整卷轴：上下同款竹轴与更窄纸页均已固化在素材内，不作 CSS 拼接。 */
+.map-desk-scroll::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: url("/assets/ui/scene/map-desk-vertical-scroll-v3.png") top
+    center/100% 100% no-repeat;
+  transform: translate3d(0, 0, 0) scaleY(1);
+  transform-origin: top center;
+  opacity: 1;
+  will-change: transform, opacity;
+  transition:
+    transform 440ms cubic-bezier(0.2, 0.74, 0.2, 1),
+    opacity 140ms linear;
+}
+.map-desk-scroll-handle {
+  position: absolute;
+  z-index: 5;
+  top: 47px;
+  left: 49px;
+  right: 49px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 33px;
+  padding: 0 9px 0 11px;
+  border: 0;
+  border-left: 3px solid var(--ui-vermilion);
+  color: var(--ui-ink);
+  background: rgba(247, 242, 231, 0.7);
+  box-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
+  font:
+    800 19px/1 "STKaiti",
+    "Kaiti SC",
+    serif;
+  letter-spacing: 0.18em;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.78);
+}
+.map-desk-scroll-handle:hover {
+  transform: none;
+  color: var(--ui-vermilion);
+  background: rgba(247, 242, 231, 0.84);
+}
+.map-desk-scroll-handle:focus-visible {
+  outline: 2px solid var(--ui-vermilion);
+  outline-offset: 3px;
+}
+.map-desk-scroll-handle > svg {
+  width: 16px;
+  height: 16px;
+}
+.map-desk-scroll-handle-label {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.map-desk-scroll-cap {
+  display: none;
+}
+.map-desk-scroll-sheet {
+  position: absolute;
+  z-index: 1;
+  top: 80px;
+  right: 49px;
+  bottom: 63px;
+  left: 49px;
+  min-height: 0;
+  padding: 15px 14px 10px;
+  overflow: hidden;
+  color: var(--ui-ink);
+  pointer-events: auto;
+  background: linear-gradient(
+    90deg,
+    rgba(247, 242, 231, 0.12),
+    rgba(247, 242, 231, 0.04) 50%,
+    rgba(247, 242, 231, 0.1)
+  );
+  transform: translate3d(0, 0, 0) scaleY(1);
+  transform-origin: top center;
+  will-change: transform, opacity;
+  transition:
+    opacity 140ms linear,
+    transform 440ms cubic-bezier(0.2, 0.74, 0.2, 1);
+}
+.map-desk-scroll-heading {
+  display: grid;
+  gap: 5px;
+  padding: 0 0 13px;
+  border-bottom: 1px solid rgba(79, 112, 117, 0.32);
+}
+.map-desk-scroll-heading span {
+  color: var(--ui-vermilion);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.map-desk-scroll-heading strong {
+  font-family: "STKaiti", "Kaiti SC", serif;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+}
+.map-desk-scroll-sheet > p {
+  margin: 14px 0 16px;
+  color: var(--ui-ink-soft);
+  font-size: 12px;
+  line-height: 1.82;
+}
+.map-desk-scroll-actions {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid rgba(79, 112, 117, 0.26);
+}
+.map-desk-scroll-actions button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: center;
+  padding: 12px 2px 11px;
+  color: var(--ui-ink);
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid rgba(79, 112, 117, 0.2);
+  background: transparent;
+  box-shadow: none;
+}
+.map-desk-scroll-actions button:hover:not(:disabled) {
+  transform: none;
+  color: var(--ui-vermilion);
+  background: linear-gradient(90deg, rgba(154, 64, 55, 0.08), transparent);
+}
+.map-desk-scroll-actions button:focus-visible {
+  outline-offset: -2px;
+}
+.map-desk-scroll-actions button:disabled {
+  opacity: 0.5;
+}
+.map-desk-scroll-actions svg {
+  grid-row: span 2;
+  width: 18px;
+  height: 18px;
+  color: var(--ui-cyan);
+}
+.map-desk-scroll-actions span {
+  font-family: "STKaiti", "Kaiti SC", serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.map-desk-scroll-actions small {
+  margin-top: 2px;
+  color: var(--ui-ink-soft);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.map-desk-scroll-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  color: var(--ui-ink-soft);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.map-desk-scroll-foot::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: rgba(79, 112, 117, 0.24);
+}
+.map-desk-scroll-foot i {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(154, 64, 55, 0.72);
+  color: var(--ui-vermilion);
+  font:
+    700 14px/1 "STKaiti",
+    "Kaiti SC",
+    serif;
+  transform: rotate(-6deg);
+}
+.map-desk-scroll-bottom {
+  display: none;
+}
+.map-desk-scroll.is-folded {
+  filter: none;
+}
+.map-desk-scroll.is-folded::before {
+  opacity: 1;
+}
+.map-desk-scroll.is-folded::after {
+  opacity: 0;
+  transform: translate3d(0, 0, 0) scaleY(0.035);
+  clip-path: inset(0 0 calc(100% - 25px) 0);
+}
+.map-desk-scroll.is-folded .map-desk-scroll-sheet {
+  opacity: 0;
+  transform: translate3d(0, -12px, 0) scaleY(0.04);
+  pointer-events: none;
+}
+.map-desk-scroll.is-folded .map-desk-scroll-handle {
+  top: 0;
+  left: 27px;
+  right: 27px;
+  height: 29px;
+  padding: 0 8px;
+  border-left: 0;
+  color: transparent;
+  background: transparent;
+  font-size: 0;
+  text-shadow: none;
+}
+.map-desk-scroll.is-folded .map-desk-scroll-handle > svg {
+  opacity: 0;
+}
+.map-desk-scroll.is-folded .map-desk-scroll-handle:hover {
+  color: transparent;
+  background: transparent;
+}
+.persistent-world-stage:has(.map-desk-scroll)
+  .persistent-world-map
+  .map-caption {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (max-width: 1100px) {
+  .map-desk-scroll {
+    left: 10px;
+    width: 290px;
+    height: min(620px, calc(100vh - 108px));
+  }
+  .map-desk-scroll.is-folded::after {
+    clip-path: inset(0 0 calc(100% - 22px) 0);
+  }
+  .map-desk-scroll-sheet {
+    top: 72px;
+    right: 43px;
+    bottom: 55px;
+    left: 43px;
+    padding: 12px 11px 8px;
+  }
+  .map-desk-scroll-handle {
+    top: 42px;
+    left: 43px;
+    right: 43px;
+    height: 28px;
+    font-size: 16px;
+  }
+  .map-desk-scroll.is-folded .map-desk-scroll-handle {
+    top: 0;
+    left: 23px;
+    right: 23px;
+    height: 27px;
+    font-size: 13px;
+  }
+  .map-desk-scroll-actions button {
+    padding-block: 10px;
+  }
+  .map-desk-fab {
+    right: 14px;
+    bottom: 16px;
+    min-width: 190px;
+  }
+  .fab-seal {
+    width: 180px;
+    height: 160px;
+    margin-bottom: -25px;
+  }
+  .map-desk-fab strong {
+    font-size: 23px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-desk-scroll::after,
+  .map-desk-scroll-sheet,
+  .map-desk-scroll-bottom {
+    transition-duration: 1ms;
+  }
+}
+.map-desk-fab {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 244px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transition: transform var(--ui-motion);
+}
+.map-desk-fab::before {
+  display: none;
+}
+.map-desk-fab:hover {
+  transform: translateY(-3px);
+}
+.map-desk-fab:hover .fab-seal {
+  transform: scale(1.025);
+}
+.map-desk-fab:focus-visible {
+  outline: 2px solid var(--ui-vermilion);
+  outline-offset: 5px;
+}
+.map-desk-fab:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+.fab-seal {
+  display: block;
+  width: 224px;
+  height: 200px;
+  margin: 0 0 -31px;
+  background: var(--revival-emblem-strategy-drafting) center/contain no-repeat;
+  filter: drop-shadow(0 4px 5px rgba(38, 49, 55, 0.24));
+  transition: transform var(--ui-motion);
+}
+.map-desk-fab strong {
+  padding-left: 0.14em;
+  color: #263137;
+  font-family: "STXingkai", "HanziPen SC", "Kaiti SC", cursive;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.14em;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.72),
+    0 2px 4px rgba(38, 49, 55, 0.18);
+}
+/* 世界不换场：所有功能页都在同一张天下舆图之上进行。 */
+.scene-shell .scene-background {
+  background-image: url("/底图_expanded.jpg?v=20260720-rect-crop-outpaint") !important;
+  filter: saturate(0.78) brightness(0.98);
+}
+.scene-content {
+  background: transparent !important;
+  color: var(--ui-ink);
+}
+.scene-density-open .scene-wash {
+  opacity: 0.08 !important;
+}
+.scene-density-standard .scene-wash {
+  opacity: 0.14 !important;
+}
+.scene-density-focused .scene-wash {
+  opacity: 0.2 !important;
+}
+.scene-content::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.11;
+  background: var(--ink-tex-paper-revival) center/cover;
+  mix-blend-mode: multiply;
+}
+.scene-content > * {
+  position: relative;
+}
+
+button {
+  border-radius: 0;
+  transition:
+    transform var(--ui-motion),
+    background var(--ui-motion),
+    border-color var(--ui-motion),
+    box-shadow var(--ui-motion);
+}
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ui-cyan);
+  outline-offset: 3px;
+}
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.primary,
+.draft-btn,
+.primary-action {
+  background: var(--ui-vermilion) !important;
+  color: #fff8ec !important;
+  border-color: var(--ui-vermilion) !important;
+  box-shadow: 0 4px 0 rgba(94, 38, 33, 0.23);
+}
+.secondary,
+.back-btn,
+.change-char-btn {
+  color: var(--ui-cyan) !important;
+  background: rgba(247, 242, 231, 0.72) !important;
+  border-color: var(--ui-line-strong) !important;
+}
+
+/* shared page heading: a low, calm state strip rather than a dashboard header */
+.metric-bar,
+.map-header,
+.secret-header,
+.directive-book > header,
+.monthly-summary > header,
+.council-page > header {
+  min-height: 72px;
+  padding: 10px 28px;
+  background: rgba(247, 242, 231, 0.84);
+  border: 0;
+  border-bottom: 1px solid var(--ui-line-strong);
+  box-shadow: 0 5px 18px rgba(36, 45, 45, 0.06);
+}
+.metric-bar {
+  gap: 22px;
+}
+.campaign-mark,
+.turn-date {
+  color: var(--ui-ink) !important;
+}
+.campaign-mark strong,
+.turn-date strong {
+  color: var(--ui-vermilion) !important;
+}
+.metric-ledger {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 46px;
+  padding: 7px 8px;
+  color: var(--ui-ink);
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--ui-line);
+  box-shadow: none;
+}
+.metric-chip svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ui-cyan);
+}
+.metric-chip strong {
+  font-family: inherit;
+  font-size: 14px;
+}
+.metric-chip:hover {
+  background: rgba(79, 112, 117, 0.08);
+  transform: none;
+}
+.metric-trend {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+}
+.metric-trend-up {
+  border-bottom: 4px solid #58714d;
+}
+.metric-trend-down {
+  border-top: 4px solid var(--ui-vermilion);
+}
+.metric-trend-steady {
+  width: 5px;
+  height: 1px;
+  border: 0;
+  background: var(--ui-ink-soft);
+}
+/* 水墨图标：替换 Lucide SVG */
+.hud-ink-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.hud-ink-icon[data-icon="wealth"] {
+  background-image: var(--revival-icon-wealth);
+}
+.hud-ink-icon[data-icon="grain"] {
+  background-image: var(--revival-icon-grain);
+}
+.hud-ink-icon[data-icon="people"] {
+  background-image: var(--revival-icon-people);
+}
+.hud-ink-icon[data-icon="legitimacy"] {
+  background-image: var(--revival-icon-legitimacy);
+}
+.hud-ink-icon[data-icon="morale"] {
+  background-image: var(--revival-icon-morale);
+}
+.hud-ink-icon[data-icon="relation"] {
+  background-image: var(--revival-icon-relation);
+}
+.hud-ink-icon[data-icon="intel"] {
+  background-image: var(--revival-icon-intel);
+}
+.hud-ink-icon[data-icon="risk"] {
+  background-image: var(--revival-icon-risk);
+}
+.game-tooltip {
+  z-index: 100;
+  padding: 6px 9px;
+  color: #fff8ec;
+  background: var(--ui-ink);
+  border: 1px solid rgba(247, 242, 231, 0.5);
+  box-shadow: 0 5px 14px rgba(36, 45, 45, 0.2);
+  font-size: 12px;
+}
+.game-tooltip-arrow {
+  fill: var(--ui-ink);
+}
+.app-frame {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+}
+.app-frame-header {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 10px 28px;
+  background: rgba(247, 242, 231, 0.84);
+  border-bottom: 1px solid var(--ui-line-strong);
+  box-shadow: 0 5px 18px rgba(36, 45, 45, 0.06);
+}
+.app-frame-back {
+  justify-self: start;
+}
+.app-frame-title {
+  text-align: center;
+}
+.app-frame-title small {
+  display: block;
+  color: var(--ui-vermilion);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.app-frame-title h1 {
+  margin: 2px 0 0;
+  color: var(--ui-ink);
+  font-size: 24px;
+  letter-spacing: 0.16em;
+}
+.app-frame-actions {
+  justify-self: end;
+  display: flex;
+  gap: 8px;
+}
+.app-frame-actions .action-seal {
+  min-height: 38px;
+}
+
+/* Situation hub: one monthly scroll, supporting chronicle and a quiet ledger. */
+.situation-hub-body {
+  grid-template-columns: minmax(0, 720px) 280px;
+  justify-content: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-3) 28px 0;
+}
+.situation-main {
+  gap: var(--ui-space-3);
+  padding-right: 4px;
+}
+.situation-header {
+  padding: 4px 2px 12px;
+  border-bottom: 1px solid var(--ui-line);
+}
+.situation-header h2,
+.situation-actions h3 {
+  color: var(--ui-ink) !important;
+  font-size: var(--ui-title);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.situation-header h2::before,
+.situation-actions h3::before {
+  content: "本月";
+  margin-right: 10px;
+  color: var(--ui-vermilion);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+.situation-overview {
+  grid-template-columns: minmax(0, 1.65fr) minmax(180px, 0.7fr);
+  gap: var(--ui-space-2);
+}
+.overview-card {
+  position: relative;
+  padding: 18px 20px;
+  background: rgba(247, 242, 231, 0.78);
+  border: 1px solid var(--ui-line);
+  border-radius: 0;
+  box-shadow: 0 6px 18px rgba(36, 45, 45, 0.05);
+}
+.overview-card:first-child {
+  grid-row: span 3;
+  border-top: 3px solid var(--ui-cyan);
+}
+.overview-card:first-child::after {
+  content: "军府纪事";
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  color: rgba(79, 112, 117, 0.6);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+.overview-card h3 {
+  color: var(--ui-ink) !important;
+  font-size: var(--ui-heading);
+  border-bottom: 1px solid var(--ui-line);
+  padding-bottom: 8px;
+}
+.overview-card p {
+  color: var(--ui-ink) !important;
+}
+.overview-hint {
+  color: var(--ui-ink-soft) !important;
+  font-style: normal !important;
+}
+.long-term-score {
+  color: var(--ui-vermilion) !important;
+  font-size: 30px !important;
+  font-weight: 700;
+}
+.incident-card,
+.memorial-card {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--ui-line);
+  background: transparent !important;
+}
+.situation-book {
+  background: rgba(239, 232, 217, 0.68);
+  border: 1px solid var(--ui-line);
+  border-top: 3px solid var(--ui-vermilion);
+  box-shadow: var(--ui-shadow);
+}
+.book-header {
+  padding: 16px;
+  border-bottom-color: var(--ui-line);
+}
+.book-header h2 {
+  color: var(--ui-ink) !important;
+  letter-spacing: 0.14em;
+}
+.book-header h2::before {
+  content: "方略";
+  color: var(--ui-vermilion);
+  font-size: 11px;
+  margin-right: 8px;
+}
+.book-item {
+  border: 0;
+  border-bottom: 1px dashed var(--ui-line);
+  background: transparent;
+  border-radius: 0;
+}
+.action-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--ui-line);
+  border: 1px solid var(--ui-line);
+}
+.action-btn {
+  min-height: 118px;
+  padding: 16px;
+  background: rgba(247, 242, 231, 0.86);
+  border: 0;
+  border-radius: 0;
+  color: var(--ui-ink);
+}
+.action-btn svg {
+  color: var(--ui-cyan);
+}
+.action-btn.primary-action {
+  background: var(--ui-vermilion) !important;
+}
+
+/* Map: retain geography as the subject; the selected location is a narrow archive slip. */
+.map-hub {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 0;
+}
+.map-header h1,
+.secret-header h1,
+.directive-book > header h1,
+.monthly-summary > header h1 {
+  color: var(--ui-ink);
+  letter-spacing: 0.16em;
+  font-size: 24px;
+}
+.map-area {
+  margin: 14px 28px;
+  border: 1px solid var(--ui-line-strong);
+  box-shadow: var(--ui-shadow);
+  overflow: hidden;
+  background: rgba(247, 242, 231, 0.45);
+}
+.map-selection-info {
+  margin: 0 28px 18px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--ui-vermilion);
+  box-shadow: var(--ui-shadow);
+  background-image:
+    linear-gradient(rgba(247, 242, 231, 0.4), rgba(247, 242, 231, 0.68)),
+    var(--revival-scene-map-dossier);
+  background-position: center;
+  background-size: cover;
+}
+
+/* Council and secret chat: record and seats, not browser-card grids or IM bubbles. */
+.minister-selection,
+.council-hall-stage,
+.secret-hub,
+.directive-book,
+.monthly-summary {
+  background: rgba(247, 242, 231, 0.88) !important;
+  border: 1px solid var(--ui-line-strong) !important;
+  box-shadow: var(--ui-shadow);
+}
+.minister-selection {
+  max-width: 1180px;
+  margin: 22px auto;
+}
+.minister-selection-inner > header,
+.council-hall-inner > header {
+  border-bottom: 1px solid var(--ui-line);
+}
+.minister-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 1px !important;
+  background: var(--ui-line);
+}
+.minister-grid > button {
+  background: rgba(247, 242, 231, 0.9) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+.minister-grid > button.selected {
+  background: rgba(79, 112, 117, 0.13) !important;
+  box-shadow: inset 0 3px var(--ui-vermilion);
+}
+.minister-selection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 18px;
+  padding: 18px;
+}
+.minister-layout-label {
+  margin: 0 0 9px;
+  color: var(--ui-cyan);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.council-seat-ledger {
+  min-height: 360px;
+  padding: 14px;
+  background: rgba(79, 112, 117, 0.08);
+  border-left: 2px solid var(--ui-cyan);
+}
+.council-seat-ledger ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.council-seat-ledger li {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--ui-line);
+}
+.council-seat-ledger strong,
+.council-seat-ledger small {
+  display: block;
+}
+.council-seat-ledger small,
+.council-seat-empty {
+  margin: 4px 0 0;
+  color: var(--ui-ink-soft);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.council-seat-empty {
+  padding-top: 20px;
+}
+.council-topic,
+.council-transcript {
+  background: rgba(247, 242, 231, 0.75) !important;
+  border: 1px solid var(--ui-line) !important;
+}
+.council-transcript {
+  border-top: 3px solid var(--ui-cyan) !important;
+}
+.council-hall-stage {
+  background-image:
+    linear-gradient(
+      rgba(247, 242, 231, 0.28) 0%,
+      rgba(247, 242, 231, 0.84) 10%,
+      rgba(247, 242, 231, 0.86) 90%,
+      rgba(247, 242, 231, 0.32) 100%
+    ),
+    var(--revival-scene-council) !important;
+  background-position: center;
+  background-size: cover;
+}
+.council-kicker,
+.council-record-label {
+  display: block;
+  margin: 0 0 5px;
+  color: var(--ui-vermilion);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.council-hall-inner > header h2 {
+  margin: 0;
+}
+.council-stage-layout {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 14px;
+}
+.council-attendance {
+  padding: 14px;
+  background: rgba(79, 112, 117, 0.09);
+  border-left: 2px solid var(--ui-cyan);
+}
+.council-attendance small {
+  display: block;
+  color: var(--ui-cyan);
+  letter-spacing: 0.12em;
+  font-size: 11px;
+}
+.council-attendance span {
+  display: block;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--ui-line);
+  font-size: 13px;
+}
+.council-record-label {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--ui-line);
+}
+.secret-hub {
+  width: min(1120px, calc(100vw - 120px));
+  margin: 18px auto;
+  min-height: min(720px, calc(100vh - 132px));
+  max-height: calc(100vh - 132px);
+  overflow: auto;
+}
+.secret-body {
+  padding: 20px !important;
+}
+.character-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 1px !important;
+  background: var(--ui-line);
+}
+.character-card {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: rgba(247, 242, 231, 0.9) !important;
+}
+.chat-area {
+  border-left: 3px solid var(--ui-cyan);
+  background: rgba(247, 242, 231, 0.72);
+}
+.secret-chat-stage {
+  background:
+    linear-gradient(
+      rgba(247, 242, 231, 0.22) 0%,
+      rgba(247, 242, 231, 0.82) 8%,
+      rgba(247, 242, 231, 0.84) 92%,
+      rgba(247, 242, 231, 0.28) 100%
+    ),
+    var(--revival-scene-secret);
+  background-position: center;
+  background-size: cover;
+}
+
+/* Directives and monthly report become authored documents. */
+.directive-book,
+.monthly-summary {
+  width: min(1120px, calc(100vw - 120px));
+  margin: 18px auto;
+  min-height: min(720px, calc(100vh - 132px));
+  max-height: calc(100vh - 132px);
+  overflow: auto;
+  padding: 0 !important;
+}
+.directive-book > header,
+.monthly-summary > header {
+  margin: 0 !important;
+}
+.draft-stats {
+  padding: 14px 22px;
+  background: rgba(79, 112, 117, 0.08);
+  border-bottom: 1px solid var(--ui-line);
+}
+.stat-value {
+  color: var(--ui-vermilion) !important;
+}
+.directive-guidance,
+.draft-list,
+.summary-content {
+  margin: 18px 22px;
+  background: rgba(247, 242, 231, 0.7);
+  border: 1px solid var(--ui-line);
+}
+.directive-book {
+  background-image:
+    linear-gradient(
+      rgba(247, 242, 231, 0.25) 0%,
+      rgba(247, 242, 231, 0.85) 8%,
+      rgba(247, 242, 231, 0.87) 92%,
+      rgba(247, 242, 231, 0.3) 100%
+    ),
+    var(--revival-scene-directive) !important;
+  background-position: center;
+  background-size: cover;
+}
+.monthly-summary {
+  background-image:
+    linear-gradient(
+      rgba(247, 242, 231, 0.25) 0%,
+      rgba(247, 242, 231, 0.85) 8%,
+      rgba(247, 242, 231, 0.87) 92%,
+      rgba(247, 242, 231, 0.3) 100%
+    ),
+    var(--revival-scene-monthly) !important;
+  background-position: center;
+  background-size: cover;
+}
+.draft-card {
+  border-radius: 0 !important;
+  border-color: var(--ui-line) !important;
+  background: transparent !important;
+}
+.draft-card.selected {
+  border-left: 3px solid var(--ui-vermilion) !important;
+}
+.monthly-summary h2 {
+  color: var(--ui-ink) !important;
+  border-bottom: 1px solid var(--ui-line);
+  padding-bottom: 8px;
+}
+.execution-table th {
+  color: var(--ui-cyan);
+}
+
+.panel-root {
+  background: var(--ui-paper) !important;
+  border: 1px solid var(--ui-line-strong) !important;
+  border-top: 3px solid var(--ui-vermilion) !important;
+  box-shadow: var(--ui-shadow) !important;
+}
+.panel-root > header {
+  border-bottom: 1px solid var(--ui-line);
+  color: var(--ui-ink);
+}
+.game-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(38, 49, 55, 0.34);
+  backdrop-filter: blur(3px);
+}
+.game-dialog-surface {
+  position: fixed;
+  z-index: 81;
+  left: 50%;
+  top: 50%;
+  width: min(620px, calc(100vw - 40px));
+  max-height: min(760px, calc(100vh - 40px));
+  transform: translate(-50%, -50%);
+  overflow: auto;
+  background:
+    linear-gradient(
+      rgba(247, 242, 231, 0.32) 0%,
+      rgba(247, 242, 231, 0.86) 5%,
+      rgba(247, 242, 231, 0.88) 95%,
+      rgba(247, 242, 231, 0.38) 100%
+    ),
+    var(--ink-tex-paper-revival) center/cover;
+  border: 1px solid var(--ui-line-strong);
+  border-top: 4px solid var(--ui-vermilion);
+  box-shadow: 0 24px 72px rgba(25, 33, 34, 0.32);
+}
+.game-dialog-surface > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--ui-line);
+}
+.game-dialog-surface h2 {
+  margin: 0;
+  color: var(--ui-ink);
+  letter-spacing: 0.12em;
+  font-size: 20px;
+}
+.game-dialog-surface p {
+  margin: 6px 0 0;
+  color: var(--ui-ink-soft);
+  font-size: var(--ui-note);
+}
+.game-dialog-surface header button {
+  border: 0;
+  background: transparent;
+  color: var(--ui-ink-soft);
+}
+.game-dialog-content {
+  padding: 20px;
+}
+.game-dialog-danger {
+  border-top-color: var(--ui-vermilion);
+}
+.game-dialog-decree {
+  border-top-color: var(--ui-cyan);
+}
+.game-dialog-map-drawer {
+  left: auto;
+  right: 24px;
+  top: 92px;
+  width: min(430px, calc(100vw - 48px));
+  height: calc((100vh - 116px) * 0.89);
+  max-height: calc((100vh - 116px) * 0.89);
+  transform: none;
+  border-top-color: var(--ui-cyan);
+  box-shadow: 0 14px 42px rgba(25, 33, 34, 0.24);
+  overflow: hidden;
+}
+.map-info-cards::-webkit-scrollbar {
+  width: 4px;
+}
+.map-info-cards::-webkit-scrollbar-thumb {
+  background: var(--ui-line-strong);
+  border-radius: 2px;
+}
+.map-info-cards::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* 背景模糊层 */
+.game-dialog-map-drawer::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  background-image: var(--dialog-bg, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(3px) saturate(0.85);
+  z-index: 0;
+}
+.game-dialog-map-drawer > * {
+  position: relative;
+  z-index: 1;
+}
+.game-dialog-map-drawer > header {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.game-dialog-map-drawer > header > div {
+  display: none;
+}
+.game-dialog-map-drawer > header button {
+  color: var(--ui-ink);
+  background: rgba(247, 242, 231, 0.7);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.game-dialog-map-drawer .game-dialog-content {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* 视觉区：背景画自然呈现 */
+.map-info-hero {
+  position: relative;
+  min-height: 140px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 18px 18px;
+}
+.map-info-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70px;
+  background: linear-gradient(transparent, rgba(247, 242, 231, 0.94));
+  pointer-events: none;
+}
+.map-info-hero-text {
+  position: relative;
+  z-index: 1;
+}
+.map-info-hero-title {
+  margin: 0;
+  color: var(--ui-ink);
+  font-size: 26px;
+  letter-spacing: 0.16em;
+  text-shadow: 0 1px 4px rgba(247, 242, 231, 0.6);
+}
+.map-info-hero-sub {
+  margin: 4px 0 0;
+  color: var(--ui-ink-soft);
+  font-size: var(--ui-note);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-info-power-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* 内容区：卡片列表，可滚动 */
+.map-info-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0 14px 18px;
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* 过渡带：从透明渐变到纸色，让背景画平滑融入内容区 */
+.map-info-cards::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 50px;
+  background: linear-gradient(rgba(247, 242, 231, 0), rgba(247, 242, 231, 0.8));
+  pointer-events: none;
+  z-index: 0;
+}
+.map-info-cards > * {
+  position: relative;
+  z-index: 1;
+}
+.map-info-card {
+  background: rgba(247, 242, 231, 0.94) !important;
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 4px 14px rgba(36, 45, 45, 0.08);
+}
+@media (max-width: 760px) {
+  .game-dialog-map-drawer {
+    right: 12px;
+    top: 74px;
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 88px);
+  }
+}
+.secret-order-form {
+  display: grid;
+  gap: 12px;
+}
+.secret-order-recipient {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--ui-cyan);
+  background: rgba(79, 112, 117, 0.1);
+  color: var(--ui-ink);
+}
+.secret-order-form input,
+.secret-order-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 0;
+  background: rgba(255, 252, 244, 0.82);
+  color: var(--ui-ink);
+}
+.secret-order-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+.decree-confirmation {
+  display: grid;
+  gap: 10px;
+  color: var(--ui-ink);
+}
+.decree-confirmation > p {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(79, 112, 117, 0.08);
+  border-left: 3px solid var(--ui-cyan);
+}
+.decree-confirmation-note {
+  color: var(--ui-ink-soft) !important;
+}
+.decree-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+.paper-panel-ui {
+  background: rgba(247, 242, 231, 0.86);
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 8px 22px rgba(36, 45, 45, 0.09);
+}
+.paper-panel-focus {
+  border-top: 3px solid var(--ui-cyan);
+}
+.paper-panel-archive {
+  border-left: 3px solid var(--ui-vermilion);
+}
+.paper-panel-floating {
+  box-shadow: var(--ui-shadow);
+}
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--ui-line);
+}
+.section-heading small {
+  color: var(--ui-vermilion);
+  letter-spacing: 0.12em;
+}
+.section-heading h2 {
+  margin: 0;
+  color: var(--ui-ink);
+  font-size: var(--ui-heading);
+  letter-spacing: 0.1em;
+}
+.section-heading span {
+  margin-left: auto;
+  color: var(--ui-ink-soft);
+  font-size: var(--ui-note);
+}
+.status-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+}
+.status-mark-neutral {
+  color: var(--ui-ink-soft);
+}
+.status-mark-action {
+  color: var(--ui-cyan);
+}
+.status-mark-warning {
+  color: var(--ui-warning);
+}
+.status-mark-danger {
+  color: var(--ui-vermilion);
+}
+.status-mark-complete {
+  color: #58714d;
+}
+.status-mark::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: var(--revival-icon-pending) center/contain no-repeat;
+  opacity: 0.72;
+}
+.status-mark-danger::before {
+  background-image: var(--revival-icon-risk);
+}
+.status-mark-complete::before {
+  background-image: var(--revival-seal-confirmed);
+}
+.action-seal {
+  position: relative;
+  padding: 9px 14px 9px 39px;
+  border: 1px solid var(--ui-line-strong);
+}
+.action-seal::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translateY(-50%);
+  background: var(--revival-seal-action) center/contain no-repeat;
+  opacity: 0.78;
+}
+.action-seal-primary {
+  background: var(--ui-vermilion);
+  color: #fff8ec;
+}
+.action-seal-primary::before {
+  filter: brightness(0) invert(1);
+}
+.action-seal-secondary {
+  background: rgba(247, 242, 231, 0.86);
+  color: var(--ui-cyan);
+}
+.action-seal-danger {
+  background: var(--ui-vermilion);
+  color: #fff8ec;
+}
+.action-seal-danger::before {
+  background-image: var(--revival-seal-danger);
+  filter: brightness(0) invert(1);
+}
+.action-seal-ghost {
+  background: transparent;
+  color: var(--ui-ink-soft);
+  border-color: transparent;
+}
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--ui-line);
+}
+.ledger-row strong,
+.ledger-row small {
+  display: block;
+}
+.ledger-row small {
+  margin-top: 3px;
+  color: var(--ui-ink-soft);
+  font-size: var(--ui-note);
+}
+
+@media (max-width: 1280px) {
+  .situation-hub-body {
+    padding-inline: 16px;
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+  .situation-overview {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+  .action-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .minister-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 900px) {
+  .scene-shell {
+    background-position: 55% center;
+  }
+  .situation-hub-body {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+  .situation-book {
+    min-height: 260px;
+  }
+  .secret-hub,
+  .directive-book,
+  .monthly-summary {
+    width: calc(100vw - 28px);
+    margin: 14px auto;
+    max-height: none;
+  }
+}
+@media (max-width: 900px) {
+  .persistent-world-content .scene-shell {
+    inset: 78px 14px 14px;
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

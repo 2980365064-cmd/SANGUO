@@ -1,0 +1,341 @@
+/* ═══════════════════════════════════════════════════════════════
+   V5 · 轻水墨 UI 改版 — 面板互斥、Backdrop、AI 图边框
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink-bg: #1a1812;
+  --ink-seal-rgb: 138, 42, 32;
+  --ink-line-rgb: 60, 45, 25;
+  --ink-paper-rgb: 232, 220, 184;
+  --ink-paper-soft-rgb: 242, 232, 200;
+  --ink-dark-rgb: 26, 24, 18;
+  --ink-jade-rgb: 62, 107, 94;
+  --ink-gold-rgb: 185, 144, 77;
+  --ink-line-warm-rgb: 111, 86, 48;
+  --ink-paper-warm-rgb: 218, 202, 160;
+  --ink-paper: #e8dcb8;
+  --ink-paper-soft: #f2e8c8;
+  --ink-line: rgba(var(--ink-line-rgb),.28);
+  --ink-line-strong: rgba(var(--ink-line-rgb),.48);
+  --ink-seal: #8a2a20;
+  --ink-jade: #3e6b5e;
+  --ink-gold: #b9904d;
+  --ink-shadow: 0 10px 26px rgba(var(--ink-dark-rgb),.22);
+  --ink-frame-panel: url('/assets/ui/frame-panel-ink.webp');
+  --ink-frame-card: url('/assets/ui/frame-card-ink.webp');
+  --ink-frame-button: url('/assets/ui/frame-button-ink.webp');
+  --ink-bg-hall: url('/assets/ui/bg-hall.webp');
+  --ink-bg-secret: url('/assets/ui/bg-secret-chamber.webp');
+  --ink-bg-dock: url('/assets/ui/bg-dock-right.webp');
+  --ink-bg-menu-side: url('/assets/ui/bg-menu-side.webp');
+  --ink-bg-city: url('/assets/ui/bg-city.webp');
+  --ink-bg-province: url('/assets/ui/bg-province.webp');
+  --ink-bg-army: url('/assets/ui/bg-army.webp');
+  --ink-bg-character: url('/assets/ui/bg-character.webp');
+  --ink-bg-diplomacy: url('/assets/ui/bg-diplomacy.webp');
+  --ink-bg-strategy: url('/assets/ui/bg-strategy.webp');
+  --ink-bg-history: url('/assets/ui/bg-history.webp');
+  --ink-bg-family: url('/assets/ui/bg-family.webp');
+  --ink-bg-map: url('/assets/ui/bg-map.webp');
+  --ink-bg-review: url('/assets/ui/bg-review.webp');
+  --ink-bg-adjudication: url('/assets/ui/bg-adjudication.webp');
+  --ink-bg-adjudication-march: url('/assets/ui/bg-adjudication-march.webp');
+  --ink-bg-adjudication-naval: url('/assets/ui/bg-adjudication-naval.webp');
+  --ink-bg-adjudication-siege: url('/assets/ui/bg-adjudication-siege.webp');
+  --ink-bg-adjudication-camp: url('/assets/ui/bg-adjudication-camp.webp');
+  --ink-bg-adjudication-envoy: url('/assets/ui/bg-adjudication-envoy.webp');
+  --ink-bg-adjudication-disaster: url('/assets/ui/bg-adjudication-disaster.webp');
+  --ink-bg-event-urgent: url('/assets/ui/bg-event-urgent.webp');
+  --ink-bg-event-disaster: url('/assets/ui/bg-event-disaster.webp');
+  --ink-bg-event-harvest: url('/assets/ui/bg-event-harvest.webp');
+  --ink-bg-report: url('/assets/ui/bg-report.webp');
+  --ink-tex-paper: url('/assets/ui/texture-paper.webp');
+  --ink-tex-wash: url('/assets/ui/texture-ink-wash.webp');
+  --ink-divider: url('/assets/ui/divider-ink.webp');
+  --ink-backdrop-blur: 8px;
+  --ink-backdrop-tint: rgba(var(--ink-dark-rgb),.55);
+}
+
+/* 全局宣纸纹理叠加 */
+.game-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--ink-tex-paper);
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
+  opacity: .04;
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ─ Panel Backdrop ─────────────────────────────────────────── */
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--ink-backdrop-tint);
+  backdrop-filter: blur(var(--ink-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--ink-backdrop-blur));
+  animation: ink-fade-in .25s ease;
+}
+@keyframes ink-fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+/* ── Ink Frame (AI-generated 9-slice border) ───────────────── */
+.ink-frame { position: relative; }
+
+.ink-frame-panel {
+  background: var(--ink-paper);
+  box-shadow: var(--ink-shadow);
+  border: 12px solid transparent;
+  border-image: var(--ink-frame-panel) 12 round;
+}
+.ink-frame-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-paper);
+  background-size: 200px 200px;
+  mix-blend-mode: multiply;
+  opacity: .15;
+  pointer-events: none;
+}
+
+.ink-frame-card {
+  background: var(--ink-paper-soft);
+  border: 8px solid transparent;
+  border-image: var(--ink-frame-card) 8 round;
+  box-shadow: 0 4px 14px rgba(var(--ink-dark-rgb),.12);
+}
+
+.ink-frame-button {
+  background: var(--ink-paper-soft);
+  border: 6px solid transparent;
+  border-image: var(--ink-frame-button) 6 round;
+  transition: background .15s ease, border-color .15s ease;
+}
+.ink-frame-button:hover {
+  background: var(--ink-paper);
+  border-color: var(--ink-line-strong);
+}
+
+.ink-frame-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-wash);
+  mix-blend-mode: multiply;
+  opacity: .15;
+  pointer-events: none;
+}
+
+.ink-frame-inner {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Map Info Drawer ─────────────────────────────────────── */
+.map-info-drawer {
+  position: absolute;
+  z-index: 27;
+  left: 18px;
+  bottom: 20px;
+  width: 360px;
+  max-height: 72vh;
+  overflow: auto;
+  background: linear-gradient(90deg, rgba(var(--ink-paper-rgb),.95), rgba(200, 181, 132, .9));
+  border: 1px solid var(--ink-line-strong);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .35), inset 0 0 45px rgba(var(--ink-line-warm-rgb),.15);
+}
+.map-info-drawer-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--ink-tex-wash);
+  mix-blend-mode: multiply;
+  opacity: .12;
+  pointer-events: none;
+}
+.map-info-drawer-inner {
+  position: relative;
+  z-index: 1;
+  padding: 14px 16px;
+}
+.map-info-drawer header {
+  position: relative;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ink-line);
+  margin-bottom: 10px;
+}
+.map-info-drawer .close-button {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink-line);
+  background: transparent;
+  color: var(--ink);
+}
+.map-info-drawer .close-button:hover {
+  background: var(--ink-seal);
+  color: #f0e0c0;
+}
+.map-info-header span.map-info-province {
+  font-size: 12px;
+  letter-spacing: .2em;
+  color: #755533;
+}
+.map-info-header h2 {
+  font-size: 22px;
+  margin: 3px 0;
+  color: #2a1e13;
+  text-shadow: 0 1px 0 #f3e8c7;
+}
+.map-info-controller {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #665842;
+}
+.map-info-controller i {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+.map-info-section {
+  margin: 10px 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--ink-line);
+}
+.map-info-section:first-of-type {
+  border-top: 0;
+}
+.map-info-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #5b452d;
+  margin: 0 0 7px;
+}
+.map-info-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+.map-info-stats span {
+  text-align: center;
+  padding: 5px 3px;
+  background: rgba(189, 163, 111, .2);
+  border-top: 2px solid #9b7744;
+  font-size: 12px;
+  color: #6a5b43;
+}
+.map-info-stats strong {
+  display: block;
+  font-size: 15px;
+  color: #2a251d;
+}
+.map-info-stats small {
+  font-size: 12px;
+  color: #7c6d56;
+}
+.map-info-status {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #6b5d47;
+  margin: 6px 0 0;
+}
+.map-info-ledger {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.map-info-ledger span {
+  padding: 5px;
+  background: rgba(189, 163, 111, .15);
+  border-top: 2px solid #9b7744;
+  text-align: center;
+}
+.map-info-ledger b {
+  display: block;
+  font-size: 12px;
+  color: #6a5b43;
+  font-weight: 400;
+}
+.map-info-ledger strong {
+  display: block;
+  font-size: 14px;
+  color: #2a251d;
+}
+.map-info-ledger small {
+  font-size: 12px;
+  color: #7c6d56;
+}
+.investment-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 6px;
+}
+.investment-actions button {
+  padding: 5px;
+  border: 1px solid var(--ink-line);
+  background: var(--ink-paper-soft);
+  font-size: 12px;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.investment-actions button:hover:not(:disabled) {
+  background: var(--ink-paper);
+  border-color: var(--ink-line-strong);
+}
+.investment-actions button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.investment-actions small {
+  font-size: 12px;
+  color: #7c6d56;
+}
+.investment-current {
+  font-size: 11px;
+  color: #6d3a2a;
+  margin: 4px 0 8px;
+}
+.map-info-armies {
+  display: grid;
+  gap: 5px;
+}
+.map-info-armies article {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--ink-line);
+  background: rgba(var(--ink-paper-warm-rgb),.5);
+}
+.map-info-armies i {
+  width: 4px;
+  height: 36px;
+}
+.map-info-armies strong {
+  display: block;
+  font-size: 12px;
+  color: #2a251d;
+}
+.map-info-armies small {
+  font-size: 12px;
+  color: #6b604d;
+}
+.empty-note {
+  margin: 6px;
+  color: #786b55;
+  font-size: 12px;
+}
+/* 存量地图规则。新地图档案样式位于 ../scenes/map.css。 */
